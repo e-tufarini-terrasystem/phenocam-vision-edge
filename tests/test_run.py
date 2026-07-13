@@ -1,8 +1,8 @@
 """
-Verify process exit statuses and console streams at the entry point.
+Verify process statuses, streams, and selection-error mapping at the entry point.
 
-These tests mock the argument and inference boundaries; parser path rules and
-Ultralytics internals remain covered by their own modules.
+Argument and inference boundaries are mocked. Inventory validation and
+Ultralytics behavior remain covered by their own modules.
 """
 
 import contextlib
@@ -15,6 +15,7 @@ from unittest.mock import patch
 from arguments import ArgumentValidationError, Arguments
 from inference import InferenceError, OutputWriteError
 from run import main
+from selection import ClassConfigurationError, ModelClassesError
 
 
 class RunTests(unittest.TestCase):
@@ -66,6 +67,34 @@ class RunTests(unittest.TestCase):
             status, stdout, stderr = self.call_main([])
         self.assertEqual((status, stdout, stderr), (1, "", "error: inference failed\n"))
         self.assertNotIn("private detail", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_class_configuration_error_has_fixed_diagnostic(self):
+        error = ClassConfigurationError()
+        error.__cause__ = RuntimeError("private configuration detail\nTraceback")
+        with patch("run.parse_arguments", return_value=self.arguments), patch(
+            "run.annotate_image", side_effect=error
+        ):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr),
+            (1, "", "error: class configuration is invalid\n"),
+        )
+        self.assertNotIn("private configuration detail", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_model_classes_error_has_fixed_diagnostic(self):
+        error = ModelClassesError()
+        error.__cause__ = RuntimeError("private model detail\nTraceback")
+        with patch("run.parse_arguments", return_value=self.arguments), patch(
+            "run.annotate_image", side_effect=error
+        ):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr),
+            (1, "", "error: model classes are incompatible\n"),
+        )
+        self.assertNotIn("private model detail", stderr)
         self.assertNotIn("Traceback", stderr)
 
     def test_output_write_error_has_fixed_diagnostic(self):
