@@ -5,9 +5,22 @@ Ultralytics is the external error boundary. Callers receive only inference or
 output-write application errors, never third-party diagnostic details.
 """
 
+import logging
+import os
 from pathlib import Path
 
-from ultralytics import YOLO
+# Native dependency loaders can write directly to fd 2 during import. Keep the
+# process boundary quiet and always restore the caller's descriptor.
+with open(os.devnull, "w") as _null_stderr:
+    _stderr_fd = os.dup(2)
+    try:
+        os.dup2(_null_stderr.fileno(), 2)
+        from ultralytics import YOLO
+    finally:
+        os.dup2(_stderr_fd, 2)
+        os.close(_stderr_fd)
+
+logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 
 class InferenceError(RuntimeError):
