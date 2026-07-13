@@ -28,6 +28,23 @@ python3 export_onnx.py
 This creates `yolo26n.onnx` from `yolo26n.pt` in the current directory.
 Generated ONNX models are runtime artifacts rather than source files.
 
+## Class selection
+
+The fixed `classes.py` file in the repository root is loaded automatically;
+there is no CLI option for selecting another configuration. It contains all 80
+COCO classes grouped into the 12 standard categories. Change only the existing
+`True`/`False` values, and keep at least one class enabled. The committed
+configuration enables only `person`.
+
+The selected ONNX model must expose exactly the standard 80 COCO classes. A
+custom-class or otherwise incompatible model is rejected. Invalid configuration
+stops the command before model inference.
+
+Class filtering limits the detections returned and annotated. It does not
+guarantee reduced neural-network inference time, CPU or GPU use, or memory use.
+A valid run with no matching detections still succeeds and saves the output
+image without annotations.
+
 ## Usage
 
 Run inference with all three required options:
@@ -63,6 +80,11 @@ Generated models and annotated images are not repository source artifacts.
 
 Operational errors are written to standard error without exposing local paths
 or third-party exception details.
+
+Class-selection failures use these status-`1` diagnostics:
+
+- `error: class configuration is invalid`
+- `error: model classes are incompatible`
 
 ## Limitations
 
