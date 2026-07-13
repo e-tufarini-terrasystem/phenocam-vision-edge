@@ -1,19 +1,32 @@
-from ultralytics import YOLO
+"""
+Provide the process boundary for the single-image inference command.
 
-# Load the exported ONNX model
-model = YOLO("yolo26n.onnx")
+Argument parsing and image inference are delegated to their modules. This entry
+point contains no fixed paths or model-specific processing logic.
+"""
 
-# Open image
-image = "car.jpg"
+import sys
+from typing import Optional, Sequence
 
-# Perform inference on the image
-results = model(image)
+from arguments import ArgumentValidationError, parse_arguments
+from inference import InferenceError, OutputWriteError, annotate_image
 
-# Save the image with bounding boxes
-# results[0].save("output.jpg")
 
-# Print detected classes and confidence scores
-for result in results[0].boxes:
-    # print(f"Class: {result.cls}, Confidence: {result.conf}")
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    try:
+        arguments = parse_arguments(argv)
+        annotate_image(arguments.model, arguments.input, arguments.output)
+    except ArgumentValidationError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    except InferenceError:
+        print("error: inference failed", file=sys.stderr)
+        return 1
+    except OutputWriteError:
+        print("error: output image could not be written", file=sys.stderr)
+        return 1
+    return 0
 
-results[0].show()
+
+if __name__ == "__main__":
+    raise SystemExit(main())
