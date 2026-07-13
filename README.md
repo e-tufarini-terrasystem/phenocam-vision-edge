@@ -66,7 +66,12 @@ python3 run.py --input /path/to/image.jpg --output ./annotated.jpg --model ./yol
 - An existing output file is overwritten.
 - The output parent directory is not created automatically.
 - The command does not open a graphical window or print detections.
-- Successful execution is quiet and writes only the annotated image.
+- Successful execution prints one prediction-time line to standard output, for
+  example `Execution time: 1.234 s`.
+- The duration is expressed in seconds with three decimal places and covers
+  only the model prediction call. The interval excludes model loading, argument
+  and class validation, image saving, and output verification.
+- Failed commands do not print a duration.
 
 Generated models and annotated images are not repository source artifacts.
 
