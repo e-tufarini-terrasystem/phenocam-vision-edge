@@ -1,14 +1,15 @@
 """
 Annotate one local image with one local ONNX model and save one output image.
 
-Configuration is validated before model construction and model metadata before
-prediction. Ultralytics remains the inference boundary; callers receive only
-the approved selection, inference, or output-write application errors.
+Configuration and model metadata are validated before prediction. Only the
+Ultralytics prediction call is timed, and its duration is returned after output
+verification; callers still receive only the approved application errors.
 """
 
 import logging
 import os
 from pathlib import Path
+from time import perf_counter
 
 from selection import ModelClassesError, enabled_class_names, model_class_ids
 
@@ -34,7 +35,7 @@ class OutputWriteError(RuntimeError):
     """Represent failure to produce a non-empty regular output file."""
 
 
-def annotate_image(model_path: Path, input_path: Path, output_path: Path) -> None:
+def annotate_image(model_path: Path, input_path: Path, output_path: Path) -> float:
     enabled_names = enabled_class_names()
 
     try:
@@ -49,10 +50,13 @@ def annotate_image(model_path: Path, input_path: Path, output_path: Path) -> Non
     except Exception:
         raise ModelClassesError() from None
 
+    inference_start = perf_counter()
     try:
         results = model(input_path, verbose=False, classes=class_ids)
     except Exception:
         raise InferenceError("inference failed") from None
+    inference_end = perf_counter()
+    inference_seconds = inference_end - inference_start
 
     if not results:
         raise InferenceError("inference failed")
@@ -66,3 +70,5 @@ def annotate_image(model_path: Path, input_path: Path, output_path: Path) -> Non
         raise
     except Exception:
         raise OutputWriteError("output image could not be written") from None
+
+    return inference_seconds

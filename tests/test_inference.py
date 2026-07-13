@@ -1,8 +1,8 @@
 """
-Verify inference ordering, class selection, prediction, and output writing.
+Verify inference ordering, class selection, prediction timing, and output writing.
 
-Every output path is disposable. Selection boundaries and YOLO are mocked, so
-tests never import malformed production configuration or load a real model.
+Every output path is disposable. Selection boundaries, the clock, and YOLO are
+mocked, so tests load no real model and use no real elapsed time.
 """
 
 import tempfile
@@ -29,8 +29,13 @@ class InferenceTests(unittest.TestCase):
         )
         self.enabled_names = self.enabled_patcher.start()
         self.model_class_ids = self.ids_patcher.start()
+        self.clock_patcher = patch(
+            "inference.perf_counter", side_effect=[10.0, 12.0]
+        )
+        self.perf_counter = self.clock_patcher.start()
 
     def tearDown(self):
+        self.clock_patcher.stop()
         self.ids_patcher.stop()
         self.enabled_patcher.stop()
         self.temporary_directory.cleanup()
@@ -50,7 +55,9 @@ class InferenceTests(unittest.TestCase):
         model.return_value.append(unused_result)
 
         with patch("inference.YOLO", constructor):
-            annotate_image(self.model_path, self.input_path, self.output_path)
+            inference_seconds = annotate_image(
+                self.model_path, self.input_path, self.output_path
+            )
 
         constructor.assert_called_once_with(self.model_path)
         self.enabled_names.assert_called_once_with()
@@ -64,6 +71,8 @@ class InferenceTests(unittest.TestCase):
         unused_result.save.assert_not_called()
         result.show.assert_not_called()
         self.assertEqual(self.output_path.read_bytes(), b"annotated")
+        self.assertEqual(inference_seconds, 2.0)
+        self.assertEqual(self.perf_counter.call_count, 2)
 
     def test_selection_boundaries_run_before_construction_and_prediction(self):
         events = []
@@ -75,15 +84,32 @@ class InferenceTests(unittest.TestCase):
         self.model_class_ids.side_effect = (
             lambda names, enabled: events.append("metadata") or (0,)
         )
+        clock_values = iter((10.0, 12.0))
+        self.perf_counter.side_effect = (
+            lambda: events.append("clock") or next(clock_values)
+        )
         model.side_effect = lambda *args, **kwargs: events.append("prediction") or [
             result
         ]
+        result.save.side_effect = (
+            lambda filename: events.append("save")
+            or Path(filename).write_bytes(b"annotated")
+        )
 
         with patch("inference.YOLO", constructor):
             annotate_image(self.model_path, self.input_path, self.output_path)
 
         self.assertEqual(
-            events, ["configuration", "construction", "metadata", "prediction"]
+            events,
+            [
+                "configuration",
+                "construction",
+                "metadata",
+                "clock",
+                "prediction",
+                "clock",
+                "save",
+            ],
         )
 
     def test_configuration_error_prevents_model_and_preserves_output(self):
@@ -105,6 +131,7 @@ class InferenceTests(unittest.TestCase):
                 else:
                     self.assertEqual(self.output_path.read_bytes(), existing)
         constructor.assert_not_called()
+        self.perf_counter.assert_not_called()
         self.assertEqual(str(error.exception), "error: class configuration is invalid")
 
     def test_missing_model_names_prevents_prediction_and_preserves_output(self):
@@ -129,6 +156,7 @@ class InferenceTests(unittest.TestCase):
                 else:
                     self.assertEqual(self.output_path.read_bytes(), existing)
         self.model_class_ids.assert_not_called()
+        self.perf_counter.assert_not_called()
         self.assertEqual(str(error.exception), "error: model classes are incompatible")
 
     def test_raising_model_names_hides_detail_and_prevents_prediction(self):
@@ -144,6 +172,7 @@ class InferenceTests(unittest.TestCase):
             with self.assertRaises(ModelClassesError) as error:
                 annotate_image(self.model_path, self.input_path, self.output_path)
         self.assertNotIn("private metadata access detail", str(error.exception))
+        self.perf_counter.assert_not_called()
         self.assertFalse(self.output_path.exists())
 
     def test_incompatible_model_classes_propagate_without_prediction(self):
@@ -162,6 +191,7 @@ class InferenceTests(unittest.TestCase):
                             self.model_path, self.input_path, self.output_path
                         )
                 model.assert_not_called()
+                self.perf_counter.assert_not_called()
                 self.assertIs(error.exception, expected)
                 if existing is None:
                     self.assertFalse(self.output_path.exists())
@@ -175,6 +205,7 @@ class InferenceTests(unittest.TestCase):
             with self.assertRaises(ModelClassesError) as error:
                 annotate_image(self.model_path, self.input_path, self.output_path)
         model.assert_not_called()
+        self.perf_counter.assert_not_called()
         self.assertNotIn("private metadata detail", str(error.exception))
 
     def test_zero_detections_are_saved_successfully(self):
@@ -199,6 +230,7 @@ class InferenceTests(unittest.TestCase):
                 annotate_image(self.model_path, self.input_path, self.output_path)
         self.enabled_names.assert_called_once_with()
         self.model_class_ids.assert_not_called()
+        self.perf_counter.assert_not_called()
         self.assertNotIn("private model detail", str(error.exception))
         self.assertFalse(self.output_path.exists())
 
@@ -209,6 +241,7 @@ class InferenceTests(unittest.TestCase):
             with self.assertRaises(InferenceError) as error:
                 annotate_image(self.model_path, self.input_path, self.output_path)
         result.save.assert_not_called()
+        self.perf_counter.assert_called_once_with()
         self.assertNotIn("private inference detail", str(error.exception))
 
     def test_empty_results_become_inference_error_without_save(self):
@@ -217,6 +250,7 @@ class InferenceTests(unittest.TestCase):
         with patch("inference.YOLO", constructor):
             with self.assertRaises(InferenceError):
                 annotate_image(self.model_path, self.input_path, self.output_path)
+        self.assertEqual(self.perf_counter.call_count, 2)
         self.assertFalse(self.output_path.exists())
 
     def test_absent_results_become_inference_error(self):
@@ -225,6 +259,7 @@ class InferenceTests(unittest.TestCase):
         with patch("inference.YOLO", constructor):
             with self.assertRaises(InferenceError):
                 annotate_image(self.model_path, self.input_path, self.output_path)
+        self.assertEqual(self.perf_counter.call_count, 2)
 
     def test_save_failure_becomes_output_write_error(self):
         constructor, _, result = self.configured_yolo()
@@ -232,6 +267,7 @@ class InferenceTests(unittest.TestCase):
         with patch("inference.YOLO", constructor):
             with self.assertRaises(OutputWriteError) as error:
                 annotate_image(self.model_path, self.input_path, self.output_path)
+        self.assertEqual(self.perf_counter.call_count, 2)
         self.assertNotIn("private write detail", str(error.exception))
 
     def test_missing_output_after_save_becomes_output_write_error(self):
