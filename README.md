@@ -1,7 +1,72 @@
-# Install the required package for YOLO26
-pip install onnxruntime
-pip install ultralytics
+# YOLO Single-Image Inference
 
-# Export YOLO26 ONNX
-python3 -m ultralytics export model=yolo26n.pt format=onnx
+This project annotates one local image using a local YOLO model in ONNX format
+and writes the annotated image to a chosen local output path.
 
+## Requirements
+
+- Python 3
+- `ultralytics`
+- `onnxruntime`
+
+## Installation
+
+Using a virtual environment is recommended. Install the runtime packages with:
+
+```sh
+python3 -m pip install ultralytics onnxruntime
+```
+
+## Export the ONNX model
+
+The repository includes `yolo26n.pt`. Export it with the existing script:
+
+```sh
+python3 export_onnx.py
+```
+
+This creates `yolo26n.onnx` from `yolo26n.pt` in the current directory.
+Generated ONNX models are runtime artifacts rather than source files.
+
+## Usage
+
+Run inference with all three required options:
+
+```sh
+python3 run.py --input /path/to/image.jpg --output ./annotated.jpg --model ./yolo26n.onnx
+```
+
+## Arguments
+
+| Option | Constraint |
+|---|---|
+| `--input` | Existing local image file. |
+| `--output` | Output image path, distinct from the input; its parent directory must already exist. |
+| `--model` | Existing local file with a case-insensitive `.onnx` extension. |
+
+## Behavior
+
+- An existing output file is overwritten.
+- The output parent directory is not created automatically.
+- The command does not open a graphical window or print detections.
+- Successful execution is quiet and writes only the annotated image.
+
+Generated models and annotated images are not repository source artifacts.
+
+## Exit statuses
+
+| Status | Meaning |
+|---|---|
+| `0` | Inference and output writing succeeded. |
+| `1` | Path validation, inference, or output writing failed. |
+| `2` | The command-line syntax is invalid. |
+
+Operational errors are written to standard error without exposing local paths
+or third-party exception details.
+
+## Limitations
+
+- Input is limited to one local image per execution.
+- Models must be local ONNX files.
+- Batch input, directories, URLs, webcams, videos, and standard input are not
+  supported.
