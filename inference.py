@@ -1,13 +1,16 @@
 """
 Annotate one local image with one local ONNX model and save one output image.
 
-Ultralytics is the external error boundary. Callers receive only inference or
-output-write application errors, never third-party diagnostic details.
+Configuration is validated before model construction and model metadata before
+prediction. Ultralytics remains the inference boundary; callers receive only
+the approved selection, inference, or output-write application errors.
 """
 
 import logging
 import os
 from pathlib import Path
+
+from selection import ModelClassesError, enabled_class_names, model_class_ids
 
 # Native dependency loaders can write directly to fd 2 during import. Keep the
 # process boundary quiet and always restore the caller's descriptor.
@@ -32,9 +35,22 @@ class OutputWriteError(RuntimeError):
 
 
 def annotate_image(model_path: Path, input_path: Path, output_path: Path) -> None:
+    enabled_names = enabled_class_names()
+
     try:
         model = YOLO(model_path)
-        results = model(input_path, verbose=False)
+    except Exception:
+        raise InferenceError("inference failed") from None
+
+    try:
+        class_ids = model_class_ids(model.names, enabled_names)
+    except ModelClassesError:
+        raise
+    except Exception:
+        raise ModelClassesError() from None
+
+    try:
+        results = model(input_path, verbose=False, classes=class_ids)
     except Exception:
         raise InferenceError("inference failed") from None
 
