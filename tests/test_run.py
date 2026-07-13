@@ -1,5 +1,5 @@
 """
-Verify process statuses, streams, and selection-error mapping at the entry point.
+Verify process statuses, streams, selection errors, and success timing output.
 
 Argument and inference boundaries are mocked. Inventory validation and
 Ultralytics behavior remain covered by their own modules.
@@ -33,15 +33,17 @@ class RunTests(unittest.TestCase):
             status = main(argv)
         return status, stdout.getvalue(), stderr.getvalue()
 
-    def test_success_passes_paths_in_order_and_is_quiet(self):
+    def test_success_passes_paths_and_prints_formatted_duration(self):
         with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image"
+            "run.annotate_image", return_value=1.2344
         ) as annotate:
             status, stdout, stderr = self.call_main(["ignored"])
         annotate.assert_called_once_with(
             self.arguments.model, self.arguments.input, self.arguments.output
         )
-        self.assertEqual((status, stdout, stderr), (0, "", ""))
+        self.assertEqual(
+            (status, stdout, stderr), (0, "Execution time: 1.234 s\n", "")
+        )
 
     def test_each_argument_error_is_exactly_reported(self):
         messages = [
@@ -110,22 +112,26 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr)
 
     def test_missing_arguments_keep_argparse_status_two_and_stderr_usage(self):
+        stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("run.annotate_image") as annotate, contextlib.redirect_stderr(
-            stderr
-        ), self.assertRaises(SystemExit) as error:
+        with patch("run.annotate_image") as annotate, contextlib.redirect_stdout(
+            stdout
+        ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
             main([])
         self.assertEqual(error.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), "")
         self.assertIn("usage:", stderr.getvalue())
         annotate.assert_not_called()
 
     def test_unknown_option_keeps_argparse_status_two_and_stderr_usage(self):
+        stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("run.annotate_image") as annotate, contextlib.redirect_stderr(
-            stderr
-        ), self.assertRaises(SystemExit) as error:
+        with patch("run.annotate_image") as annotate, contextlib.redirect_stdout(
+            stdout
+        ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
             main(["--unknown"])
         self.assertEqual(error.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), "")
         self.assertIn("usage:", stderr.getvalue())
         annotate.assert_not_called()
 
@@ -138,17 +144,22 @@ class RunTests(unittest.TestCase):
             main(["--help"])
         self.assertEqual(error.exception.code, 0)
         self.assertIn("--input", stdout.getvalue())
+        self.assertNotIn("Execution time:", stdout.getvalue())
         self.assertEqual(stderr.getvalue(), "")
         annotate.assert_not_called()
 
     def test_main_guard_converts_return_value_to_process_status(self):
         message = "error: input image does not exist or is not a file"
+        stdout = io.StringIO()
         stderr = io.StringIO()
         with patch(
             "arguments.parse_arguments", side_effect=ArgumentValidationError(message)
-        ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+        ), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
+            stderr
+        ), self.assertRaises(SystemExit) as error:
             runpy.run_module("run", run_name="__main__")
         self.assertEqual(error.exception.code, 1)
+        self.assertEqual(stdout.getvalue(), "")
         self.assertEqual(stderr.getvalue(), f"{message}\n")
 
 

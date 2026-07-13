@@ -1,9 +1,9 @@
 """
 Provide the process boundary for the single-image inference command.
 
-Argument parsing, class configuration, model compatibility, and inference are
-delegated to their modules. This entry point contains no fixed paths, class
-inventory, or model metadata processing.
+Argument handling, timing, class configuration, model compatibility, inference,
+and output writing are delegated. Successful execution prints the prediction
+duration; this entry point contains no fixed paths or model metadata processing.
 """
 
 import sys
@@ -17,7 +17,9 @@ from selection import ClassConfigurationError, ModelClassesError
 def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         arguments = parse_arguments(argv)
-        annotate_image(arguments.model, arguments.input, arguments.output)
+        inference_seconds = annotate_image(
+            arguments.model, arguments.input, arguments.output
+        )
     except ArgumentValidationError as error:
         print(str(error), file=sys.stderr)
         return 1
@@ -33,6 +35,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except OutputWriteError:
         print("error: output image could not be written", file=sys.stderr)
         return 1
+    print(f"Execution time: {inference_seconds:.3f} s")
     return 0
 
 
