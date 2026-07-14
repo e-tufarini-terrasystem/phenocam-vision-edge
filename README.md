@@ -39,6 +39,23 @@ For the smallest deployment copy, `yolo26n.pt`, `export_onnx.py`,
 `export_onnx_int8.py`, and `requirements-export.txt` may be omitted. They are
 export-time assets and are not read by `run.py`. Keep `yolo26n.onnx`.
 
+## macOS installation
+
+Install Python 3.13 with Homebrew, then create the virtual environment from the
+project directory. The runtime packages in `requirements-rpi.txt` also support
+macOS on Apple Silicon.
+
+```sh
+brew install python@3.13
+python3.13 -m venv .venv
+.venv/bin/python -m pip install -r requirements-rpi.txt
+```
+
+The commands in this README work without activating the environment. To use
+its `python` command directly in the current shell, run `source
+.venv/bin/activate`; run `deactivate` when finished. The batch can then be
+started with `./batch.sh`.
+
 ## Usage
 
 Run inference with all three required options:
@@ -98,6 +115,19 @@ See `MODIFICHE_RASPBERRY_PI.md` for the full measurements and
 
 An existing output file is overwritten. The command is headless and does not
 open a graphical window.
+
+## Batch usage
+
+Run inference on every supported image directly inside `images/`:
+
+```sh
+./batch.sh
+```
+
+The script creates `output/` when needed and writes each result with the input
+filename. Existing output files with the same name are overwritten. Processing
+continues after individual failures, but the script exits with a non-zero status
+if any image fails.
 
 ## Exit statuses
 
