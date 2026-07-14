@@ -1,18 +1,19 @@
-"""Verify the public inference transaction with package-boundary test doubles.
+"""Verify the public nine-view inference transaction with boundary doubles.
 
-Every path is disposable. Runtime, view, selection, and output boundaries are
-mocked, so these tests load neither the real ONNX model nor real elapsed time.
+Disposable paths, a fake session, and a deterministic clock prove ordering,
+all-class aggregation, failure atomicity, timing, and final output delegation.
 """
 
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 
 from inference import InferenceError, OutputWriteError, annotate_image
+from inference.runtime import run_tensor as timed_run_tensor
 from selection import ClassConfigurationError, ModelClassesError
 
 
@@ -26,54 +27,155 @@ class InferenceTests(unittest.TestCase):
             self.root / "output.jpg",
         )
         self.image = SimpleNamespace(width=100, height=80)
-        self.view = SimpleNamespace(tensor=np.zeros((1, 3, 4, 4)), priority=0)
-        self.session = object()
-        self.contract = ("images", "output0", 640, 640, {0: "person", 2: "car"})
+        self.views = tuple(
+            SimpleNamespace(tensor=object(), priority=priority)
+            for priority in range(9)
+        )
+        self.session = Mock()
+        self.contract = (
+            "images",
+            "output0",
+            640,
+            640,
+            {0: "person", 2: "car", 7: "truck"},
+        )
 
     def tearDown(self):
         self.temporary_directory.cleanup()
 
     def boundaries(self):
-        patches = (
-            patch("inference.enabled_class_names", return_value=("person", "car")),
-            patch("inference.create_session", return_value=self.session),
-            patch("inference.model_contract", return_value=self.contract),
-            patch("inference.model_class_ids", return_value=(0, 2)),
-            patch("inference.load_image", return_value=self.image),
-            patch("inference.iter_views", return_value=iter((self.view,))),
-            patch("inference.run_tensor", return_value=(np.empty((0, 6)), 1.25)),
-            patch("inference.normalize_rows", return_value=()),
-            patch("inference.write_output"),
-        )
-        return [item.start() for item in patches], patches
+        patchers = {
+            "configuration": patch(
+                "inference.enabled_class_names", return_value=("person", "car")
+            ),
+            "session": patch("inference.create_session", return_value=self.session),
+            "contract": patch("inference.model_contract", return_value=self.contract),
+            "class_ids": patch("inference.model_class_ids", return_value=(0, 2)),
+            "load": patch("inference.load_image", return_value=self.image),
+            "views": patch("inference.iter_views", return_value=iter(self.views)),
+            "runtime": patch(
+                "inference.run_tensor",
+                side_effect=[(np.empty((0, 6)), index / 10) for index in range(9)],
+            ),
+            "normalize": patch(
+                "inference.normalize_rows",
+                side_effect=[(("detection", index),) for index in range(9)],
+            ),
+            "nms": patch("inference.deduplicate", return_value=("final",)),
+            "output": patch("inference.write_output"),
+        }
+        return {name: patcher.start() for name, patcher in patchers.items()}, patchers
 
-    def test_success_preserves_order_and_returns_runtime_duration(self):
-        events = []
-        mocks, patches = self.boundaries()
-        names = (
-            "configuration", "session", "contract", "class_ids", "load",
-            "views", "runtime", "normalize", "output",
-        )
-        for name, mock in zip(names, mocks):
-            original = mock.side_effect
-            mock.side_effect = lambda *args, _name=name, _original=original, _mock=mock, **kwargs: (
-                events.append(_name), _original(*args, **kwargs) if _original else _mock.return_value
-            )[1]
+    def stop_boundaries(self, patchers):
+        for patcher in reversed(tuple(patchers.values())):
+            patcher.stop()
+
+    def test_success_uses_one_session_nine_runs_one_nms_and_exact_sum(self):
+        mocks, patchers = self.boundaries()
         try:
             elapsed = annotate_image(*self.paths)
         finally:
-            for item in reversed(patches):
-                item.stop()
+            self.stop_boundaries(patchers)
 
-        self.assertEqual(events, list(names))
-        self.assertEqual(elapsed, 1.25)
-        mocks[1].assert_called_once_with(self.paths[0])
-        mocks[6].assert_called_once_with(
-            self.session, "images", "output0", self.view.tensor
+        self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(9)))
+        mocks["session"].assert_called_once_with(self.paths[0])
+        self.assertEqual(mocks["runtime"].call_count, 9)
+        self.assertEqual(
+            mocks["runtime"].call_args_list,
+            [
+                call(self.session, "images", "output0", view.tensor)
+                for view in self.views
+            ],
         )
-        mocks[8].assert_called_once_with(
-            self.image, (), (0, 2), self.contract[4], self.paths[2]
+        mocks["nms"].assert_called_once_with(
+            [("detection", index) for index in range(9)]
         )
+        mocks["output"].assert_called_once_with(
+            self.image, ("final",), (0, 2), self.contract[4], self.paths[2]
+        )
+
+    def test_views_are_consumed_and_normalized_sequentially(self):
+        events = []
+
+        def view_sequence():
+            for view in self.views:
+                events.append(("view", view.priority))
+                yield view
+
+        mocks, patchers = self.boundaries()
+        mocks["views"].return_value = view_sequence()
+        mocks["runtime"].side_effect = lambda *args: (
+            events.append(("runtime", args[3])),
+            (np.empty((0, 6)), 0.1),
+        )[1]
+        mocks["normalize"].side_effect = lambda rows, view, *args: (
+            events.append(("normalize", view.priority)),
+            (),
+        )[1]
+        try:
+            annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+
+        expected = []
+        for view in self.views:
+            expected.extend(
+                (("view", view.priority), ("runtime", view.tensor), ("normalize", view.priority))
+            )
+        self.assertEqual(events, expected)
+
+    def test_real_runtime_boundary_reads_clock_eighteen_times(self):
+        output = np.empty((1, 0, 6), dtype=np.float32)
+        self.session.run.return_value = [output]
+        mocks, patchers = self.boundaries()
+        mocks["runtime"].side_effect = timed_run_tensor
+        clock_values = tuple(value for _ in range(9) for value in (10.0, 11.0))
+        try:
+            with patch(
+                "inference.runtime.perf_counter", side_effect=clock_values
+            ) as clock:
+                elapsed = annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertEqual(elapsed, 9.0)
+        self.assertEqual(clock.call_count, 18)
+        self.assertEqual(self.session.run.call_count, 9)
+
+    def test_configuration_and_model_validation_precede_inference(self):
+        events = []
+        mocks, patchers = self.boundaries()
+        for name in ("configuration", "session", "contract", "class_ids", "load"):
+            mock = mocks[name]
+            value = mock.return_value
+            mock.side_effect = lambda *args, _name=name, _value=value: (
+                events.append(_name),
+                _value,
+            )[1]
+        try:
+            annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertEqual(
+            events, ["configuration", "session", "contract", "class_ids", "load"]
+        )
+
+    def test_failure_at_first_middle_or_final_view_never_writes(self):
+        for failing_index in (0, 4, 8):
+            with self.subTest(failing_index=failing_index):
+                mocks, patchers = self.boundaries()
+                results = [
+                    (np.empty((0, 6)), 0.1) for _ in range(failing_index)
+                ]
+                results.append(InferenceError())
+                mocks["runtime"].side_effect = results
+                try:
+                    with self.assertRaises(InferenceError):
+                        annotate_image(*self.paths)
+                finally:
+                    self.stop_boundaries(patchers)
+                self.assertEqual(mocks["runtime"].call_count, failing_index + 1)
+                mocks["nms"].assert_not_called()
+                mocks["output"].assert_not_called()
 
     def test_configuration_error_prevents_session_and_preserves_output(self):
         self.paths[2].write_bytes(b"existing")
@@ -100,37 +202,35 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
     def test_internal_failure_is_hidden_and_prevents_output(self):
-        with patch("inference.enabled_class_names", return_value=("person",)), patch(
-            "inference.create_session", return_value=self.session
-        ), patch("inference.model_contract", return_value=self.contract), patch(
-            "inference.model_class_ids", return_value=(0,)
-        ), patch(
-            "inference.load_image", side_effect=ValueError("private detail")
-        ), patch("inference.write_output") as write_output:
+        mocks, patchers = self.boundaries()
+        mocks["normalize"].side_effect = ValueError("private detail")
+        try:
             with self.assertRaises(InferenceError) as error:
                 annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
         self.assertNotIn("private detail", str(error.exception))
-        write_output.assert_not_called()
+        mocks["output"].assert_not_called()
 
     def test_zero_detections_still_reaches_output(self):
-        mocks, patches = self.boundaries()
+        mocks, patchers = self.boundaries()
+        mocks["normalize"].side_effect = [() for _ in range(9)]
+        mocks["nms"].return_value = ()
         try:
             annotate_image(*self.paths)
         finally:
-            for item in reversed(patches):
-                item.stop()
-        mocks[-1].assert_called_once()
+            self.stop_boundaries(patchers)
+        mocks["output"].assert_called_once()
 
     def test_output_error_is_preserved(self):
-        mocks, patches = self.boundaries()
+        mocks, patchers = self.boundaries()
         expected = OutputWriteError()
-        mocks[-1].side_effect = expected
+        mocks["output"].side_effect = expected
         try:
             with self.assertRaises(OutputWriteError) as error:
                 annotate_image(*self.paths)
         finally:
-            for item in reversed(patches):
-                item.stop()
+            self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
 
 
