@@ -112,14 +112,8 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(len(all_names), 80)
         self.assertEqual(len(set(all_names)), 80)
 
-    def test_real_configuration_enables_only_person(self):
-        enabled = {
-            name
-            for _, entries in COCO_CLASSES
-            for name, is_enabled in entries
-            if is_enabled
-        }
-        self.assertEqual(enabled, {"person"})
+    def test_real_configuration_enables_person_and_car_in_canonical_order(self):
+        self.assertEqual(enabled_class_names(), ("person", "car"))
 
     def test_valid_configuration_returns_names_in_canonical_order(self):
         configured = self.configured()
@@ -133,9 +127,10 @@ class SelectionTests(unittest.TestCase):
     def test_configuration_is_loaded_fresh_for_each_call(self):
         self.write_configuration()
         with patch("selection._CONFIG_PATH", self.configuration_path):
-            self.assertEqual(enabled_class_names(), ("person",))
+            self.assertEqual(enabled_class_names(), ("person", "car"))
             configured = self.configured()
             configured[0][1][0] = ("person", False)
+            configured[1][1][1] = ("car", False)
             configured[11][1][-1] = ("toothbrush", True)
             self.write_configuration(self.freeze(configured))
             self.assertEqual(enabled_class_names(), ("toothbrush",))
@@ -263,6 +258,7 @@ class SelectionTests(unittest.TestCase):
     def test_no_enabled_class_is_rejected(self):
         configured = self.configured()
         configured[0][1][0] = ("person", False)
+        configured[1][1][1] = ("car", False)
         self.write_configuration(self.freeze(configured))
         self.assert_configuration_error()
 
