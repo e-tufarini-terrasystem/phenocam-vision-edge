@@ -8,6 +8,13 @@ Inference still uses the original `yolo26n.onnx` model and its end-to-end ONNX
 graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
 not install Ultralytics, PyTorch, or OpenCV.
 
+Each image is processed sequentially in one ONNX session using one full-image
+view plus eight adaptive overlapping crops. Horizontal and square images use a
+`4×2` crop grid, while vertical images use `2×4`; both use 20% nominal overlap.
+Crop detections are converted to global image coordinates, all model classes
+are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
+`classes.py` selects the final annotations.
+
 ## Runtime requirements
 
 - Raspberry Pi OS 64-bit (`aarch64`)
@@ -86,21 +93,26 @@ The ONNX model must expose exactly the standard 80 COCO classes and the
 end-to-end six-column detection output used by the included YOLO26n model.
 Incompatible metadata or tensor shapes are rejected before inference.
 
-Class filtering controls which detections are annotated. It does not reduce
-the neural-network compute or memory requirement.
+Class filtering controls which final detections are annotated. All model
+classes still participate in the nine inference calls, merge, and NMS, so
+disabling classes does not reduce neural-network compute or memory requirements.
 
 ## Timing
 
 A successful command prints `Execution time: N.NNN s`. This is the measured
-ONNX model execution (`session.run`) and excludes Python startup, model/session
-creation, image decoding, drawing, and JPEG writing.
+sum of the nine ONNX `session.run()` intervals. It excludes Python startup,
+model/session creation, image decoding, view preparation, coordinate merging,
+NMS, drawing, and JPEG writing.
 
-On the tested Pi, six runs over the two included 4608x2592 images measured:
+Raspberry Pi multi-view timing is not verified — external verification:
+reference Raspberry Pi 3 is unavailable. The 15-second complete-command limit
+remains an unverified acceptance target and is not inferred from workstation
+measurements.
 
-- mean model execution: 0.848 s per image;
-- observed model range: 0.775-1.032 s;
-- complete command wall time in final CLI checks: 3.803-4.048 s;
-- process peak RSS: about 209 MiB, with 0 KiB process swap.
+The six included images have fixed detection-count snapshots used to detect
+behavioral regressions in the committed model and dependencies.
+Reference counts are a regression snapshot, not ground truth or a measurement of accuracy, precision, recall, or mAP.
+They do not prove that individual boxes are correct.
 
 See `MODIFICHE_RASPBERRY_PI.md` for the full measurements and
 `LIMITAZIONI_RASPBERRY_PI.md` for deployment constraints.
