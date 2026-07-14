@@ -1,8 +1,7 @@
-"""Normalize untrusted runtime rows into immutable global detections.
+"""Normalize untrusted rows and deduplicate immutable global detections.
 
-Coordinates are validated, inverted, and clipped before rendering. Class
-selection is intentionally outside this module so every valid model class is
-preserved at the post-processing boundary.
+Coordinates are validated, inverted, and clipped before class-wise suppression.
+Class selection stays outside this boundary so every valid class is aggregated.
 """
 
 import math
@@ -10,6 +9,7 @@ from dataclasses import dataclass
 
 
 _CONFIDENCE_THRESHOLD = 0.25
+_NMS_IOU_THRESHOLD = 0.50
 
 
 @dataclass(frozen=True)
@@ -64,3 +64,41 @@ def normalize_rows(rows, view, image_width, image_height, model_names):
         except (OverflowError, TypeError, ValueError, ZeroDivisionError):
             continue
     return tuple(detections)
+
+
+def _iou(left, right):
+    intersection_width = max(0.0, min(left.x2, right.x2) - max(left.x1, right.x1))
+    intersection_height = max(0.0, min(left.y2, right.y2) - max(left.y1, right.y1))
+    intersection = intersection_width * intersection_height
+    left_area = (left.x2 - left.x1) * (left.y2 - left.y1)
+    right_area = (right.x2 - right.x1) * (right.y2 - right.y1)
+    return intersection / (left_area + right_area - intersection)
+
+
+def deduplicate(detections):
+    by_class = {}
+    for detection in detections:
+        by_class.setdefault(detection.class_id, []).append(detection)
+
+    kept = []
+    for candidates in by_class.values():
+        candidates.sort(
+            key=lambda item: (-item.confidence, item.view_priority, item.row_priority)
+        )
+        accepted = []
+        for candidate in candidates:
+            # Earlier accepted boxes own confidence and deterministic tie priority.
+            if any(_iou(candidate, previous) >= _NMS_IOU_THRESHOLD for previous in accepted):
+                continue
+            accepted.append(candidate)
+        kept.extend(accepted)
+
+    kept.sort(
+        key=lambda item: (
+            -item.confidence,
+            item.view_priority,
+            item.row_priority,
+            item.class_id,
+        )
+    )
+    return tuple(kept)
