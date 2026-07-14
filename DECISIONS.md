@@ -9,3 +9,9 @@
 - Motivo: il planner ha trasformato i conteggi osservati in un contratto di regressione riproducibile, esplicitamente privo di significato di accuracy o ground truth.
 - Alternative scartate: tuning della produzione o mantenimento simultaneo dei vecchi range, entrambi vietati dalla specifica aggiornata.
 - Reversibile: sì, tramite una successiva modifica esplicita del piano e delle costanti del test.
+
+## [M2-T3] Verifica Raspberry Pi esterna non disponibile
+- Scelta: registrare `not verified — external verification: reference Raspberry Pi 3 is unavailable` e proseguire con i controlli locali e la documentazione.
+- Motivo: l'ambiente corrente è macOS arm64, non la board Raspberry Pi 3 di riferimento richiesta dal criterio prestazionale.
+- Alternative scartate: applicare il limite alla workstation o presentare timing locali come Raspberry Pi, entrambi vietati dalla specifica.
+- Reversibile: sì, sostituendo lo stato con i sei risultati quando il blocco approvato verrà eseguito sulla board di riferimento.
