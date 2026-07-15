@@ -60,14 +60,14 @@ stream standard, video, webcam o directory.
 ("vehicle", (
     ("bicycle", True),
     ("car", True),
-    ("motorcycle", False),
+    ("motorcycle", True),
     # ...
 )),
 ```
 
-Modificare esclusivamente il booleano associato alle classi desiderate. Non
-cambiare nomi, ordine, categorie, parentesi o tipo dei contenitori e mantenere
-almeno una classe su `True`. Il file viene validato e caricato a ogni comando.
+La configurazione versionata abilita `person`, `bicycle`, `car`, `motorcycle`, `bus` e `truck`.
+Modificare soltanto i booleani, mantenendo invariati nomi, ordine, categorie e
+tuple; almeno una classe deve restare `True`. Il file viene validato a ogni comando.
 
 Disabilitare una classe impedisce soltanto che le sue box vengano disegnate. Non
 riduce il numero di chiamate ONNX, il tempo del modello o la memoria necessaria

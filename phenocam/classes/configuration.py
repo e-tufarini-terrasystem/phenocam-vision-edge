@@ -4,7 +4,7 @@ Define the fixed, version-controlled COCO class configuration.
 Names, grouping, order, and tuple structure are invariants. Operators may
 modify only the boolean value attached to each class.
 
-Only activate vehicles that are useful for privacy.
+The committed defaults enable people and selected road vehicles for privacy analysis.
 """
 
 COCO_CLASSES = (
