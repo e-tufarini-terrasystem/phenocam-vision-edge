@@ -33,7 +33,7 @@ le opzioni:
 
 ```sh
 .venv/bin/python -m phenocam \
-  --input images/esempio.jpg \
+  --input input/esempio.jpg \
   --output output/esempio.jpg \
   --model models/yolo26n.onnx
 ```
@@ -80,7 +80,7 @@ una latenza probabilmente maggiore:
 
 ```sh
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
-  --input images/esempio.jpg \
+  --input input/esempio.jpg \
   --output output/esempio.jpg \
   --model models/yolo26n.onnx
 ```
@@ -124,7 +124,7 @@ error: output image could not be written
 
 ## Elaborazione batch
 
-`scripts/batch.sh` elabora i file immagine presenti direttamente in `images/`:
+`scripts/batch.sh` elabora i file immagine presenti direttamente in `input/`:
 
 ```sh
 ./scripts/batch.sh
