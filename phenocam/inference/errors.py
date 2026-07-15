@@ -11,7 +11,3 @@ class InferenceError(RuntimeError):
 
 class OutputWriteError(RuntimeError):
     """Represent failure to create a non-empty regular output image."""
-
-
-class GammaConfigurationError(RuntimeError):
-    """Represent invalid version-controlled adaptive-gamma constants."""

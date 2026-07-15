@@ -1,5 +1,5 @@
 """
-Verify process statuses, streams, configuration errors, and success timing.
+Verify process statuses, streams, fixed diagnostics, and success timing.
 
 Argument and inference boundaries are mocked. Inventory validation and
 Ultralytics behavior remain covered by their own modules.
@@ -14,11 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from phenocam.arguments import ArgumentValidationError, Arguments
-from phenocam.inference.errors import (
-    GammaConfigurationError,
-    InferenceError,
-    OutputWriteError,
-)
+from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.__main__ import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
@@ -102,21 +98,6 @@ class RunTests(unittest.TestCase):
             (1, "", "error: model classes are incompatible\n"),
         )
         self.assertNotIn("private model detail", stderr)
-        self.assertNotIn("Traceback", stderr)
-
-    def test_gamma_configuration_error_has_fixed_diagnostic(self):
-        error = GammaConfigurationError("private gamma detail")
-        error.__cause__ = RuntimeError("private cause\nTraceback")
-        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
-            "phenocam.__main__.annotate_image", side_effect=error
-        ):
-            status, stdout, stderr = self.call_main([])
-        self.assertEqual(
-            (status, stdout, stderr),
-            (1, "", "error: invalid gamma configuration\n"),
-        )
-        self.assertNotIn("private gamma detail", stderr)
-        self.assertNotIn("private cause", stderr)
         self.assertNotIn("Traceback", stderr)
 
     def test_output_write_error_has_fixed_diagnostic(self):
