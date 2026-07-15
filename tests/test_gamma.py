@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from inference import gamma
-from inference.errors import GammaConfigurationError
+from phenocam.inference import gamma
+from phenocam.inference.errors import GammaConfigurationError
 
 
 class GammaTests(unittest.TestCase):

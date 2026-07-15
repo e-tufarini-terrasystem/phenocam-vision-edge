@@ -11,8 +11,8 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from inference.errors import InferenceError
-from inference.runtime import _thread_count, create_session, model_contract, run_tensor
+from phenocam.inference.errors import InferenceError
+from phenocam.inference.runtime import _thread_count, create_session, model_contract, run_tensor
 from phenocam.classes.selection import ModelClassesError
 
 
@@ -36,7 +36,7 @@ def valid_session():
 
 class RuntimeTests(unittest.TestCase):
     def test_thread_count_accepts_only_one_through_four(self):
-        with patch("inference.runtime.os.cpu_count", return_value=8):
+        with patch("phenocam.inference.runtime.os.cpu_count", return_value=8):
             for configured, expected in (
                 (None, 4), ("1", 1), ("4", 4), ("0", 4), ("5", 4), ("x", 4)
             ):
@@ -50,8 +50,8 @@ class RuntimeTests(unittest.TestCase):
     def test_create_session_preserves_cpu_options(self):
         options = SimpleNamespace()
         constructor = Mock(return_value=object())
-        with patch("inference.runtime.ort.SessionOptions", return_value=options), patch(
-            "inference.runtime.ort.InferenceSession", constructor
+        with patch("phenocam.inference.runtime.ort.SessionOptions", return_value=options), patch(
+            "phenocam.inference.runtime.ort.InferenceSession", constructor
         ):
             session = create_session(Path("model.onnx"))
         self.assertIsNotNone(session)
@@ -65,7 +65,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_session_failure_hides_detail(self):
         with patch(
-            "inference.runtime.ort.InferenceSession",
+            "phenocam.inference.runtime.ort.InferenceSession",
             side_effect=RuntimeError("private detail"),
         ):
             with self.assertRaises(InferenceError) as error:
@@ -90,7 +90,7 @@ class RuntimeTests(unittest.TestCase):
         session = Mock()
         session.run.return_value = [output]
         tensor = np.zeros((1, 3, 4, 4), dtype=np.float32)
-        with patch("inference.runtime.perf_counter", side_effect=(10.0, 12.5)) as clock:
+        with patch("phenocam.inference.runtime.perf_counter", side_effect=(10.0, 12.5)) as clock:
             rows, elapsed = run_tensor(session, "images", "output0", tensor)
         self.assertTrue(np.shares_memory(rows, output))
         self.assertEqual(elapsed, 2.5)
@@ -100,7 +100,7 @@ class RuntimeTests(unittest.TestCase):
     def test_empty_output_is_valid(self):
         session = Mock()
         session.run.return_value = [np.empty((1, 0, 6), dtype=np.float32)]
-        with patch("inference.runtime.perf_counter", side_effect=(1.0, 2.0)):
+        with patch("phenocam.inference.runtime.perf_counter", side_effect=(1.0, 2.0)):
             rows, _ = run_tensor(session, "i", "o", np.empty(0))
         self.assertEqual(rows.shape, (0, 6))
 
@@ -116,14 +116,14 @@ class RuntimeTests(unittest.TestCase):
             with self.subTest(result=result):
                 session = Mock()
                 session.run.return_value = result
-                with patch("inference.runtime.perf_counter", side_effect=(1.0, 2.0)):
+                with patch("phenocam.inference.runtime.perf_counter", side_effect=(1.0, 2.0)):
                     with self.assertRaises(InferenceError):
                         run_tensor(session, "i", "o", np.empty(0))
 
     def test_runtime_failure_reads_clock_once_and_hides_detail(self):
         session = Mock()
         session.run.side_effect = RuntimeError("private runtime detail")
-        with patch("inference.runtime.perf_counter", return_value=1.0) as clock:
+        with patch("phenocam.inference.runtime.perf_counter", return_value=1.0) as clock:
             with self.assertRaises(InferenceError) as error:
                 run_tensor(session, "i", "o", np.empty(0))
         self.assertEqual(clock.call_count, 1)

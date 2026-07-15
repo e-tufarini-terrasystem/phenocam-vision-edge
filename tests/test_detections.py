@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from inference.detections import Detection, deduplicate, normalize_rows
+from phenocam.inference.detections import Detection, deduplicate, normalize_rows
 
 
 class DetectionTests(unittest.TestCase):

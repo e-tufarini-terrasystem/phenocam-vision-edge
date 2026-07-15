@@ -1,7 +1,7 @@
 """Define inference-domain errors that cross into the CLI boundary.
 
-The errors carry only fixed, non-sensitive meanings; ``run.py`` owns their
-user-facing messages and process status handling.
+The errors carry only fixed, non-sensitive meanings; the package command owns
+their user-facing messages and process status handling.
 """
 
 
