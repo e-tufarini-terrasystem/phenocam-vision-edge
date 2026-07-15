@@ -13,7 +13,7 @@ import numpy as np
 
 from inference.errors import InferenceError
 from inference.runtime import _thread_count, create_session, model_contract, run_tensor
-from selection import ModelClassesError
+from phenocam.classes.selection import ModelClassesError
 
 
 def valid_session():

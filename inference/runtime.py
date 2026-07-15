@@ -11,7 +11,7 @@ from time import perf_counter
 
 import numpy as np
 
-from selection import ModelClassesError
+from phenocam.classes.selection import ModelClassesError
 
 from .errors import InferenceError
 

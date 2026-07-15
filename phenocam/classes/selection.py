@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 
-_CONFIG_PATH = Path(__file__).with_name("classes.py")
+_CONFIG_PATH = Path(__file__).with_name("configuration.py")
 
 _CANONICAL_INVENTORY = (
     ("person", ("person",)),

@@ -5,7 +5,11 @@ image supplies all nine views. All views must succeed before global NMS and
 output, and the returned duration includes only ONNX execution time.
 """
 
-from selection import ModelClassesError, enabled_class_names, model_class_ids
+from phenocam.classes.selection import (
+    ModelClassesError,
+    enabled_class_names,
+    model_class_ids,
+)
 
 from .detections import deduplicate, normalize_rows
 from .errors import GammaConfigurationError, InferenceError, OutputWriteError

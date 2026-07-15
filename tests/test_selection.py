@@ -2,7 +2,7 @@
 Verify the fixed class inventory and the class-selection trust boundary.
 
 Malformed configurations live only in disposable temporary directories. Tests
-never edit the repository's real classes.py or construct a YOLO model.
+never edit the repository's real configuration.py or construct a YOLO model.
 """
 
 import tempfile
@@ -11,8 +11,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from unittest.mock import patch
 
-from classes import COCO_CLASSES
-from selection import (
+from phenocam.classes.configuration import COCO_CLASSES
+from phenocam.classes.selection import (
     ClassConfigurationError,
     ModelClassesError,
     enabled_class_names,
@@ -57,7 +57,7 @@ class SelectionTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary_directory.name)
-        self.configuration_path = self.root / "classes.py"
+        self.configuration_path = self.root / "configuration.py"
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -81,7 +81,7 @@ class SelectionTests(unittest.TestCase):
         return tuple((category, tuple(entries)) for category, entries in configured)
 
     def assert_configuration_error(self):
-        with patch("selection._CONFIG_PATH", self.configuration_path):
+        with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             with self.assertRaises(ClassConfigurationError) as error:
                 enabled_class_names()
         self.assertEqual(str(error.exception), "error: class configuration is invalid")
@@ -128,12 +128,12 @@ class SelectionTests(unittest.TestCase):
     def test_valid_configuration_returns_names_in_canonical_order(self):
         configured = self.configuration_with_enabled("dog", "car")
         self.write_configuration(self.freeze(configured))
-        with patch("selection._CONFIG_PATH", self.configuration_path):
+        with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             self.assertEqual(enabled_class_names(), ("car", "dog"))
 
     def test_configuration_is_loaded_fresh_for_each_call(self):
         self.write_configuration()
-        with patch("selection._CONFIG_PATH", self.configuration_path):
+        with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             self.assertEqual(
                 enabled_class_names(),
                 ("person", "bicycle", "car", "motorcycle", "bus", "truck"),
@@ -148,14 +148,17 @@ class SelectionTests(unittest.TestCase):
 
     def test_unreadable_configuration_is_rejected(self):
         with patch(
-            "selection.importlib.util.spec_from_file_location",
+            "phenocam.classes.selection.importlib.util.spec_from_file_location",
             side_effect=PermissionError("private access detail"),
         ):
             error = self.assert_configuration_error()
         self.assertNotIn("private access detail", str(error))
 
     def test_failed_module_specification_is_rejected(self):
-        with patch("selection.importlib.util.spec_from_file_location", return_value=None):
+        with patch(
+            "phenocam.classes.selection.importlib.util.spec_from_file_location",
+            return_value=None,
+        ):
             self.assert_configuration_error()
 
     def test_syntax_error_is_rejected_without_details(self):
@@ -176,7 +179,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_import_time_keyboard_interrupt_is_preserved(self):
         self.configuration_path.write_text("raise KeyboardInterrupt\n", encoding="utf-8")
-        with patch("selection._CONFIG_PATH", self.configuration_path):
+        with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             with self.assertRaises(KeyboardInterrupt):
                 enabled_class_names()
 
@@ -270,7 +273,7 @@ class SelectionTests(unittest.TestCase):
     def test_configuration_value_is_not_mutated(self):
         self.write_configuration()
         before = self.configuration_path.read_bytes()
-        with patch("selection._CONFIG_PATH", self.configuration_path):
+        with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             enabled_class_names()
         self.assertEqual(self.configuration_path.read_bytes(), before)
 
