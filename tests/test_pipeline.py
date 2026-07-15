@@ -1,7 +1,7 @@
 """Verify the public nine-view inference transaction with boundary doubles.
 
 Disposable paths, a fake session, and a deterministic clock prove ordering,
-adaptive preprocessing ownership, aggregation, atomicity, timing, and output.
+direct-source ownership, aggregation, atomicity, timing, and output.
 """
 
 import tempfile
@@ -12,11 +12,7 @@ from unittest.mock import Mock, call, patch
 
 import numpy as np
 
-from phenocam.inference.errors import (
-    GammaConfigurationError,
-    InferenceError,
-    OutputWriteError,
-)
+from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import annotate_image
 from phenocam.inference.runtime import run_tensor as timed_run_tensor
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
@@ -32,7 +28,6 @@ class InferenceTests(unittest.TestCase):
             self.root / "output.jpg",
         )
         self.image = SimpleNamespace(width=100, height=80)
-        self.model_image = SimpleNamespace(width=100, height=80)
         self.views = tuple(
             SimpleNamespace(tensor=object(), priority=priority)
             for priority in range(9)
@@ -58,9 +53,6 @@ class InferenceTests(unittest.TestCase):
             "contract": patch("phenocam.inference.pipeline.model_contract", return_value=self.contract),
             "class_ids": patch("phenocam.inference.pipeline.model_class_ids", return_value=(0, 2)),
             "load": patch("phenocam.inference.pipeline.load_image", return_value=self.image),
-            "gamma": patch(
-                "phenocam.inference.pipeline.apply_adaptive_gamma", return_value=self.model_image
-            ),
             "views": patch("phenocam.inference.pipeline.iter_views", return_value=iter(self.views)),
             "runtime": patch(
                 "phenocam.inference.pipeline.run_tensor",
@@ -88,8 +80,7 @@ class InferenceTests(unittest.TestCase):
 
         self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(9)))
         mocks["session"].assert_called_once_with(self.paths[0])
-        mocks["gamma"].assert_called_once_with(self.image)
-        mocks["views"].assert_called_once_with(self.model_image, 640, 640)
+        mocks["views"].assert_called_once_with(self.image, 640, 640)
         self.assertEqual(mocks["runtime"].call_count, 9)
         self.assertEqual(
             mocks["runtime"].call_args_list,
@@ -163,7 +154,6 @@ class InferenceTests(unittest.TestCase):
             "contract",
             "class_ids",
             "load",
-            "gamma",
         ):
             mock = mocks[name]
             value = mock.return_value
@@ -187,7 +177,6 @@ class InferenceTests(unittest.TestCase):
                 "contract",
                 "class_ids",
                 "load",
-                "gamma",
                 "views",
             ],
         )
@@ -233,35 +222,6 @@ class InferenceTests(unittest.TestCase):
         self.assertIs(error.exception, expected)
         run_tensor.assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
-
-    def test_gamma_configuration_error_prevents_inference_and_preserves_output(self):
-        expected = GammaConfigurationError()
-        self.paths[2].write_bytes(b"existing")
-        mocks, patchers = self.boundaries()
-        mocks["gamma"].side_effect = expected
-        try:
-            with self.assertRaises(GammaConfigurationError) as error:
-                annotate_image(*self.paths)
-        finally:
-            self.stop_boundaries(patchers)
-        self.assertIs(error.exception, expected)
-        mocks["runtime"].assert_not_called()
-        mocks["nms"].assert_not_called()
-        mocks["output"].assert_not_called()
-        self.assertEqual(self.paths[2].read_bytes(), b"existing")
-
-    def test_gamma_internal_failure_is_hidden_and_prevents_output(self):
-        mocks, patchers = self.boundaries()
-        mocks["gamma"].side_effect = OSError("private Pillow detail")
-        try:
-            with self.assertRaises(InferenceError) as error:
-                annotate_image(*self.paths)
-        finally:
-            self.stop_boundaries(patchers)
-        self.assertNotIn("private Pillow detail", str(error.exception))
-        mocks["views"].assert_not_called()
-        mocks["runtime"].assert_not_called()
-        mocks["output"].assert_not_called()
 
     def test_internal_failure_is_hidden_and_prevents_output(self):
         mocks, patchers = self.boundaries()
