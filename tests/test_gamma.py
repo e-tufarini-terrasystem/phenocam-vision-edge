@@ -16,6 +16,18 @@ from inference.errors import GammaConfigurationError
 
 class GammaTests(unittest.TestCase):
     def test_defaults_are_exact(self):
+        self.assertEqual(
+            {name for name in vars(gamma) if not name.startswith("_")},
+            {
+                "ADAPTIVE_GAMMA_ENABLED",
+                "DARK_THRESHOLD",
+                "DIM_THRESHOLD",
+                "DARK_GAMMA",
+                "DIM_GAMMA",
+                "NORMAL_GAMMA",
+                "apply_adaptive_gamma",
+            },
+        )
         self.assertIs(gamma.ADAPTIVE_GAMMA_ENABLED, False)
         self.assertEqual(
             (
