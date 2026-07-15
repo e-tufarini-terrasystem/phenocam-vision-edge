@@ -1,7 +1,7 @@
 """Verify the public nine-view inference transaction with boundary doubles.
 
 Disposable paths, a fake session, and a deterministic clock prove ordering,
-all-class aggregation, failure atomicity, timing, and final output delegation.
+adaptive preprocessing ownership, aggregation, atomicity, timing, and output.
 """
 
 import tempfile
@@ -12,7 +12,12 @@ from unittest.mock import Mock, call, patch
 
 import numpy as np
 
-from inference import InferenceError, OutputWriteError, annotate_image
+from inference import (
+    GammaConfigurationError,
+    InferenceError,
+    OutputWriteError,
+    annotate_image,
+)
 from inference.runtime import run_tensor as timed_run_tensor
 from selection import ClassConfigurationError, ModelClassesError
 
@@ -27,6 +32,7 @@ class InferenceTests(unittest.TestCase):
             self.root / "output.jpg",
         )
         self.image = SimpleNamespace(width=100, height=80)
+        self.model_image = SimpleNamespace(width=100, height=80)
         self.views = tuple(
             SimpleNamespace(tensor=object(), priority=priority)
             for priority in range(9)
@@ -52,6 +58,9 @@ class InferenceTests(unittest.TestCase):
             "contract": patch("inference.model_contract", return_value=self.contract),
             "class_ids": patch("inference.model_class_ids", return_value=(0, 2)),
             "load": patch("inference.load_image", return_value=self.image),
+            "gamma": patch(
+                "inference.apply_adaptive_gamma", return_value=self.model_image
+            ),
             "views": patch("inference.iter_views", return_value=iter(self.views)),
             "runtime": patch(
                 "inference.run_tensor",
@@ -79,6 +88,8 @@ class InferenceTests(unittest.TestCase):
 
         self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(9)))
         mocks["session"].assert_called_once_with(self.paths[0])
+        mocks["gamma"].assert_called_once_with(self.image)
+        mocks["views"].assert_called_once_with(self.model_image, 640, 640)
         self.assertEqual(mocks["runtime"].call_count, 9)
         self.assertEqual(
             mocks["runtime"].call_args_list,
@@ -90,6 +101,8 @@ class InferenceTests(unittest.TestCase):
         mocks["nms"].assert_called_once_with(
             [("detection", index) for index in range(9)]
         )
+        for normalized in mocks["normalize"].call_args_list:
+            self.assertEqual(normalized.args[2:4], (100, 80))
         mocks["output"].assert_called_once_with(
             self.image, ("final",), (0, 2), self.contract[4], self.paths[2]
         )
@@ -144,19 +157,39 @@ class InferenceTests(unittest.TestCase):
     def test_configuration_and_model_validation_precede_inference(self):
         events = []
         mocks, patchers = self.boundaries()
-        for name in ("configuration", "session", "contract", "class_ids", "load"):
+        for name in (
+            "configuration",
+            "session",
+            "contract",
+            "class_ids",
+            "load",
+            "gamma",
+        ):
             mock = mocks[name]
             value = mock.return_value
             mock.side_effect = lambda *args, _name=name, _value=value: (
                 events.append(_name),
                 _value,
             )[1]
+        mocks["views"].side_effect = lambda *args: (
+            events.append("views"),
+            iter(self.views),
+        )[1]
         try:
             annotate_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertEqual(
-            events, ["configuration", "session", "contract", "class_ids", "load"]
+            events,
+            [
+                "configuration",
+                "session",
+                "contract",
+                "class_ids",
+                "load",
+                "gamma",
+                "views",
+            ],
         )
 
     def test_failure_at_first_middle_or_final_view_never_writes(self):
@@ -199,6 +232,22 @@ class InferenceTests(unittest.TestCase):
                 annotate_image(*self.paths)
         self.assertIs(error.exception, expected)
         run_tensor.assert_not_called()
+        self.assertEqual(self.paths[2].read_bytes(), b"existing")
+
+    def test_gamma_configuration_error_prevents_inference_and_preserves_output(self):
+        expected = GammaConfigurationError()
+        self.paths[2].write_bytes(b"existing")
+        mocks, patchers = self.boundaries()
+        mocks["gamma"].side_effect = expected
+        try:
+            with self.assertRaises(GammaConfigurationError) as error:
+                annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertIs(error.exception, expected)
+        mocks["runtime"].assert_not_called()
+        mocks["nms"].assert_not_called()
+        mocks["output"].assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
     def test_internal_failure_is_hidden_and_prevents_output(self):

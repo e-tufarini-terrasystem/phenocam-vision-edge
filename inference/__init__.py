@@ -1,13 +1,15 @@
 """Preserve the public API and own the complete multi-view transaction.
 
-All nine views must succeed before global NMS and output. The returned duration
-is accumulated ONNX execution time rather than complete command wall time.
+The original source image remains the output background; one optional model
+image supplies all nine views. All views must succeed before global NMS and
+output, and the returned duration includes only ONNX execution time.
 """
 
 from selection import ModelClassesError, enabled_class_names, model_class_ids
 
 from .detections import deduplicate, normalize_rows
-from .errors import InferenceError, OutputWriteError
+from .errors import GammaConfigurationError, InferenceError, OutputWriteError
+from .gamma import apply_adaptive_gamma
 from .output import write_output
 from .runtime import create_session, model_contract, run_tensor
 from .views import iter_views, load_image
@@ -27,24 +29,31 @@ def annotate_image(model_path, input_path, output_path) -> float:
 
     enabled_ids = model_class_ids(model_names, enabled_names)
     try:
-        image = load_image(input_path)
+        source_image = load_image(input_path)
+        model_image = apply_adaptive_gamma(source_image)
         detections = []
         elapsed = 0.0
-        for view in iter_views(image, width, height):
+        for view in iter_views(model_image, width, height):
             rows, view_elapsed = run_tensor(
                 session, input_name, output_name, view.tensor
             )
             elapsed += view_elapsed
             detections.extend(
                 normalize_rows(
-                    rows, view, image.width, image.height, model_names
+                    rows,
+                    view,
+                    source_image.width,
+                    source_image.height,
+                    model_names,
                 )
             )
         detections = deduplicate(detections)
+    except GammaConfigurationError:
+        raise
     except InferenceError:
         raise
     except Exception:
         raise InferenceError() from None
 
-    write_output(image, detections, enabled_ids, model_names, output_path)
+    write_output(source_image, detections, enabled_ids, model_names, output_path)
     return elapsed
