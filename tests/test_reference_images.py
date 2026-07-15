@@ -30,14 +30,14 @@ class ReferenceImageTests(unittest.TestCase):
     def test_reference_inventory_and_dimensions(self):
         expected_names = tuple(case[0] for case in REFERENCE_DATA)
         actual_names = tuple(
-            path.name for path in sorted((ROOT / "images").glob("*.jpg"))
+            path.name for path in sorted((ROOT / "input").glob("*.jpg"))
         )
 
         self.assertEqual(len(set(expected_names)), len(expected_names))
         self.assertEqual(actual_names, expected_names)
         for name in expected_names:
             with self.subTest(name=name):
-                with Image.open(ROOT / "images" / name) as source:
+                with Image.open(ROOT / "input" / name) as source:
                     image = ImageOps.exif_transpose(source)
                     image.load()
                 self.assertEqual(image.size, (4608, 2592))
@@ -50,7 +50,7 @@ class ReferenceImageTests(unittest.TestCase):
 
     def assert_reference(self, case):
         name, person_baseline, car_baseline, expected_person, expected_car = case
-        source_path = ROOT / "images" / name
+        source_path = ROOT / "input" / name
         model_path = ROOT / "models" / "yolo26n.onnx"
         captured = {}
         real_write_output = pipeline.write_output
