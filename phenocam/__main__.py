@@ -10,11 +10,7 @@ import sys
 from typing import Optional, Sequence
 
 from phenocam.arguments import ArgumentValidationError, parse_arguments
-from phenocam.inference.errors import (
-    GammaConfigurationError,
-    InferenceError,
-    OutputWriteError,
-)
+from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import annotate_image
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
@@ -33,9 +29,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     except ModelClassesError as error:
         print(str(error), file=sys.stderr)
-        return 1
-    except GammaConfigurationError:
-        print("error: invalid gamma configuration", file=sys.stderr)
         return 1
     except InferenceError:
         print("error: inference failed", file=sys.stderr)
