@@ -3,6 +3,8 @@ Define the fixed, version-controlled COCO class configuration.
 
 Names, grouping, order, and tuple structure are invariants. Operators may
 modify only the boolean value attached to each class.
+
+Only activate vehicles that are useful for privacy.
 """
 
 COCO_CLASSES = (
@@ -10,13 +12,13 @@ COCO_CLASSES = (
         ("person", True),
     )),
     ("vehicle", (
-        ("bicycle", False),
-        ("car", False),
-        ("motorcycle", False),
+        ("bicycle", True),
+        ("car", True),
+        ("motorcycle", True),
         ("airplane", False),
-        ("bus", False),
+        ("bus", True),
         ("train", False),
-        ("truck", False),
+        ("truck", True),
         ("boat", False),
     )),
     ("outdoor", (

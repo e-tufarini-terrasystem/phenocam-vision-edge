@@ -8,3 +8,5 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 DECISIONS.md
+/inference/__pycache__
+/tests/__pycache__
