@@ -1,5 +1,5 @@
 """
-Verify process statuses, streams, selection errors, and success timing output.
+Verify process statuses, streams, configuration errors, and success timing.
 
 Argument and inference boundaries are mocked. Inventory validation and
 Ultralytics behavior remain covered by their own modules.
@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from arguments import ArgumentValidationError, Arguments
-from inference import InferenceError, OutputWriteError
+from inference import GammaConfigurationError, InferenceError, OutputWriteError
 from run import main
 from selection import ClassConfigurationError, ModelClassesError
 
@@ -97,6 +97,21 @@ class RunTests(unittest.TestCase):
             (1, "", "error: model classes are incompatible\n"),
         )
         self.assertNotIn("private model detail", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_gamma_configuration_error_has_fixed_diagnostic(self):
+        error = GammaConfigurationError("private gamma detail")
+        error.__cause__ = RuntimeError("private cause\nTraceback")
+        with patch("run.parse_arguments", return_value=self.arguments), patch(
+            "run.annotate_image", side_effect=error
+        ):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr),
+            (1, "", "error: invalid gamma configuration\n"),
+        )
+        self.assertNotIn("private gamma detail", stderr)
+        self.assertNotIn("private cause", stderr)
         self.assertNotIn("Traceback", stderr)
 
     def test_output_write_error_has_fixed_diagnostic(self):
