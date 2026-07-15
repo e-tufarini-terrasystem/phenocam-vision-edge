@@ -1,8 +1,8 @@
 """
 Provide the process boundary for the single-image inference command.
 
-Argument handling, timing, class configuration, model compatibility, inference,
-and output writing are delegated. Successful execution prints the prediction
+Argument handling, timing, configuration, model compatibility, inference, and
+output writing are delegated. Successful execution prints the prediction
 duration; this entry point contains no fixed paths or model metadata processing.
 """
 
@@ -10,7 +10,12 @@ import sys
 from typing import Optional, Sequence
 
 from arguments import ArgumentValidationError, parse_arguments
-from inference import InferenceError, OutputWriteError, annotate_image
+from inference import (
+    GammaConfigurationError,
+    InferenceError,
+    OutputWriteError,
+    annotate_image,
+)
 from selection import ClassConfigurationError, ModelClassesError
 
 
@@ -28,6 +33,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     except ModelClassesError as error:
         print(str(error), file=sys.stderr)
+        return 1
+    except GammaConfigurationError:
+        print("error: invalid gamma configuration", file=sys.stderr)
         return 1
     except InferenceError:
         print("error: inference failed", file=sys.stderr)
