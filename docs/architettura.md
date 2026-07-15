@@ -1,6 +1,6 @@
 <!--
 Scopo: descrivere la struttura statica e il flusso complessivo del software.
-Responsabilita: definire componenti, confini di fiducia, errori e invarianti tra moduli.
+Responsabilita: definire componenti, preprocessing, errori e invarianti tra moduli.
 Contesto: collega l'interfaccia CLI alla pipeline dettagliata in inferenza.md.
 -->
 
@@ -22,11 +22,13 @@ flowchart LR
     Selezione --> Coordinamento
     Sessione --> Coordinamento
     Immagine[Immagine locale] --> Coordinamento
-    Coordinamento --> Viste[1 vista completa + 8 crop]
+    Coordinamento -->|source RGB originale| Gamma[Gamma adattiva opzionale]
+    Gamma -->|model image| Viste[1 vista completa + 8 crop]
     Viste --> Detection[Detection globali]
     Detection --> NMS[NMS per classe]
     NMS --> Filtro[Filtro classi abilitate]
     Filtro --> Output[Immagine annotata]
+    Coordinamento -->|source originale| Output
 ```
 
 L'invariante transazionale principale e: **l'output viene scritto soltanto se
@@ -44,9 +46,10 @@ in una vista interrompe il comando; non viene prodotto un risultato parziale.
 | `inference/__init__.py` | Coordina l'intera transazione multi-vista e somma il tempo delle chiamate ONNX. |
 | `inference/runtime.py` | Configura ONNX Runtime, verifica il contratto statico del modello ed esegue un tensore. |
 | `inference/views.py` | Decodifica l'immagine e produce viste normalizzate con geometria inversa. |
+| `inference/gamma.py` | Valida la configurazione gamma e prepara l'unica model image usata dalle nove viste. |
 | `inference/detections.py` | Valida le righe del modello, ricostruisce coordinate globali ed elimina duplicati. |
 | `inference/output.py` | Disegna le detection selezionate e salva un file di output verificato. |
-| `inference/errors.py` | Definisce i due errori del dominio inferenza esposti al confine CLI. |
+| `inference/errors.py` | Definisce gli errori del dominio inferenza esposti al confine CLI. |
 | `batch.sh` | Applica il comando singolo ai file supportati presenti direttamente in `images/`. |
 | `export_onnx.py` | Rigenera il modello ONNX FP32 su workstation. |
 | `export_onnx_int8.py` | Esegue l'export ONNX INT8 sperimentale con dati di calibrazione. |
@@ -68,6 +71,8 @@ sequenceDiagram
     R->>O: crea sessione CPU
     O-->>R: input, output e metadata
     R->>S: risolve nomi abilitati in ID
+    R->>P: carica la source RGB normalizzata EXIF
+    P->>P: valida gamma e sceglie una model image
     loop vista completa e otto crop
         R->>P: prepara tensore
         P->>O: session.run()
@@ -75,7 +80,7 @@ sequenceDiagram
         P->>P: valida e converte in coordinate globali
     end
     P->>P: NMS per classe
-    P->>F: disegna solo gli ID abilitati e salva
+    P->>F: disegna gli ID abilitati sulla source originale
     F-->>R: file regolare non vuoto
     R-->>U: Execution time e stato 0
 ```
@@ -92,6 +97,8 @@ file locali:
 - metadata, descrittori dei tensori e valori restituiti dal modello vengono
   controllati prima dell'uso;
 - l'immagine deve essere decodificabile e avere dimensioni positive;
+- le sei costanti gamma devono avere tipi, valori e ordine validi anche quando
+  la funzione e disabilitata;
 - ogni detection deve contenere sei numeri finiti e produrre un rettangolo con
   area positiva;
 - il salvataggio e riuscito solo se il percorso finale e un file regolare non
@@ -99,7 +106,9 @@ file locali:
 
 Gli errori delle librerie non attraversano il confine pubblico con dettagli
 interni, stack trace o percorsi sensibili. Il comando espone messaggi fissi per
-configurazione classi, compatibilita del modello, inferenza e scrittura.
+configurazione classi, configurazione gamma, compatibilita del modello,
+inferenza e scrittura. `GammaConfigurationError` identifica soltanto costanti
+gamma versionate non valide.
 
 ## Stato e proprieta
 
@@ -107,9 +116,11 @@ Gli oggetti `Arguments`, `View` e `Detection` sono dataclass immutabili. Questo
 rende esplicito che percorsi validati, geometria di una vista e detection
 normalizzate non vengono modificati dopo la costruzione.
 
-La sola mutazione intenzionale del dato applicativo e il disegno sull'immagine
-RGB originale immediatamente prima del salvataggio. La sessione ONNX viene
-creata una volta per processo e riutilizzata in sequenza per tutte le viste.
+La transazione conserva la source RGB originale per dimensioni e rendering. La
+gamma puo produrre una distinta model image, condivisa da tutte le nove viste;
+non modifica mai la source. La sola mutazione intenzionale del dato applicativo
+e il disegno sulla source immediatamente prima del salvataggio. La sessione ONNX
+viene creata una volta per processo e riutilizzata in sequenza per tutte le viste.
 
 ## Dipendenze
 

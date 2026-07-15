@@ -100,6 +100,21 @@ Class filtering controls which final detections are annotated. All model
 classes still participate in the nine inference calls, merge, and NMS, so
 disabling classes does not reduce neural-network compute or memory requirements.
 
+## Adaptive gamma
+
+`inference/gamma.py` contains the optional model-input preprocessing constants:
+`ADAPTIVE_GAMMA_ENABLED`, `DARK_THRESHOLD`, `DIM_THRESHOLD`, `DARK_GAMMA`,
+`DIM_GAMMA`, and `NORMAL_GAMMA`. The committed default is disabled. When
+enabled, the median luminance of the complete EXIF-normalized image selects
+gamma 0.60 below 0.15, 0.80 from 0.15 to below 0.35, or identity gamma 1.00.
+
+The selected transform supplies all nine model views; annotations are still
+drawn on the original pixels. This uses Pillow already present at runtime and
+adds no dependency. Invalid constants produce only
+`error: invalid gamma configuration`. The default may be enabled only after an
+external comparison on the same annotated dataset shows higher overall mAP50
+without lower overall recall; visual review is additional, not a substitute.
+
 ## Timing
 
 A successful command prints `Execution time: N.NNN s`. This is the measured

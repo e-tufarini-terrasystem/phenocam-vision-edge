@@ -1,6 +1,6 @@
 <!--
 Scopo: documentare l'algoritmo di inferenza multi-vista dall'immagine alle annotazioni.
-Responsabilita: rendere espliciti geometria, contratti tensoriali, filtri e ordinamento.
+Responsabilita: rendere espliciti preprocessing, geometria, contratti e filtri.
 Contesto: dettaglia la transazione coordinata da inference/__init__.py.
 -->
 
@@ -69,7 +69,41 @@ Un file non decodificabile o un'immagine senza dimensioni positive produce un
 errore di inferenza generico. Il dettaglio dell'eccezione e il percorso non
 vengono inseriti nel messaggio pubblico.
 
-## 4. Geometria delle nove viste
+## 4. Gamma adattiva opzionale
+
+`inference/gamma.py` raccoglie sei costanti versionate:
+
+| Costante | Default |
+|---|---:|
+| `ADAPTIVE_GAMMA_ENABLED` | `False` |
+| `DARK_THRESHOLD` / `DIM_THRESHOLD` | `0,15` / `0,35` |
+| `DARK_GAMMA` / `DIM_GAMMA` / `NORMAL_GAMMA` | `0,60` / `0,80` / `1,00` |
+
+Ogni chiamata valida tutte le costanti, anche con funzione disabilitata. Il flag
+deve essere esattamente un `bool`; soglie e gamma devono essere `int` o `float`
+Python, non booleani, finiti e ordinati come
+`0 < DARK_THRESHOLD < DIM_THRESHOLD < 1` e
+`0 < DARK_GAMMA <= DIM_GAMMA <= NORMAL_GAMMA = 1`. Una configurazione non valida
+interrompe la transazione prima della prima esecuzione ONNX e produce il solo
+diagnostico pubblico `error: invalid gamma configuration`.
+
+Quando abilitata, la source RGB completa viene convertita temporaneamente in
+modalita Pillow `L`. Nel suo istogramma a 256 livelli, per `N` pixel si cerca il
+primo livello il cui cumulato raggiunge `(N + 1) // 2`; la luminanza mediana e
+quel livello diviso per 255. Una mediana `>= 0,35` seleziona gamma `1,00`, una
+mediana `>= 0,15` seleziona `0,80`, altrimenti seleziona `0,60`.
+
+Per gamma inferiore a 1, ogni voce `i` della LUT RGB e
+`round(255 * (i / 255) ** gamma)`, con arrotondamento Python ties-to-even e
+clipping a `0..255`. Il percorso disabilitato e gamma `1,00` restituiscono lo
+stesso oggetto senza istogramma o LUT. Negli altri casi nasce una model image
+RGB distinta, delle stesse dimensioni, senza mutare la source.
+
+La scelta avviene una volta dopo il caricamento e prima delle viste: tutte le
+nove usano la model image, mentre normalizzazione globale e rendering usano la
+source originale. La gamma non rientra nel tempo ONNX stampato.
+
+## 5. Geometria delle nove viste
 
 La prima vista contiene tutta l'immagine e ha priorita 0. Seguono otto crop in
 ordine per righe:
@@ -95,7 +129,7 @@ Ogni `View` conserva origine e dimensione del crop, fattore di scala, padding e
 priorita. Questi valori costituiscono la trasformazione inversa necessaria per
 riportare le box nello spazio dell'immagine completa.
 
-## 5. Letterbox e tensore
+## 6. Letterbox e tensore
 
 Ogni vista mantiene le proporzioni. Date le dimensioni del modello `(Wm, Hm)` e
 della vista `(Wv, Hv)`:
@@ -116,7 +150,7 @@ e un array contiguo con forma `[1, 3, Hm, Wm]` e valori tra 0 e 1.
 Le viste sono prodotte da un generatore: crop e tensori vengono preparati uno
 alla volta, invece di conservare nove input contemporaneamente.
 
-## 6. Esecuzione e tempo misurato
+## 7. Esecuzione e tempo misurato
 
 Per ogni vista `run_tensor()` chiama:
 
@@ -126,13 +160,13 @@ session.run((nome_output,), {nome_input: tensore})
 
 Il cronometro racchiude soltanto questa chiamata. Il valore stampato al termine
 e la somma dei nove intervalli ONNX; non include avvio Python, sessione, lettura
-immagine, preparazione, post-processing, disegno o scrittura.
+immagine, gamma adattiva, preparazione, post-processing, disegno o scrittura.
 
 Anche dopo il controllo statico del modello, il risultato dinamico deve essere
 una lista o tupla con un solo `numpy.ndarray`, tipo `float32`, tre dimensioni e
 forma `[1, N, 6]`. L'intera transazione fallisce se questo contratto non vale.
 
-## 7. Normalizzazione delle detection
+## 8. Normalizzazione delle detection
 
 Ogni riga e interpretata come:
 
@@ -157,7 +191,7 @@ Ogni coordinata viene limitata a `[0, larghezza - 1]` o
 `x2 > x1` e `y2 > y1`. La detection immutabile conserva inoltre priorita della
 vista e posizione originale della riga per risolvere i pareggi.
 
-## 8. NMS globale per classe
+## 9. NMS globale per classe
 
 Le detection delle nove viste vengono raggruppate per ID di classe. In ogni
 gruppo i candidati sono ordinati per:
@@ -171,7 +205,7 @@ gia accettata e maggiore o uguale a 0,50. Classi diverse non si sopprimono tra
 loro. L'ordinamento finale aggiunge l'ID classe come ultimo criterio, rendendo
 il risultato riproducibile anche in presenza di pareggi.
 
-## 9. Filtro e output
+## 10. Filtro e output
 
 Soltanto ora gli ID non abilitati in `classes.py` vengono esclusi. Le detection
 selezionate sono disegnate sull'immagine RGB completa con rettangolo, nome della
