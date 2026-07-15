@@ -26,8 +26,9 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
 | `tests/test_views.py` | EXIF, RGB, letterbox, forma del tensore, geometria adattiva, copertura e ordine delle viste. |
+| `tests/test_gamma.py` | Configurazione, mediana su istogramma, soglie, percorsi identita e LUT gamma RGB. |
 | `tests/test_detections.py` | Soglia, valori non validi, conversione globale, clipping, IoU, NMS per classe e pareggi deterministici. |
-| `tests/test_inference.py` | Coordinamento delle nove viste, somma dei tempi, ordine dei passaggi e assenza di output parziale. |
+| `tests/test_inference.py` | Unica model image, proprieta della source, nove viste, tempi e assenza di output parziale. |
 | `tests/test_run.py` | Messaggi pubblici, separazione stdout/stderr e stati del processo. |
 | `tests/test_reference_images.py` | Output JPEG reali, conteggi snapshot e assenza di duplicati sopra la soglia IoU. |
 
@@ -38,6 +39,8 @@ La suite protegge in particolare questi comportamenti:
 - i dati restituiti ai moduli successivi sono immutabili o trattati come tali;
 - configurazione, modello, immagine e output vengono validati ai rispettivi
   confini;
+- la configurazione gamma viene validata anche se disabilitata e la source non
+  viene trasformata sul percorso di default;
 - ogni immagine produce una vista completa e otto crop deterministici;
 - le nove chiamate usano una sessione, avvengono in sequenza e devono riuscire
   tutte;
@@ -54,15 +57,27 @@ Le immagini di riferimento vengono elaborate con modello e dipendenze reali.
 Per ciascuna, il test confronta i conteggi multi-vista con valori approvati e
 verifica che gli output siano JPEG non vuoti con dimensioni attese.
 
-Questi conteggi sono uno **snapshot di regressione**. Segnalano cambiamenti nel
+Con `ADAPTIVE_GAMMA_ENABLED = False`, i conteggi esistenti devono restare
+invariati. Sono uno **snapshot di regressione**: segnalano cambiamenti nel
 comportamento del modello, nella geometria o nel post-processing, ma non sono
 ground truth e non misurano accuracy, precision, recall o mAP. Un conteggio
 uguale non dimostra che posizione, classe e confidenza di ogni box siano
-semanticamente corrette.
+semanticamente corrette e non autorizza ad abilitare la gamma.
 
 La configurazione locale di `classes.py` puo essere modificata dall'operatore.
 Prima di interpretare un fallimento degli snapshot occorre verificare che la
 selezione attesa dal test non sia stata alterata intenzionalmente.
+
+## Gate di accuratezza esterno
+
+Il default gamma puo diventare attivo soltanto se, sullo stesso dataset
+annotato e con identici modello, nove viste e procedura di valutazione, la
+variante adattiva ottiene mAP50 complessiva superiore alla baseline e recall
+complessiva non inferiore. Il controllo visivo dell'utente e aggiuntivo: puo
+rifiutare un risultato, ma non sostituisce le due metriche.
+
+Dataset annotato ed evaluator non fanno parte del repository. Stato corrente:
+`not verified — external verification: annotated dataset and evaluator are not part of the repository`.
 
 ## Prestazioni
 
