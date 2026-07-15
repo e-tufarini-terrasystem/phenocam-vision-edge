@@ -250,6 +250,19 @@ class InferenceTests(unittest.TestCase):
         mocks["output"].assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
+    def test_gamma_internal_failure_is_hidden_and_prevents_output(self):
+        mocks, patchers = self.boundaries()
+        mocks["gamma"].side_effect = OSError("private Pillow detail")
+        try:
+            with self.assertRaises(InferenceError) as error:
+                annotate_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertNotIn("private Pillow detail", str(error.exception))
+        mocks["views"].assert_not_called()
+        mocks["runtime"].assert_not_called()
+        mocks["output"].assert_not_called()
+
     def test_internal_failure_is_hidden_and_prevents_output(self):
         mocks, patchers = self.boundaries()
         mocks["normalize"].side_effect = ValueError("private detail")
