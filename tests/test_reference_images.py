@@ -51,7 +51,7 @@ class ReferenceImageTests(unittest.TestCase):
     def assert_reference(self, case):
         name, person_baseline, car_baseline, expected_person, expected_car = case
         source_path = ROOT / "images" / name
-        model_path = ROOT / "yolo26n.onnx"
+        model_path = ROOT / "models" / "yolo26n.onnx"
         captured = {}
         real_write_output = pipeline.write_output
 
