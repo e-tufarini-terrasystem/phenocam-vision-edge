@@ -1,4 +1,4 @@
-"""Define the two inference-domain errors that cross into the CLI boundary.
+"""Define inference-domain errors that cross into the CLI boundary.
 
 The errors carry only fixed, non-sensitive meanings; ``run.py`` owns their
 user-facing messages and process status handling.
@@ -11,3 +11,7 @@ class InferenceError(RuntimeError):
 
 class OutputWriteError(RuntimeError):
     """Represent failure to create a non-empty regular output image."""
+
+
+class GammaConfigurationError(RuntimeError):
+    """Represent invalid version-controlled adaptive-gamma constants."""
