@@ -90,7 +90,7 @@ YOLO_NUM_THREADS=2 .venv/bin/python run.py \
 
 The fixed `classes.py` file is loaded automatically. Change only its existing
 `True`/`False` values and keep at least one class enabled. The committed
-configuration enables `person` and `car`.
+configuration enables `person`, `bicycle`, `car`, `motorcycle`, `bus`, and `truck`.
 
 The ONNX model must expose exactly the standard 80 COCO classes and the
 end-to-end six-column detection output used by the included YOLO26n model.
