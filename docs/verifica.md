@@ -84,10 +84,10 @@ post-processing, ma non sono ground truth e non misurano accuracy, precision,
 recall o mAP. Un conteggio uguale non dimostra che posizione, classe e
 confidenza di ogni box siano semanticamente corrette.
 
-La configurazione locale di `phenocam/classes/configuration.py` puo essere
-modificata dall'operatore.
-Prima di interpretare un fallimento degli snapshot occorre verificare che la
-selezione attesa dal test non sia stata alterata intenzionalmente.
+La selezione in `phenocam/classes/configuration.py` non modifica questi
+conteggi: il test li raccoglie prima del filtro applicato al rendering. Una
+configurazione invalida impedisce invece l'esecuzione; cambiare i booleani
+modifica soltanto quali box compaiono nei JPEG prodotti.
 
 ## Prestazioni
 

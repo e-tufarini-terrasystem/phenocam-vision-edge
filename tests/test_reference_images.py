@@ -1,7 +1,8 @@
 """Run the slower real-model regression for the six fixed reference images.
 
-Counts are a deterministic regression snapshot, not an accuracy metric. Outputs
-are disposable; complete wall-time remains an external Raspberry Pi check.
+Person/car counts are captured before output class filtering and form a
+deterministic regression snapshot, not an accuracy metric. Outputs are
+disposable; complete wall-time remains an external Raspberry Pi check.
 """
 
 import tempfile
