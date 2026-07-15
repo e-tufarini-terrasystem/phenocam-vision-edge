@@ -14,7 +14,7 @@ a 1,4 GHz, 905 MiB di RAM utilizzabile, Python 3.13.5 e filesystem della
 microSD da 6,9 GiB.
 
 Il modello non è stato sostituito né quantizzato: l'inferenza usa il file
-originale `yolo26n.onnx` da 9.941.954 byte, input 640x640 e uscita end-to-end
+originale `models/yolo26n.onnx` da 9.941.954 byte, input 640x640 e uscita end-to-end
 `[1, 300, 6]`.
 
 ## Interventi applicati
@@ -28,7 +28,7 @@ originale `yolo26n.onnx` da 9.941.954 byte, input 640x640 e uscita end-to-end
   nominale del 20% (`4×2` per immagini orizzontali/quadrate, `2×4` per verticali).
 - Riportate le detection nello spazio globale, aggregate tutte le classi e
   applicata NMS per classe con IoU 0,50 prima della selezione finale di
-  `classes.py`.
+  `phenocam/classes/configuration.py`.
 - Conservati CLI, validazione dei percorsi, configurazione delle classi COCO e
   messaggi/exit status esistenti.
 - Aggiunta validazione del contratto del modello: singolo input float,
@@ -37,8 +37,8 @@ originale `yolo26n.onnx` da 9.941.954 byte, input 640x640 e uscita end-to-end
   pattern disabilitati per contenere la RAM.
 - Impostati quattro thread CPU come default; `YOLO_NUM_THREADS=1..4` permette
   di ridurre il carico.
-- Separate le dipendenze di deploy (`requirements-rpi.txt`) da Ultralytics,
-  necessario solo per un eventuale export (`requirements-export.txt`).
+- Separate le dipendenze di deploy (`requirements/runtime.txt`) da Ultralytics,
+  necessario solo per un eventuale export (`requirements/export.txt`).
 - Aggiornati README e `.gitignore`; la virtualenv non viene inclusa nel
   progetto versionato.
 
@@ -104,7 +104,7 @@ pipeline corrente mantiene le nove viste sequenziali, ma il nuovo picco RSS non
 ## Verifiche finali
 
 - Compilazione Python di tutti i moduli riuscita.
-- Installazione da `requirements-rpi.txt` riuscita.
+- Installazione da `requirements/runtime.txt` riuscita.
 - Integrità dipendenze con `pip check` riuscita.
 - Tutti i sei output di regressione aperti e verificati con Pillow come JPEG
   4608x2592; snapshot esatti e assenza indipendente di duplicati IoU `>=0,50`.

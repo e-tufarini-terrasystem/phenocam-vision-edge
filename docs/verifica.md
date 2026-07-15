@@ -14,8 +14,26 @@ I test usano `unittest` e si eseguono dalla radice del repository:
 .venv/bin/python -m unittest discover -s tests
 ```
 
+Il gate locale completo aggiunge compilazione, integrita delle dipendenze,
+contratto del comando, sintassi batch e hash degli asset:
+
+```sh
+.venv/bin/python -m compileall -q phenocam scripts tests
+.venv/bin/python -m pip check
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m phenocam --help
+sh -n scripts/batch.sh
+test -x scripts/batch.sh
+shasum -a 256 models/yolo26n.onnx models/yolo26n.pt
+shasum -a 256 requirements/runtime.txt requirements/export.txt
+```
+
+Il gate strutturale verifica inoltre la presenza dell'albero approvato,
+l'assenza dei precedenti percorsi e l'assenza di riferimenti obsoleti nella
+documentazione e negli import, senza introdurre alias di compatibilita.
+
 La maggior parte della suite usa file temporanei, immagini sintetiche e mock.
-In questo modo verifica i contratti senza modificare `classes.py`, senza scrivere
+In questo modo verifica i contratti senza modificare
+`phenocam/classes/configuration.py`, senza scrivere
 nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 
 ## Copertura per confine
@@ -28,8 +46,8 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 | `tests/test_views.py` | EXIF, RGB, letterbox, forma del tensore, geometria adattiva, copertura e ordine delle viste. |
 | `tests/test_gamma.py` | Configurazione, mediana su istogramma, soglie, percorsi identita e LUT gamma RGB. |
 | `tests/test_detections.py` | Soglia, valori non validi, conversione globale, clipping, IoU, NMS per classe e pareggi deterministici. |
-| `tests/test_inference.py` | Unica model image, proprieta della source, nove viste, tempi e assenza di output parziale. |
-| `tests/test_run.py` | Messaggi pubblici, separazione stdout/stderr e stati del processo. |
+| `tests/test_pipeline.py` | Unica model image, proprieta della source, nove viste, tempi e assenza di output parziale. |
+| `tests/test_command.py` | Messaggi pubblici, separazione stdout/stderr e stati del processo. |
 | `tests/test_reference_images.py` | Output JPEG reali, conteggi snapshot e assenza di duplicati sopra la soglia IoU. |
 
 ## Invarianti verificati
@@ -53,7 +71,8 @@ La suite protegge in particolare questi comportamenti:
 
 ## Snapshot sulle immagini di riferimento
 
-Le immagini di riferimento vengono elaborate con modello e dipendenze reali.
+Quando sono disponibili, le immagini di riferimento vengono elaborate con
+modello e dipendenze reali.
 Per ciascuna, il test confronta i conteggi multi-vista con valori approvati e
 verifica che gli output siano JPEG non vuoti con dimensioni attese.
 
@@ -64,7 +83,8 @@ ground truth e non misurano accuracy, precision, recall o mAP. Un conteggio
 uguale non dimostra che posizione, classe e confidenza di ogni box siano
 semanticamente corrette e non autorizza ad abilitare la gamma.
 
-La configurazione locale di `classes.py` puo essere modificata dall'operatore.
+La configurazione locale di `phenocam/classes/configuration.py` puo essere
+modificata dall'operatore.
 Prima di interpretare un fallimento degli snapshot occorre verificare che la
 selezione attesa dal test non sia stata alterata intenzionalmente.
 
@@ -77,7 +97,7 @@ complessiva non inferiore. Il controllo visivo dell'utente e aggiuntivo: puo
 rifiutare un risultato, ma non sostituisce le due metriche.
 
 Dataset annotato ed evaluator non fanno parte del repository. Stato corrente:
-`not verified — external verification: annotated dataset and evaluator are not part of the repository`.
+`not verified — external verification: annotated gamma-evaluation dataset and evaluator are not part of the repository`.
 
 ## Prestazioni
 
@@ -111,5 +131,5 @@ con filesystem particolari, immagini eccezionalmente grandi, build diverse di
 ONNX Runtime e comportamento termico richiedono prove nell'ambiente reale.
 
 Per risultati e vincoli gia registrati consultare
-[Modifiche per Raspberry Pi](../MODIFICHE_RASPBERRY_PI.md) e
-[Limitazioni Raspberry Pi](../LIMITAZIONI_RASPBERRY_PI.md).
+[Modifiche per Raspberry Pi](modifiche-raspberry-pi.md) e
+[Limitazioni Raspberry Pi](limitazioni-raspberry-pi.md).

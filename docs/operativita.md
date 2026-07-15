@@ -15,26 +15,27 @@ ambiente virtuale. Dalla radice del repository:
 sudo apt update
 sudo apt install --no-install-recommends python3-venv
 python3 -m venv .venv
-.venv/bin/python -m pip install --no-cache-dir -r requirements-rpi.txt
+.venv/bin/python -m pip install --no-cache-dir -r requirements/runtime.txt
 ```
 
 `--no-cache-dir` evita di conservare le wheel sulla microSD. Il requirements
 seleziona un pin NumPy compatibile con la versione di Python e installa inoltre
-ONNX Runtime e Pillow. Il modello `yolo26n.onnx` deve restare disponibile; il
-file `.pt` e gli script di export non sono necessari al runtime.
+ONNX Runtime e Pillow. Il modello `models/yolo26n.onnx` deve restare disponibile;
+`models/yolo26n.pt` e gli script di export non sono necessari al runtime.
 
 Su macOS Apple Silicon si puo creare allo stesso modo una virtualenv con Python
-3.13 e installare `requirements-rpi.txt`, senza `sudo apt`.
+3.13 e installare `requirements/runtime.txt`, senza `sudo apt`.
 
 ## Comando singolo
 
-La CLI richiede sempre tutte e tre le opzioni:
+Il modulo si esegue dalla radice del repository e richiede sempre tutte e tre
+le opzioni:
 
 ```sh
-.venv/bin/python run.py \
+.venv/bin/python -m phenocam \
   --input images/esempio.jpg \
   --output output/esempio.jpg \
-  --model yolo26n.onnx
+  --model models/yolo26n.onnx
 ```
 
 | Opzione | Validazione |
@@ -53,7 +54,7 @@ stream standard, video, webcam o directory.
 
 ## Configurazione delle classi
 
-`classes.py` elenca tutte le classi COCO per categoria:
+`phenocam/classes/configuration.py` elenca tutte le classi COCO per categoria:
 
 ```python
 ("vehicle", (
@@ -78,10 +79,10 @@ Il default usa fino a quattro core. Per ridurre carico e temperatura, accettando
 una latenza probabilmente maggiore:
 
 ```sh
-YOLO_NUM_THREADS=2 .venv/bin/python run.py \
+YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
   --input images/esempio.jpg \
   --output output/esempio.jpg \
-  --model yolo26n.onnx
+  --model models/yolo26n.onnx
 ```
 
 Sono validi soltanto `1`, `2`, `3` e `4`. Qualunque altro valore usa il default.
@@ -123,10 +124,10 @@ error: output image could not be written
 
 ## Elaborazione batch
 
-`batch.sh` elabora i file immagine presenti direttamente in `images/`:
+`scripts/batch.sh` elabora i file immagine presenti direttamente in `images/`:
 
 ```sh
-./batch.sh
+./scripts/batch.sh
 ```
 
 Lo script:
@@ -136,8 +137,9 @@ Lo script:
 3. crea `output/`;
 4. considera JPG, JPEG, PNG, WEBP, BMP, TIF e TIFF senza distinzione tra
    maiuscole e minuscole;
-5. invoca `run.py` separatamente per ciascun file, usando sempre
-   `yolo26n.onnx`;
+5. invoca `.venv/bin/python -m phenocam` separatamente per ciascun file, usando
+   sempre
+   `models/yolo26n.onnx`;
 6. conserva il nome originale nell'output;
 7. continua dopo un errore individuale, ma termina con stato 1 se almeno una
    immagine fallisce.
@@ -151,14 +153,15 @@ La rigenerazione del modello e un'attivita da workstation separata dal deploy:
 
 ```sh
 python3 -m venv .venv-export
-.venv-export/bin/python -m pip install -r requirements-export.txt
-.venv-export/bin/python export_onnx.py
+.venv-export/bin/python -m pip install -r requirements/export.txt
+.venv-export/bin/python scripts/export/fp32.py
+.venv-export/bin/python scripts/export/int8.py
 ```
 
-`export_onnx.py` carica `yolo26n.pt` con Ultralytics e produce ONNX con opset 20.
-`export_onnx_int8.py` richiede inoltre i dati di calibrazione `coco8.yaml` e
+`scripts/export/fp32.py` carica `models/yolo26n.pt` con Ultralytics e produce ONNX con opset 20.
+`scripts/export/int8.py` richiede inoltre i dati di calibrazione `coco8.yaml` e
 produce una variante quantizzata sperimentale. Il runtime documentato e testato
-continua a usare `yolo26n.onnx`; sostituirlo richiede di verificare nuovamente
+continua a usare `models/yolo26n.onnx`; sostituirlo richiede di verificare nuovamente
 contratto, snapshot e prestazioni.
 
 ## Diagnosi essenziale
@@ -166,7 +169,7 @@ contratto, snapshot e prestazioni.
 - Se il modello e rifiutato, controllare che sia end-to-end, detection, con un
   solo input float statico, un solo output a sei colonne e 80 classi COCO.
 - Se la configurazione e rifiutata, ripristinare struttura e nomi di
-  `classes.py` e cambiare soltanto i booleani.
+  `phenocam/classes/configuration.py` e cambiare soltanto i booleani.
 - Se la scrittura fallisce, controllare esistenza e permessi della directory
   padre e che l'estensione sia supportata da Pillow.
 - Se il Pi rallenta durante esecuzioni ripetute, controllare temperatura,
