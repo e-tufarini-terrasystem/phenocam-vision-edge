@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from arguments import ArgumentValidationError, Arguments, parse_arguments
+from phenocam.arguments import ArgumentValidationError, Arguments, parse_arguments
 
 
 class ArgumentTests(unittest.TestCase):

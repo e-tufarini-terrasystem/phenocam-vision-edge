@@ -9,7 +9,7 @@ duration; this entry point contains no fixed paths or model metadata processing.
 import sys
 from typing import Optional, Sequence
 
-from arguments import ArgumentValidationError, parse_arguments
+from phenocam.arguments import ArgumentValidationError, parse_arguments
 from phenocam.inference.errors import (
     GammaConfigurationError,
     InferenceError,
