@@ -20,6 +20,8 @@ not install Ultralytics, PyTorch, or OpenCV.
 Each image is processed sequentially in one ONNX session using one full-image
 view plus eight adaptive overlapping crops. Horizontal and square images use a
 `4×2` crop grid, while vertical images use `2×4`; both use 20% nominal overlap.
+The EXIF-normalized RGB source supplies all nine views and remains the final
+rendering background.
 Crop detections are converted to global image coordinates, all model classes
 are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
 `phenocam/classes/configuration.py` selects the final annotations.
@@ -79,7 +81,7 @@ Run inference with all three required options:
 
 ```sh
 .venv/bin/python -m phenocam \
-  --input images/raspberrypi2.local_2025-12-18_141905.jpg \
+  --input input/raspberrypi2.local_2025-12-18_141905.jpg \
   --output output/annotated.jpg \
   --model models/yolo26n.onnx
 ```
@@ -90,7 +92,7 @@ thread count to a value from 1 to 4:
 
 ```sh
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
-  --input images/example.jpg --output output/example.jpg --model models/yolo26n.onnx
+  --input input/example.jpg --output output/example.jpg --model models/yolo26n.onnx
 ```
 
 ## Class selection
@@ -107,21 +109,6 @@ Incompatible metadata or tensor shapes are rejected before inference.
 Class filtering controls which final detections are annotated. All model
 classes still participate in the nine inference calls, merge, and NMS, so
 disabling classes does not reduce neural-network compute or memory requirements.
-
-## Adaptive gamma
-
-`phenocam/inference/gamma.py` contains the optional model-input preprocessing constants:
-`ADAPTIVE_GAMMA_ENABLED`, `DARK_THRESHOLD`, `DIM_THRESHOLD`, `DARK_GAMMA`,
-`DIM_GAMMA`, and `NORMAL_GAMMA`. The committed default is disabled. When
-enabled, the median luminance of the complete EXIF-normalized image selects
-gamma 0.60 below 0.15, 0.80 from 0.15 to below 0.35, or identity gamma 1.00.
-
-The selected transform supplies all nine model views; annotations are still
-drawn on the original pixels. This uses Pillow already present at runtime and
-adds no dependency. Invalid constants produce only
-`error: invalid gamma configuration`. The default may be enabled only after an
-external comparison on the same annotated dataset shows higher overall mAP50
-without lower overall recall; visual review is additional, not a substitute.
 
 ## Timing
 
@@ -156,7 +143,7 @@ open a graphical window.
 
 ## Batch usage
 
-Run inference on every supported image directly inside `images/`:
+Run inference on every supported image directly inside `input/`:
 
 ```sh
 ./scripts/batch.sh
