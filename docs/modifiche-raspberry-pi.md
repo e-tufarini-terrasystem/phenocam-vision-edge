@@ -1,3 +1,9 @@
+<!--
+Scopo: preservare lo storico degli adattamenti e delle misure Raspberry Pi.
+Responsabilita: registrare interventi, risultati e contesto hardware originario.
+Contesto: integra i documenti tecnici con l'evidenza storica del deploy Raspberry Pi.
+-->
+
 # Modifiche per Raspberry Pi 3
 
 ## Esito

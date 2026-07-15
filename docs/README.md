@@ -26,9 +26,9 @@ a 64 bit e usa soltanto NumPy, ONNX Runtime e Pillow.
 I due rapporti nella radice conservano informazioni legate alla piattaforma e
 alla storia dell'adattamento:
 
-- [Modifiche per Raspberry Pi](../MODIFICHE_RASPBERRY_PI.md): interventi,
+- [Modifiche per Raspberry Pi](modifiche-raspberry-pi.md): interventi,
   dipendenze e risultati osservati.
-- [Limitazioni Raspberry Pi](../LIMITAZIONI_RASPBERRY_PI.md): compatibilita,
+- [Limitazioni Raspberry Pi](limitazioni-raspberry-pi.md): compatibilita,
   risorse, prestazioni e funzioni non supportate.
 
 Il [README principale](../README.md) resta la guida rapida. In caso di

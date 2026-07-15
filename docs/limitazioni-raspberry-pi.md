@@ -1,3 +1,9 @@
+<!--
+Scopo: preservare i vincoli Raspberry Pi e i confini delle funzioni non supportate.
+Responsabilita: distinguere compatibilita, prestazioni e verifiche esterne.
+Contesto: integra i documenti tecnici con i limiti specifici del deploy Raspberry Pi.
+-->
+
 # Limitazioni riscontrate su Raspberry Pi 3
 
 ## Piattaforma supportata
