@@ -1,3 +1,9 @@
+<!--
+Scopo: fornire il percorso minimo completo per installare e usare il progetto.
+Responsabilita: presentare quick start, configurazione, comandi e limiti operativi.
+Contesto: e il punto di ingresso per operatori e rimanda ai dettagli sotto docs/.
+-->
+
 # YOLO single-image inference on Raspberry Pi
 
 This project annotates one local image with the included YOLO26n ONNX model.
@@ -7,7 +13,7 @@ RAM and a 64-bit Raspberry Pi OS installation.
 Detailed Italian documentation is available in [`docs/`](docs/README.md),
 including architecture, inference internals, operations, and verification.
 
-Inference still uses the original `yolo26n.onnx` model and its end-to-end ONNX
+Inference still uses the original `models/yolo26n.onnx` model and its end-to-end ONNX
 graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
 not install Ultralytics, PyTorch, or OpenCV.
 
@@ -16,13 +22,13 @@ view plus eight adaptive overlapping crops. Horizontal and square images use a
 `4×2` crop grid, while vertical images use `2×4`; both use 20% nominal overlap.
 Crop detections are converted to global image coordinates, all model classes
 are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
-`classes.py` selects the final annotations.
+`phenocam/classes/configuration.py` selects the final annotations.
 
 ## Runtime requirements
 
 - Raspberry Pi OS 64-bit (`aarch64`)
 - Python 3.11 or newer and `python3-venv` (tested with Python 3.13.5)
-- `numpy`, `onnxruntime`, and `Pillow` from `requirements-rpi.txt`
+- `numpy`, `onnxruntime`, and `Pillow` from `requirements/runtime.txt`
 
 The Python 3.13 dependency set in the requirements file was installed and
 tested on a four-core Cortex-A53 Raspberry Pi. Python 3.11 uses its compatible
@@ -38,43 +44,44 @@ on a small microSD card:
 sudo apt update
 sudo apt install --no-install-recommends python3-venv
 python3 -m venv .venv
-.venv/bin/python -m pip install --no-cache-dir -r requirements-rpi.txt
+.venv/bin/python -m pip install --no-cache-dir -r requirements/runtime.txt
 ```
 
 The tested virtual environment occupies about 154 MiB. The application,
 environment, included models, source images, and generated test outputs occupy
 about 187 MiB in total.
 
-For the smallest deployment copy, `yolo26n.pt`, `export_onnx.py`,
-`export_onnx_int8.py`, and `requirements-export.txt` may be omitted. They are
-export-time assets and are not read by `run.py`. Keep `yolo26n.onnx`.
+For the smallest deployment copy, `models/yolo26n.pt`, `scripts/export/fp32.py`,
+`scripts/export/int8.py`, and `requirements/export.txt` may be omitted. They are
+export-time assets and are not read by the `phenocam` runtime. Keep
+`models/yolo26n.onnx`.
 
 ## macOS installation
 
 Install Python 3.13 with Homebrew, then create the virtual environment from the
-project directory. The runtime packages in `requirements-rpi.txt` also support
+project directory. The runtime packages in `requirements/runtime.txt` also support
 macOS on Apple Silicon.
 
 ```sh
 brew install python@3.13
 python3.13 -m venv .venv
-.venv/bin/python -m pip install -r requirements-rpi.txt
+.venv/bin/python -m pip install -r requirements/runtime.txt
 ```
 
 The commands in this README work without activating the environment. To use
 its `python` command directly in the current shell, run `source
 .venv/bin/activate`; run `deactivate` when finished. The batch can then be
-started with `./batch.sh`.
+started with `./scripts/batch.sh`.
 
 ## Usage
 
 Run inference with all three required options:
 
 ```sh
-.venv/bin/python run.py \
+.venv/bin/python -m phenocam \
   --input images/raspberrypi2.local_2025-12-18_141905.jpg \
   --output output/annotated.jpg \
-  --model yolo26n.onnx
+  --model models/yolo26n.onnx
 ```
 
 The output directory must already exist. The default uses all four Pi 3 CPU
@@ -82,13 +89,14 @@ cores. To reduce CPU load or temperature at the cost of latency, set the
 thread count to a value from 1 to 4:
 
 ```sh
-YOLO_NUM_THREADS=2 .venv/bin/python run.py \
-  --input images/example.jpg --output output/example.jpg --model yolo26n.onnx
+YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
+  --input images/example.jpg --output output/example.jpg --model models/yolo26n.onnx
 ```
 
 ## Class selection
 
-The fixed `classes.py` file is loaded automatically. Change only its existing
+The fixed `phenocam/classes/configuration.py` file is loaded automatically.
+Change only its existing
 `True`/`False` values and keep at least one class enabled. The committed
 configuration enables `person`, `bicycle`, `car`, `motorcycle`, `bus`, and `truck`.
 
@@ -102,7 +110,7 @@ disabling classes does not reduce neural-network compute or memory requirements.
 
 ## Adaptive gamma
 
-`inference/gamma.py` contains the optional model-input preprocessing constants:
+`phenocam/inference/gamma.py` contains the optional model-input preprocessing constants:
 `ADAPTIVE_GAMMA_ENABLED`, `DARK_THRESHOLD`, `DIM_THRESHOLD`, `DARK_GAMMA`,
 `DIM_GAMMA`, and `NORMAL_GAMMA`. The committed default is disabled. When
 enabled, the median luminance of the complete EXIF-normalized image selects
@@ -127,13 +135,13 @@ reference Raspberry Pi 3 is unavailable. The 15-second complete-command limit
 remains an unverified acceptance target and is not inferred from workstation
 measurements.
 
-The six included images have fixed detection-count snapshots used to detect
-behavioral regressions in the committed model and dependencies.
+When the six ignored reference images are available, fixed detection-count
+snapshots detect behavioral regressions in the committed model and dependencies.
 Reference counts are a regression snapshot, not ground truth or a measurement of accuracy, precision, recall, or mAP.
 They do not prove that individual boxes are correct.
 
-See `MODIFICHE_RASPBERRY_PI.md` for the full measurements and
-`LIMITAZIONI_RASPBERRY_PI.md` for deployment constraints.
+See `docs/modifiche-raspberry-pi.md` for the full measurements and
+`docs/limitazioni-raspberry-pi.md` for deployment constraints.
 
 ## Arguments
 
@@ -151,7 +159,7 @@ open a graphical window.
 Run inference on every supported image directly inside `images/`:
 
 ```sh
-./batch.sh
+./scripts/batch.sh
 ```
 
 The script creates `output/` when needed and writes each result with the input
@@ -174,8 +182,9 @@ stack. Install it in a separate environment only when regeneration is needed:
 
 ```sh
 python3 -m venv .venv-export
-.venv-export/bin/python -m pip install -r requirements-export.txt
-.venv-export/bin/python export_onnx.py
+.venv-export/bin/python -m pip install -r requirements/export.txt
+.venv-export/bin/python scripts/export/fp32.py
+.venv-export/bin/python scripts/export/int8.py
 ```
 
-The included and tested `yolo26n.onnx` does not need to be exported on the Pi.
+The included and tested `models/yolo26n.onnx` does not need to be exported on the Pi.

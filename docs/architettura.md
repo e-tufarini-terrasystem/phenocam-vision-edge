@@ -16,7 +16,7 @@ code, worker o inferenze parallele.
 ```mermaid
 flowchart LR
     CLI[Argomenti CLI] --> Validazione[Validazione percorsi]
-    Config[classes.py] --> Selezione[Selezione classi]
+    Config[phenocam/classes/configuration.py] --> Selezione[Selezione classi]
     Modello[Modello ONNX] --> Sessione[Sessione ONNX CPU]
     Validazione --> Coordinamento[Transazione di inferenza]
     Selezione --> Coordinamento
@@ -39,49 +39,51 @@ in una vista interrompe il comando; non viene prodotto un risultato parziale.
 
 | File | Responsabilita unica |
 |---|---|
-| `run.py` | Definisce il confine del processo, traduce gli errori in messaggi pubblici e restituisce lo stato di uscita. |
-| `arguments.py` | Costruisce la CLI e valida i tre percorsi ricevuti. |
-| `classes.py` | Contiene l'inventario COCO fisso e i soli booleani configurabili dall'operatore. |
-| `selection.py` | Valida configurazione e metadata delle classi, quindi risolve i nomi abilitati negli ID del modello. |
-| `inference/__init__.py` | Coordina l'intera transazione multi-vista e somma il tempo delle chiamate ONNX. |
-| `inference/runtime.py` | Configura ONNX Runtime, verifica il contratto statico del modello ed esegue un tensore. |
-| `inference/views.py` | Decodifica l'immagine e produce viste normalizzate con geometria inversa. |
-| `inference/gamma.py` | Valida la configurazione gamma e prepara l'unica model image usata dalle nove viste. |
-| `inference/detections.py` | Valida le righe del modello, ricostruisce coordinate globali ed elimina duplicati. |
-| `inference/output.py` | Disegna le detection selezionate e salva un file di output verificato. |
-| `inference/errors.py` | Definisce gli errori del dominio inferenza esposti al confine CLI. |
-| `batch.sh` | Applica il comando singolo ai file supportati presenti direttamente in `images/`. |
-| `export_onnx.py` | Rigenera il modello ONNX FP32 su workstation. |
-| `export_onnx_int8.py` | Esegue l'export ONNX INT8 sperimentale con dati di calibrazione. |
+| `phenocam/__main__.py` | Definisce il confine del processo, traduce gli errori in messaggi pubblici e restituisce lo stato di uscita. |
+| `phenocam/arguments.py` | Costruisce la CLI e valida i tre percorsi ricevuti. |
+| `phenocam/classes/configuration.py` | Contiene l'inventario COCO fisso e i soli booleani configurabili dall'operatore. |
+| `phenocam/classes/selection.py` | Valida configurazione e metadata delle classi, quindi risolve i nomi abilitati negli ID del modello. |
+| `phenocam/inference/pipeline.py` | Coordina l'intera transazione multi-vista e somma il tempo delle chiamate ONNX. |
+| `phenocam/inference/runtime.py` | Configura ONNX Runtime, verifica il contratto statico del modello ed esegue un tensore. |
+| `phenocam/inference/views.py` | Decodifica l'immagine e produce viste normalizzate con geometria inversa. |
+| `phenocam/inference/gamma.py` | Valida la configurazione gamma e prepara l'unica model image usata dalle nove viste. |
+| `phenocam/inference/detections.py` | Valida le righe del modello, ricostruisce coordinate globali ed elimina duplicati. |
+| `phenocam/inference/output.py` | Disegna le detection selezionate e salva un file di output verificato. |
+| `phenocam/inference/errors.py` | Definisce gli errori del dominio inferenza esposti al confine CLI. |
+| `scripts/batch.sh` | Applica il comando singolo ai file supportati presenti direttamente in `images/`. |
+| `scripts/export/fp32.py` | Rigenera il modello ONNX FP32 su workstation. |
+| `scripts/export/int8.py` | Esegue l'export ONNX INT8 sperimentale con dati di calibrazione. |
 
 ## Sequenza di una richiesta
 
 ```mermaid
 sequenceDiagram
     participant U as Operatore
-    participant R as run.py
-    participant S as selection.py
+    participant R as phenocam/__main__.py
+    participant S as phenocam/classes/selection.py
     participant O as ONNX Runtime
     participant P as Pipeline inferenza
     participant F as File output
 
     U->>R: --input, --output, --model
     R->>R: valida i percorsi
-    R->>S: carica e valida classes.py
-    R->>O: crea sessione CPU
-    O-->>R: input, output e metadata
-    R->>S: risolve nomi abilitati in ID
-    R->>P: carica la source RGB normalizzata EXIF
+    R->>P: avvia la transazione
+    P->>S: carica e valida configuration.py
+    P->>O: crea sessione CPU
+    O-->>P: input, output e metadata
+    P->>S: risolve nomi abilitati in ID
+    P->>P: carica la source RGB normalizzata EXIF
     P->>P: valida gamma e sceglie una model image
     loop vista completa e otto crop
-        R->>P: prepara tensore
+        P->>P: prepara tensore
         P->>O: session.run()
         O-->>P: righe [x1,y1,x2,y2,conf,id]
         P->>P: valida e converte in coordinate globali
     end
     P->>P: NMS per classe
     P->>F: disegna gli ID abilitati sulla source originale
-    F-->>R: file regolare non vuoto
+    F-->>P: file regolare non vuoto
+    P-->>R: somma dei tempi ONNX
     R-->>U: Execution time e stato 0
 ```
 
@@ -92,7 +94,8 @@ file locali:
 
 - la CLI non puo assumere che i percorsi esistano o identifichino oggetti del
   tipo atteso;
-- `classes.py` e importato dinamicamente, ma struttura, ordine, nomi e tipi
+- `phenocam/classes/configuration.py` e importato dinamicamente, ma struttura,
+  ordine, nomi e tipi
   devono coincidere con l'inventario canonico;
 - metadata, descrittori dei tensori e valori restituiti dal modello vengono
   controllati prima dell'uso;

@@ -23,8 +23,8 @@ a 64 bit e usa soltanto NumPy, ONNX Runtime e Pillow.
 
 ## Documenti specifici Raspberry Pi
 
-I due rapporti nella radice conservano informazioni legate alla piattaforma e
-alla storia dell'adattamento:
+I due rapporti affiancano i documenti tecnici e conservano informazioni legate
+alla piattaforma e alla storia dell'adattamento:
 
 - [Modifiche per Raspberry Pi](modifiche-raspberry-pi.md): interventi,
   dipendenze e risultati osservati.

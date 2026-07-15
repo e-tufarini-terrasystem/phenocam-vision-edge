@@ -1,14 +1,15 @@
 <!--
 Scopo: documentare l'algoritmo di inferenza multi-vista dall'immagine alle annotazioni.
 Responsabilita: rendere espliciti preprocessing, geometria, contratti e filtri.
-Contesto: dettaglia la transazione coordinata da inference/__init__.py.
+Contesto: dettaglia la transazione coordinata da phenocam/inference/pipeline.py.
 -->
 
 # Pipeline di inferenza
 
 ## 1. Configurazione delle classi
 
-Prima di caricare il modello, `enabled_class_names()` importa `classes.py` e
+Prima di caricare il modello, `enabled_class_names()` importa
+`phenocam/classes/configuration.py` e
 verifica l'intera costante `COCO_CLASSES`. Sono invarianti:
 
 - contenitore esterno, categorie e voci sono tuple;
@@ -71,7 +72,7 @@ vengono inseriti nel messaggio pubblico.
 
 ## 4. Gamma adattiva opzionale
 
-`inference/gamma.py` raccoglie sei costanti versionate:
+`phenocam/inference/gamma.py` raccoglie sei costanti versionate:
 
 | Costante | Default |
 |---|---:|
@@ -207,7 +208,8 @@ il risultato riproducibile anche in presenza di pareggi.
 
 ## 10. Filtro e output
 
-Soltanto ora gli ID non abilitati in `classes.py` vengono esclusi. Le detection
+Soltanto ora gli ID non abilitati in `phenocam/classes/configuration.py` vengono
+esclusi. Le detection
 selezionate sono disegnate sull'immagine RGB completa con rettangolo, nome della
 classe e confidenza a due decimali. Dimensione del font e spessore della linea
 scalano rispetto al lato minore dell'immagine. La classe con ID 0 usa un colore

@@ -59,7 +59,7 @@ prova.
 Il margine dipende però dallo spazio già occupato dal sistema operativo. Le
 installazioni con meno di circa 250 MiB liberi non hanno un margine prudente per
 virtualenv, download temporanei e output. `--no-cache-dir` evita di conservare
-le wheel scaricate. Per un deploy minimo si possono omettere `yolo26n.pt` e i
+le wheel scaricate. Per un deploy minimo si possono omettere `models/yolo26n.pt` e i
 file di export, risparmiando almeno 5,3 MiB oltre alle dipendenze di export.
 
 ## Vincoli del modello e della pipeline
@@ -71,7 +71,8 @@ file di export, risparmiando almeno 5,3 MiB oltre alle dipendenze di export.
   precedente, e non è esposta nella CLI.
 - Una vista completa e otto ritagli adattivi usano griglie `4×2` o `2×4`, 20%
   di overlap nominale, coordinate globali e NMS per classe con IoU 0,50.
-- Il filtro `classes.py` agisce soltanto dopo le nove inferenze, la fusione e la
+- Il filtro `phenocam/classes/configuration.py` agisce soltanto dopo le nove
+  inferenze, la fusione e la
   NMS: disabilitare classi non riduce tempo CPU o RAM del modello.
 - I conteggi di riferimento sono uno snapshot di regressione, non una ground truth né una misura di accuracy, precision, recall o mAP.
   Lo snapshot verifica riproducibilità e aumento dei conteggi, non la correttezza
