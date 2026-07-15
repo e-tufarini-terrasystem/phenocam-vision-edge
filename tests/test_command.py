@@ -9,16 +9,17 @@ import contextlib
 import io
 import runpy
 import unittest
+import warnings
 from pathlib import Path
 from unittest.mock import patch
 
-from arguments import ArgumentValidationError, Arguments
+from phenocam.arguments import ArgumentValidationError, Arguments
 from phenocam.inference.errors import (
     GammaConfigurationError,
     InferenceError,
     OutputWriteError,
 )
-from run import main
+from phenocam.__main__ import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -38,8 +39,8 @@ class RunTests(unittest.TestCase):
         return status, stdout.getvalue(), stderr.getvalue()
 
     def test_success_passes_paths_and_prints_formatted_duration(self):
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", return_value=1.2344
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", return_value=1.2344
         ) as annotate:
             status, stdout, stderr = self.call_main(["ignored"])
         annotate.assert_called_once_with(
@@ -60,15 +61,15 @@ class RunTests(unittest.TestCase):
         ]
         for message in messages:
             with self.subTest(message=message), patch(
-                "run.parse_arguments", side_effect=ArgumentValidationError(message)
-            ), patch("run.annotate_image") as annotate:
+                "phenocam.__main__.parse_arguments", side_effect=ArgumentValidationError(message)
+            ), patch("phenocam.__main__.annotate_image") as annotate:
                 status, stdout, stderr = self.call_main([])
             self.assertEqual((status, stdout, stderr), (1, "", f"{message}\n"))
             annotate.assert_not_called()
 
     def test_inference_error_has_fixed_diagnostic(self):
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", side_effect=InferenceError("private detail")
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", side_effect=InferenceError("private detail")
         ):
             status, stdout, stderr = self.call_main([])
         self.assertEqual((status, stdout, stderr), (1, "", "error: inference failed\n"))
@@ -78,8 +79,8 @@ class RunTests(unittest.TestCase):
     def test_class_configuration_error_has_fixed_diagnostic(self):
         error = ClassConfigurationError()
         error.__cause__ = RuntimeError("private configuration detail\nTraceback")
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", side_effect=error
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", side_effect=error
         ):
             status, stdout, stderr = self.call_main([])
         self.assertEqual(
@@ -92,8 +93,8 @@ class RunTests(unittest.TestCase):
     def test_model_classes_error_has_fixed_diagnostic(self):
         error = ModelClassesError()
         error.__cause__ = RuntimeError("private model detail\nTraceback")
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", side_effect=error
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", side_effect=error
         ):
             status, stdout, stderr = self.call_main([])
         self.assertEqual(
@@ -106,8 +107,8 @@ class RunTests(unittest.TestCase):
     def test_gamma_configuration_error_has_fixed_diagnostic(self):
         error = GammaConfigurationError("private gamma detail")
         error.__cause__ = RuntimeError("private cause\nTraceback")
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", side_effect=error
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", side_effect=error
         ):
             status, stdout, stderr = self.call_main([])
         self.assertEqual(
@@ -119,8 +120,8 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr)
 
     def test_output_write_error_has_fixed_diagnostic(self):
-        with patch("run.parse_arguments", return_value=self.arguments), patch(
-            "run.annotate_image", side_effect=OutputWriteError("private detail")
+        with patch("phenocam.__main__.parse_arguments", return_value=self.arguments), patch(
+            "phenocam.__main__.annotate_image", side_effect=OutputWriteError("private detail")
         ):
             status, stdout, stderr = self.call_main([])
         self.assertEqual(
@@ -133,7 +134,7 @@ class RunTests(unittest.TestCase):
     def test_missing_arguments_keep_argparse_status_two_and_stderr_usage(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("run.annotate_image") as annotate, contextlib.redirect_stdout(
+        with patch("phenocam.__main__.annotate_image") as annotate, contextlib.redirect_stdout(
             stdout
         ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
             main([])
@@ -145,7 +146,7 @@ class RunTests(unittest.TestCase):
     def test_unknown_option_keeps_argparse_status_two_and_stderr_usage(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("run.annotate_image") as annotate, contextlib.redirect_stdout(
+        with patch("phenocam.__main__.annotate_image") as annotate, contextlib.redirect_stdout(
             stdout
         ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
             main(["--unknown"])
@@ -157,7 +158,7 @@ class RunTests(unittest.TestCase):
     def test_help_keeps_argparse_status_zero_and_uses_stdout(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("run.annotate_image") as annotate, contextlib.redirect_stdout(
+        with patch("phenocam.__main__.annotate_image") as annotate, contextlib.redirect_stdout(
             stdout
         ), contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
             main(["--help"])
@@ -172,11 +173,12 @@ class RunTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with patch(
-            "arguments.parse_arguments", side_effect=ArgumentValidationError(message)
+            "phenocam.arguments.parse_arguments", side_effect=ArgumentValidationError(message)
         ), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
             stderr
-        ), self.assertRaises(SystemExit) as error:
-            runpy.run_module("run", run_name="__main__")
+        ), warnings.catch_warnings(), self.assertRaises(SystemExit) as error:
+            warnings.simplefilter("ignore", RuntimeWarning)
+            runpy.run_module("phenocam", run_name="__main__")
         self.assertEqual(error.exception.code, 1)
         self.assertEqual(stdout.getvalue(), "")
         self.assertEqual(stderr.getvalue(), f"{message}\n")
