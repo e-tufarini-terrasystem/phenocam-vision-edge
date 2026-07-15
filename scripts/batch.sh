@@ -1,11 +1,11 @@
 #!/bin/sh
 # Run single-image inference over the project's images directory.
 # This script owns batch iteration and output-directory creation.
-# Image validation, inference, and output writing remain inside run.py.
+# Image validation, inference, and output writing remain inside phenocam.
 
 set -u
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || { echo "error: project directory cannot be resolved" >&2; exit 1; }
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || { echo "error: project directory cannot be resolved" >&2; exit 1; }
 input_dir="$root/images"
 output_dir="$root/output"
 python="$root/.venv/bin/python"
@@ -16,6 +16,7 @@ found=0
 [ -d "$input_dir" ] || { echo "error: images directory does not exist" >&2; exit 1; }
 [ -n "$python" ] && [ -x "$python" ] || { echo "error: Python interpreter does not exist" >&2; exit 1; }
 mkdir -p -- "$output_dir" 2>/dev/null || { echo "error: output directory could not be created" >&2; exit 1; }
+cd "$root" || { echo "error: project directory cannot be resolved" >&2; exit 1; }
 
 for image in "$input_dir"/*; do
     [ -f "$image" ] || continue
@@ -26,7 +27,7 @@ for image in "$input_dir"/*; do
 
     found=1
     name=$(basename -- "$image")
-    if ! "$python" "$root/run.py" --input "$image" --output "$output_dir/$name" --model "$root/yolo26n.onnx"; then
+    if ! "$python" -m phenocam --input "$image" --output "$output_dir/$name" --model "$root/models/yolo26n.onnx"; then
         echo "error: inference failed for $name" >&2
         status=1
     fi
