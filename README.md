@@ -4,6 +4,9 @@ This project annotates one local image with the included YOLO26n ONNX model.
 The deployment runtime is designed and tested for a Raspberry Pi 3 with 1 GB
 RAM and a 64-bit Raspberry Pi OS installation.
 
+Detailed Italian documentation is available in [`docs/`](docs/README.md),
+including architecture, inference internals, operations, and verification.
+
 Inference still uses the original `yolo26n.onnx` model and its end-to-end ONNX
 graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
 not install Ultralytics, PyTorch, or OpenCV.
