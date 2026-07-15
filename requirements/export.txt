@@ -1,0 +1,2 @@
+# Optional workstation-only dependency. Not needed for inference on Raspberry Pi.
+ultralytics==8.4.48
