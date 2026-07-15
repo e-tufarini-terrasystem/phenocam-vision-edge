@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from PIL import Image, ImageOps
 
-import inference
+from phenocam.inference import pipeline
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,7 +53,7 @@ class ReferenceImageTests(unittest.TestCase):
         source_path = ROOT / "images" / name
         model_path = ROOT / "yolo26n.onnx"
         captured = {}
-        real_write_output = inference.write_output
+        real_write_output = pipeline.write_output
 
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / name
@@ -67,8 +67,11 @@ class ReferenceImageTests(unittest.TestCase):
                     image, detections, enabled_ids, model_names, destination
                 )
 
-            with patch("inference.write_output", side_effect=capturing_write_output):
-                duration = inference.annotate_image(
+            with patch(
+                "phenocam.inference.pipeline.write_output",
+                side_effect=capturing_write_output,
+            ):
+                duration = pipeline.annotate_image(
                     model_path, source_path, output_path
                 )
 

@@ -13,7 +13,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from arguments import ArgumentValidationError, Arguments
-from inference import GammaConfigurationError, InferenceError, OutputWriteError
+from phenocam.inference.errors import (
+    GammaConfigurationError,
+    InferenceError,
+    OutputWriteError,
+)
 from run import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 

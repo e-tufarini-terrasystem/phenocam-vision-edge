@@ -11,8 +11,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from inference.errors import InferenceError
-from inference.views import _crop_rectangles, iter_views, load_image
+from phenocam.inference.errors import InferenceError
+from phenocam.inference.views import _crop_rectangles, iter_views, load_image
 
 
 class ViewTests(unittest.TestCase):

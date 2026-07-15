@@ -1,7 +1,7 @@
 """Render final selected detections and persist one verified output image.
 
-Geometry and row validation are complete before this boundary. ``classes.py``
-selection is final here, and output failures reveal no filesystem internals.
+Geometry and row validation are complete before this boundary. Class selection
+is final here, and output failures reveal no filesystem internals.
 """
 
 from PIL import ImageDraw, ImageFont

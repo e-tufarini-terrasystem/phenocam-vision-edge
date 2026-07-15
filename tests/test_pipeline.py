@@ -12,13 +12,13 @@ from unittest.mock import Mock, call, patch
 
 import numpy as np
 
-from inference import (
+from phenocam.inference.errors import (
     GammaConfigurationError,
     InferenceError,
     OutputWriteError,
-    annotate_image,
 )
-from inference.runtime import run_tensor as timed_run_tensor
+from phenocam.inference.pipeline import annotate_image
+from phenocam.inference.runtime import run_tensor as timed_run_tensor
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -52,26 +52,26 @@ class InferenceTests(unittest.TestCase):
     def boundaries(self):
         patchers = {
             "configuration": patch(
-                "inference.enabled_class_names", return_value=("person", "car")
+                "phenocam.inference.pipeline.enabled_class_names", return_value=("person", "car")
             ),
-            "session": patch("inference.create_session", return_value=self.session),
-            "contract": patch("inference.model_contract", return_value=self.contract),
-            "class_ids": patch("inference.model_class_ids", return_value=(0, 2)),
-            "load": patch("inference.load_image", return_value=self.image),
+            "session": patch("phenocam.inference.pipeline.create_session", return_value=self.session),
+            "contract": patch("phenocam.inference.pipeline.model_contract", return_value=self.contract),
+            "class_ids": patch("phenocam.inference.pipeline.model_class_ids", return_value=(0, 2)),
+            "load": patch("phenocam.inference.pipeline.load_image", return_value=self.image),
             "gamma": patch(
-                "inference.apply_adaptive_gamma", return_value=self.model_image
+                "phenocam.inference.pipeline.apply_adaptive_gamma", return_value=self.model_image
             ),
-            "views": patch("inference.iter_views", return_value=iter(self.views)),
+            "views": patch("phenocam.inference.pipeline.iter_views", return_value=iter(self.views)),
             "runtime": patch(
-                "inference.run_tensor",
+                "phenocam.inference.pipeline.run_tensor",
                 side_effect=[(np.empty((0, 6)), index / 10) for index in range(9)],
             ),
             "normalize": patch(
-                "inference.normalize_rows",
+                "phenocam.inference.pipeline.normalize_rows",
                 side_effect=[(("detection", index),) for index in range(9)],
             ),
-            "nms": patch("inference.deduplicate", return_value=("final",)),
-            "output": patch("inference.write_output"),
+            "nms": patch("phenocam.inference.pipeline.deduplicate", return_value=("final",)),
+            "output": patch("phenocam.inference.pipeline.write_output"),
         }
         return {name: patcher.start() for name, patcher in patchers.items()}, patchers
 
@@ -145,7 +145,7 @@ class InferenceTests(unittest.TestCase):
         clock_values = tuple(value for _ in range(9) for value in (10.0, 11.0))
         try:
             with patch(
-                "inference.runtime.perf_counter", side_effect=clock_values
+                "phenocam.inference.runtime.perf_counter", side_effect=clock_values
             ) as clock:
                 elapsed = annotate_image(*self.paths)
         finally:
@@ -213,8 +213,8 @@ class InferenceTests(unittest.TestCase):
     def test_configuration_error_prevents_session_and_preserves_output(self):
         self.paths[2].write_bytes(b"existing")
         with patch(
-            "inference.enabled_class_names", side_effect=ClassConfigurationError()
-        ), patch("inference.create_session") as create_session:
+            "phenocam.inference.pipeline.enabled_class_names", side_effect=ClassConfigurationError()
+        ), patch("phenocam.inference.pipeline.create_session") as create_session:
             with self.assertRaises(ClassConfigurationError):
                 annotate_image(*self.paths)
         create_session.assert_not_called()
@@ -223,10 +223,10 @@ class InferenceTests(unittest.TestCase):
     def test_model_error_prevents_inference_and_preserves_output(self):
         expected = ModelClassesError()
         self.paths[2].write_bytes(b"existing")
-        with patch("inference.enabled_class_names", return_value=("person",)), patch(
-            "inference.create_session", return_value=self.session
-        ), patch("inference.model_contract", side_effect=expected), patch(
-            "inference.run_tensor"
+        with patch("phenocam.inference.pipeline.enabled_class_names", return_value=("person",)), patch(
+            "phenocam.inference.pipeline.create_session", return_value=self.session
+        ), patch("phenocam.inference.pipeline.model_contract", side_effect=expected), patch(
+            "phenocam.inference.pipeline.run_tensor"
         ) as run_tensor:
             with self.assertRaises(ModelClassesError) as error:
                 annotate_image(*self.paths)

@@ -10,12 +10,12 @@ import sys
 from typing import Optional, Sequence
 
 from arguments import ArgumentValidationError, parse_arguments
-from inference import (
+from phenocam.inference.errors import (
     GammaConfigurationError,
     InferenceError,
     OutputWriteError,
-    annotate_image,
 )
+from phenocam.inference.pipeline import annotate_image
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
