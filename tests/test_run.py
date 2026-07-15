@@ -15,7 +15,7 @@ from unittest.mock import patch
 from arguments import ArgumentValidationError, Arguments
 from inference import GammaConfigurationError, InferenceError, OutputWriteError
 from run import main
-from selection import ClassConfigurationError, ModelClassesError
+from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
 class RunTests(unittest.TestCase):

@@ -16,7 +16,7 @@ from inference import (
     OutputWriteError,
     annotate_image,
 )
-from selection import ClassConfigurationError, ModelClassesError
+from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

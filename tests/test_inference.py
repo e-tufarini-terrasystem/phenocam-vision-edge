@@ -19,7 +19,7 @@ from inference import (
     annotate_image,
 )
 from inference.runtime import run_tensor as timed_run_tensor
-from selection import ClassConfigurationError, ModelClassesError
+from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
 class InferenceTests(unittest.TestCase):
