@@ -1,8 +1,8 @@
 """Run the slower real-model regression for the six fixed reference images.
 
-Person/car counts are captured before output class filtering and form a
-deterministic regression snapshot, not an accuracy metric. Outputs are
-disposable; complete wall-time remains an external Raspberry Pi check.
+Person/car counts are captured before selected-class output filtering and form
+a deterministic regression snapshot, not an accuracy metric. The annotated
+output is disposable; complete wall-time remains an external Raspberry Pi check.
 """
 
 import tempfile
@@ -54,26 +54,36 @@ class ReferenceImageTests(unittest.TestCase):
         source_path = ROOT / "input" / name
         model_path = ROOT / "models" / "yolo26n.onnx"
         captured = {}
-        real_write_output = pipeline.write_output
+        real_write_outputs = pipeline.write_outputs
 
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / name
 
-            def capturing_write_output(
-                image, detections, enabled_ids, model_names, destination
+            def capturing_write_outputs(
+                image,
+                detections,
+                enabled_ids,
+                model_names,
+                annotated_destination,
+                privacy_destination,
             ):
                 captured["detections"] = detections
                 captured["model_names"] = model_names
-                real_write_output(
-                    image, detections, enabled_ids, model_names, destination
+                real_write_outputs(
+                    image,
+                    detections,
+                    enabled_ids,
+                    model_names,
+                    annotated_destination,
+                    privacy_destination,
                 )
 
             with patch(
-                "phenocam.inference.pipeline.write_output",
-                side_effect=capturing_write_output,
+                "phenocam.inference.pipeline.write_outputs",
+                side_effect=capturing_write_outputs,
             ):
-                duration = pipeline.annotate_image(
-                    model_path, source_path, output_path
+                duration = pipeline.process_image(
+                    model_path, source_path, output_path, None
                 )
 
             self.assertIsInstance(duration, float)
