@@ -1,7 +1,8 @@
 """Verify the public nine-view inference transaction with boundary doubles.
 
-Disposable paths, a fake session, and a deterministic clock prove ordering,
-direct-source ownership, aggregation, atomicity, timing, and output.
+One or two outputs never duplicate inference, and final product generation
+occurs only after successful NMS. Doubles prove ordering, aggregation, timing,
+error sanitization, and source ownership.
 """
 
 import tempfile
@@ -13,7 +14,7 @@ from unittest.mock import Mock, call, patch
 import numpy as np
 
 from phenocam.inference.errors import InferenceError, OutputWriteError
-from phenocam.inference.pipeline import annotate_image
+from phenocam.inference.pipeline import process_image
 from phenocam.inference.runtime import run_tensor as timed_run_tensor
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
@@ -25,7 +26,8 @@ class InferenceTests(unittest.TestCase):
         self.paths = (
             self.root / "model.onnx",
             self.root / "input.jpg",
-            self.root / "output.jpg",
+            self.root / "annotated.jpg",
+            self.root / "privacy.jpg",
         )
         self.image = SimpleNamespace(width=100, height=80)
         self.views = tuple(
@@ -63,7 +65,7 @@ class InferenceTests(unittest.TestCase):
                 side_effect=[(("detection", index),) for index in range(9)],
             ),
             "nms": patch("phenocam.inference.pipeline.deduplicate", return_value=("final",)),
-            "output": patch("phenocam.inference.pipeline.write_output"),
+            "output": patch("phenocam.inference.pipeline.write_outputs"),
         }
         return {name: patcher.start() for name, patcher in patchers.items()}, patchers
 
@@ -74,7 +76,7 @@ class InferenceTests(unittest.TestCase):
     def test_success_uses_one_session_nine_runs_one_nms_and_exact_sum(self):
         mocks, patchers = self.boundaries()
         try:
-            elapsed = annotate_image(*self.paths)
+            elapsed = process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
 
@@ -95,8 +97,38 @@ class InferenceTests(unittest.TestCase):
         for normalized in mocks["normalize"].call_args_list:
             self.assertEqual(normalized.args[2:4], (100, 80))
         mocks["output"].assert_called_once_with(
-            self.image, ("final",), (0, 2), self.contract[4], self.paths[2]
+            self.image,
+            ("final",),
+            (0, 2),
+            self.contract[4],
+            self.paths[2],
+            self.paths[3],
         )
+
+    def test_each_output_combination_runs_the_same_inference_transaction(self):
+        combinations = (
+            (self.paths[2], None),
+            (None, self.paths[3]),
+            (self.paths[2], self.paths[3]),
+        )
+        for annotated, privacy in combinations:
+            with self.subTest(annotated=annotated, privacy=privacy):
+                mocks, patchers = self.boundaries()
+                try:
+                    process_image(self.paths[0], self.paths[1], annotated, privacy)
+                finally:
+                    self.stop_boundaries(patchers)
+                mocks["session"].assert_called_once()
+                self.assertEqual(mocks["runtime"].call_count, 9)
+                mocks["nms"].assert_called_once()
+                mocks["output"].assert_called_once_with(
+                    self.image,
+                    ("final",),
+                    (0, 2),
+                    self.contract[4],
+                    annotated,
+                    privacy,
+                )
 
     def test_views_are_consumed_and_normalized_sequentially(self):
         events = []
@@ -117,7 +149,7 @@ class InferenceTests(unittest.TestCase):
             (),
         )[1]
         try:
-            annotate_image(*self.paths)
+            process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
 
@@ -138,7 +170,7 @@ class InferenceTests(unittest.TestCase):
             with patch(
                 "phenocam.inference.runtime.perf_counter", side_effect=clock_values
             ) as clock:
-                elapsed = annotate_image(*self.paths)
+                elapsed = process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertEqual(elapsed, 9.0)
@@ -166,7 +198,7 @@ class InferenceTests(unittest.TestCase):
             iter(self.views),
         )[1]
         try:
-            annotate_image(*self.paths)
+            process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertEqual(
@@ -192,7 +224,7 @@ class InferenceTests(unittest.TestCase):
                 mocks["runtime"].side_effect = results
                 try:
                     with self.assertRaises(InferenceError):
-                        annotate_image(*self.paths)
+                        process_image(*self.paths)
                 finally:
                     self.stop_boundaries(patchers)
                 self.assertEqual(mocks["runtime"].call_count, failing_index + 1)
@@ -205,7 +237,7 @@ class InferenceTests(unittest.TestCase):
             "phenocam.inference.pipeline.enabled_class_names", side_effect=ClassConfigurationError()
         ), patch("phenocam.inference.pipeline.create_session") as create_session:
             with self.assertRaises(ClassConfigurationError):
-                annotate_image(*self.paths)
+                process_image(*self.paths)
         create_session.assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
@@ -218,7 +250,7 @@ class InferenceTests(unittest.TestCase):
             "phenocam.inference.pipeline.run_tensor"
         ) as run_tensor:
             with self.assertRaises(ModelClassesError) as error:
-                annotate_image(*self.paths)
+                process_image(*self.paths)
         self.assertIs(error.exception, expected)
         run_tensor.assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
@@ -228,7 +260,7 @@ class InferenceTests(unittest.TestCase):
         mocks["normalize"].side_effect = ValueError("private detail")
         try:
             with self.assertRaises(InferenceError) as error:
-                annotate_image(*self.paths)
+                process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertNotIn("private detail", str(error.exception))
@@ -239,7 +271,7 @@ class InferenceTests(unittest.TestCase):
         mocks["normalize"].side_effect = [() for _ in range(9)]
         mocks["nms"].return_value = ()
         try:
-            annotate_image(*self.paths)
+            process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         mocks["output"].assert_called_once()
@@ -250,7 +282,7 @@ class InferenceTests(unittest.TestCase):
         mocks["output"].side_effect = expected
         try:
             with self.assertRaises(OutputWriteError) as error:
-                annotate_image(*self.paths)
+                process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
