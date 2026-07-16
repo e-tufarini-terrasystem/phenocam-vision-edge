@@ -11,6 +11,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from phenocam.arguments import ArgumentValidationError, Arguments, parse_arguments
 
@@ -165,13 +166,43 @@ class ArgumentTests(unittest.TestCase):
         )
         self.assertFalse(parent.exists())
 
+    def test_missing_privacy_parent_has_fixed_error_and_is_not_created(self):
+        parent = self.root / "missing"
+        privacy = parent / "privacy.jpg"
+        self.assert_validation_error(
+            "error: output directory does not exist",
+            self.argv(output=privacy, output_option="--privacy-output"),
+        )
+        self.assertFalse(parent.exists())
+
     def test_output_directory_has_fixed_error(self):
         self.assert_validation_error("error: output path must be a file", self.argv(output=self.root))
+
+    def test_privacy_directory_has_fixed_error(self):
+        self.assert_validation_error(
+            "error: output path must be a file",
+            self.argv(output=self.root, output_option="--privacy-output"),
+        )
 
     def test_same_normalized_path_has_fixed_error(self):
         output = self.input.parent / "." / self.input.name
         self.assert_validation_error(
             "error: input and output paths must differ", self.argv(output=output)
+        )
+
+    def test_privacy_same_normalized_path_has_fixed_error(self):
+        output = self.input.parent / "." / self.input.name
+        self.assert_validation_error(
+            "error: input and output paths must differ",
+            self.argv(output=output, output_option="--privacy-output"),
+        )
+
+    def test_normalized_output_identity_has_fixed_error(self):
+        (self.root / "nested").mkdir()
+        privacy = self.root / "nested" / ".." / self.output.name
+        self.assert_validation_error(
+            "error: output paths must differ",
+            [*self.argv(), "--privacy-output", str(privacy)],
         )
 
     def test_existing_output_file_is_accepted_without_modification(self):
@@ -198,6 +229,71 @@ class ArgumentTests(unittest.TestCase):
             self.skipTest(f"symlink creation is unavailable: {error.errno}")
         self.assert_validation_error(
             "error: input and output paths must differ", self.argv()
+        )
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_privacy_symlink_to_input_is_rejected(self):
+        try:
+            self.output.symlink_to(self.input)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error.errno}")
+        self.assert_validation_error(
+            "error: input and output paths must differ",
+            self.argv(output_option="--privacy-output"),
+        )
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_output_symlinks_to_same_file_are_rejected(self):
+        target = self.root / "target.png"
+        privacy = self.root / "privacy.png"
+        target.write_bytes(b"image")
+        try:
+            self.output.symlink_to(target)
+            privacy.symlink_to(target)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error.errno}")
+        self.assert_validation_error(
+            "error: output paths must differ",
+            [*self.argv(), "--privacy-output", str(privacy)],
+        )
+
+    @unittest.skipUnless(hasattr(os, "link"), "hard links are unavailable")
+    def test_output_hard_links_to_same_file_are_rejected(self):
+        privacy = self.root / "privacy.png"
+        self.output.write_bytes(b"image")
+        try:
+            os.link(self.output, privacy)
+        except OSError as error:
+            self.skipTest(f"hard-link creation is unavailable: {error.errno}")
+        self.assert_validation_error(
+            "error: output paths must differ",
+            [*self.argv(), "--privacy-output", str(privacy)],
+        )
+
+    def test_distinct_existing_outputs_are_accepted_without_modification(self):
+        privacy = self.root / "privacy.png"
+        self.output.write_bytes(b"annotated")
+        privacy.write_bytes(b"privacy")
+        arguments = parse_arguments(
+            [*self.argv(), "--privacy-output", str(privacy)]
+        )
+        self.assertEqual(arguments.annotated_output, self.output)
+        self.assertEqual(arguments.privacy_output, privacy)
+        self.assertEqual(self.output.read_bytes(), b"annotated")
+        self.assertEqual(privacy.read_bytes(), b"privacy")
+
+    def test_samefile_os_error_is_sanitized_as_non_identity(self):
+        self.output.write_bytes(b"existing")
+        with patch.object(Path, "samefile", side_effect=OSError("private detail")):
+            arguments = parse_arguments(self.argv())
+        self.assertEqual(arguments.annotated_output, self.output)
+
+    def test_annotated_validation_precedes_privacy_validation(self):
+        annotated = self.root / "missing-annotated" / "out.png"
+        privacy = self.root / "missing-privacy" / "out.png"
+        self.assert_validation_error(
+            "error: output directory does not exist",
+            self.argv(output=annotated) + ["--privacy-output", str(privacy)],
         )
 
     def test_validation_order_is_deterministic(self):
