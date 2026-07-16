@@ -1,8 +1,8 @@
 """
-Verify parsing and path validation at the public CLI boundary.
+Verify two optional output paths at the public CLI boundary.
 
-Temporary filesystem entries model untrusted paths, and tests never modify
-production files.
+Temporary entries prove the at-least-one and pairwise identity invariants for
+untrusted paths without modifying production files.
 """
 
 import contextlib
@@ -28,11 +28,11 @@ class ArgumentTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
-    def argv(self, output=None, model=None):
+    def argv(self, output=None, model=None, output_option="--annotated-output"):
         return [
             "--input",
             str(self.input),
-            "--output",
+            output_option,
             str(output or self.output),
             "--model",
             str(model or self.model),
@@ -49,14 +49,30 @@ class ArgumentTests(unittest.TestCase):
                 str(self.model),
                 "--input",
                 str(self.input),
-                "--output",
+                "--annotated-output",
                 str(self.output),
             ]
         )
 
-        self.assertEqual(arguments, Arguments(self.input, self.output, self.model))
+        self.assertEqual(
+            arguments, Arguments(self.input, self.output, None, self.model)
+        )
         with self.assertRaises(AttributeError):
             arguments.input = self.output
+
+    def test_privacy_only_and_dual_output_forms_are_accepted(self):
+        privacy = self.root / "privacy.png"
+        privacy_only = parse_arguments(
+            self.argv(output=privacy, output_option="--privacy-output")
+        )
+        dual = parse_arguments(
+            [*self.argv(), "--privacy-output", str(privacy)]
+        )
+
+        self.assertEqual(
+            privacy_only, Arguments(self.input, None, privacy, self.model)
+        )
+        self.assertEqual(dual, Arguments(self.input, self.output, privacy, self.model))
 
     def test_repeated_option_uses_last_value(self):
         other_input = self.root / "other.jpg"
@@ -69,7 +85,28 @@ class ArgumentTests(unittest.TestCase):
     def test_missing_required_option_exits_with_usage(self):
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
-            parse_arguments(["--input", str(self.input), "--model", str(self.model)])
+            parse_arguments(["--model", str(self.model), *self.argv()[2:]])
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("usage:", stderr.getvalue())
+
+    def test_missing_outputs_has_fixed_semantic_error(self):
+        self.assert_validation_error(
+            "error: at least one output path is required",
+            ["--input", str(self.input), "--model", str(self.model)],
+        )
+
+    def test_obsolete_output_option_exits_with_usage(self):
+        stderr = io.StringIO()
+        argv = [
+            "--input",
+            str(self.input),
+            "--output",
+            str(self.output),
+            "--model",
+            str(self.model),
+        ]
+        with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+            parse_arguments(argv)
         self.assertEqual(error.exception.code, 2)
         self.assertIn("usage:", stderr.getvalue())
 
@@ -140,7 +177,7 @@ class ArgumentTests(unittest.TestCase):
     def test_existing_output_file_is_accepted_without_modification(self):
         self.output.write_bytes(b"existing")
         arguments = parse_arguments(self.argv())
-        self.assertEqual(arguments.output, self.output)
+        self.assertEqual(arguments.annotated_output, self.output)
         self.assertEqual(self.output.read_bytes(), b"existing")
 
     def test_bare_output_uses_current_directory_without_creating_file(self):
@@ -150,7 +187,7 @@ class ArgumentTests(unittest.TestCase):
             arguments = parse_arguments(self.argv(output=Path("bare.jpg")))
         finally:
             os.chdir(previous_directory)
-        self.assertEqual(arguments.output, Path("bare.jpg"))
+        self.assertEqual(arguments.annotated_output, Path("bare.jpg"))
         self.assertFalse((self.root / "bare.jpg").exists())
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
