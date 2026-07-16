@@ -1,7 +1,8 @@
-"""Render final selected detections and persist one verified output image.
+"""Own selected-class rendering and verified final-image persistence.
 
-Geometry and row validation are complete before this boundary. Class selection
-is final here, and output failures reveal no filesystem internals.
+Geometry and detection validation are complete before this boundary. This file
+creates independent annotated/privacy products, writes them deterministically,
+and maps every output failure to one fixed non-sensitive error.
 """
 
 from PIL import ImageDraw, ImageFont
@@ -9,9 +10,21 @@ from PIL import ImageDraw, ImageFont
 from .errors import OutputWriteError
 
 
-def write_output(image, detections, enabled_ids, model_names, output_path):
+def write_outputs(
+    source, detections, enabled_ids, model_names, annotated_path, privacy_path
+):
+    selected = set(enabled_ids)
+    if annotated_path is not None:
+        annotated = source.copy()
+        _render_annotated(annotated, detections, selected, model_names)
+        _save_output(annotated, annotated_path)
+    if privacy_path is not None:
+        # Each product starts from the unmodified normalized source.
+        _save_output(source.copy(), privacy_path)
+
+
+def _render_annotated(image, detections, selected, model_names):
     try:
-        selected = set(enabled_ids)
         width, height = image.size
         draw = ImageDraw.Draw(image)
         font = ImageFont.load_default(size=max(12, round(min(width, height) / 120)))
@@ -47,7 +60,12 @@ def write_output(image, detections, enabled_ids, model_names, output_path):
                 stroke_width=1,
                 stroke_fill=colour,
             )
+    except Exception:
+        raise OutputWriteError() from None
 
+
+def _save_output(image, output_path):
+    try:
         image.save(output_path)
         if not output_path.is_file() or output_path.stat().st_size == 0:
             raise OutputWriteError()
