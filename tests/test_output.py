@@ -8,12 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from PIL import Image
 
 from phenocam.inference.errors import OutputWriteError
-from phenocam.inference.output import _render_privacy, write_outputs
+from phenocam.inference.output import _render_privacy, _save_output, write_outputs
 
 
 class OutputTests(unittest.TestCase):
@@ -137,6 +137,101 @@ class OutputTests(unittest.TestCase):
         image.paste.assert_called_once_with(
             region.filter.return_value, (80, 40, 320, 160)
         )
+
+    def test_empty_detections_write_pixel_identical_products(self):
+        annotated = self.root / "annotated.png"
+        privacy = self.root / "privacy.png"
+        write_outputs(self.source, (), (0,), self.names, annotated, privacy)
+
+        for destination in (annotated, privacy):
+            with self.subTest(destination=destination), Image.open(destination) as output:
+                self.assertEqual(output.tobytes(), self.source.tobytes())
+
+    def test_overlapping_regions_are_processed_in_detection_order(self):
+        image = Mock(width=100, height=100)
+        first = SimpleNamespace(class_id=0, x1=10, y1=10, x2=30, y2=30)
+        second = SimpleNamespace(class_id=0, x1=20, y1=20, x2=50, y2=50)
+
+        _render_privacy(image, (first, second), {0})
+
+        self.assertEqual(
+            image.crop.call_args_list,
+            [call((8, 8, 32, 32)), call((17, 17, 53, 53))],
+        )
+        self.assertEqual(image.paste.call_count, 2)
+        self.assertLess(
+            image.mock_calls.index(call.paste(image.crop().filter(), (8, 8, 32, 32))),
+            image.mock_calls.index(call.crop((17, 17, 53, 53))),
+        )
+
+    def test_real_dual_output_keeps_annotations_out_of_privacy(self):
+        annotated = self.root / "annotated.png"
+        privacy = self.root / "privacy.png"
+        write_outputs(
+            self.source, self.detections, (0,), self.names, annotated, privacy
+        )
+
+        with Image.open(annotated) as annotated_image, Image.open(privacy) as privacy_image:
+            self.assertEqual(annotated_image.getpixel((20, 20)), (255, 70, 40))
+            self.assertEqual(privacy_image.getpixel((20, 20)), (10, 20, 30))
+
+    def test_post_save_verification_failures_have_fixed_empty_error(self):
+        destination = self.root / "annotated.png"
+        checks = (
+            ("missing", patch.object(Path, "is_file", return_value=False)),
+            (
+                "empty",
+                patch.object(Path, "stat", return_value=SimpleNamespace(st_size=0)),
+            ),
+        )
+        for name, check in checks:
+            with self.subTest(name=name), check:
+                with self.assertRaises(OutputWriteError) as raised:
+                    write_outputs(self.source, (), (), self.names, destination, None)
+                self.assertEqual(str(raised.exception), "")
+
+    def test_privacy_failure_keeps_completed_annotated_file(self):
+        annotated = self.root / "annotated.png"
+        privacy = self.root / "privacy.png"
+        calls = 0
+
+        def fail_second(image, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OutputWriteError()
+            _save_output(image, destination)
+
+        with patch("phenocam.inference.output._save_output", side_effect=fail_second):
+            with self.assertRaises(OutputWriteError):
+                write_outputs(
+                    self.source, self.detections, (0,), self.names, annotated, privacy
+                )
+
+        self.assertTrue(annotated.is_file())
+        self.assertGreater(annotated.stat().st_size, 0)
+        self.assertFalse(privacy.exists())
+
+    def test_privacy_rendering_failure_has_fixed_empty_error(self):
+        destination = self.root / "privacy.png"
+        with patch(
+            "phenocam.inference.output.ImageFilter.GaussianBlur",
+            side_effect=ValueError("private filter detail"),
+        ):
+            with self.assertRaises(OutputWriteError) as raised:
+                write_outputs(
+                    self.source, self.detections, (0,), self.names, None, destination
+                )
+        self.assertEqual(str(raised.exception), "")
+
+    def test_source_copy_failure_has_fixed_empty_error(self):
+        source = Mock()
+        source.copy.side_effect = ValueError("private copy detail")
+        with self.assertRaises(OutputWriteError) as raised:
+            write_outputs(
+                source, self.detections, (0,), self.names, self.root / "out.png", None
+            )
+        self.assertEqual(str(raised.exception), "")
 
 
 if __name__ == "__main__":
