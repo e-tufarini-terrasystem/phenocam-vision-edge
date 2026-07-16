@@ -1,7 +1,7 @@
 <!--
 Scopo: descrivere come il comportamento del software viene verificato.
-Responsabilita: collegare invarianti, test automatici, snapshot e limiti delle prove.
-Contesto: separa le garanzie riproducibili dalle misure dipendenti dalla piattaforma.
+Responsabilita: collegare invarianti, rendering privacy, test e limiti delle prove.
+Contesto: separa le garanzie locali sui due output dalle verifiche esterne.
 -->
 
 # Verifica
@@ -42,14 +42,15 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 
 | Test | Contratto principale |
 |---|---|
-| `tests/test_arguments.py` | Opzioni richieste, tipi di percorso, directory padre e identita distinta tra input e output. |
+| `tests/test_arguments.py` | Due output opzionali, presenza minima, ordine e identita distinte tra input/output/output. |
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
 | `tests/test_views.py` | EXIF, RGB, letterbox, forma del tensore, geometria adattiva, copertura e ordine delle viste. |
 | `tests/test_detections.py` | Soglia, valori non validi, conversione globale, clipping, IoU, NMS per classe e pareggi deterministici. |
-| `tests/test_pipeline.py` | Identita della source tra caricamento, nove viste e rendering, tempi e assenza di output parziale. |
-| `tests/test_command.py` | Messaggi pubblici, separazione stdout/stderr e stati del processo. |
-| `tests/test_reference_images.py` | Output JPEG reali, conteggi snapshot e assenza di duplicati sopra la soglia IoU. |
+| `tests/test_output.py` | Selezione, copie indipendenti, geometria/raggio privacy, ordine, persistenza e fallimento parziale. |
+| `tests/test_pipeline.py` | Una sessione, nove run e una NMS per ogni combinazione di output; timing e ordine dei confini. |
+| `tests/test_command.py` | Delega delle due destinazioni, messaggi pubblici, stream e stati del processo. |
+| `tests/test_reference_images.py` | Un output annotato reale, conteggi pre-filtro e assenza di duplicati sopra IoU 0,50. |
 
 ## Invarianti verificati
 
@@ -58,8 +59,8 @@ La suite protegge in particolare questi comportamenti:
 - i dati restituiti ai moduli successivi sono immutabili o trattati come tali;
 - configurazione, modello, immagine e output vengono validati ai rispettivi
   confini;
-- la stessa source RGB alimenta le nove viste, fornisce le dimensioni globali e
-  rimane lo sfondo del rendering;
+- la stessa source RGB alimenta le nove viste e rimane non mutata, mentre ogni
+  prodotto nasce da una copia indipendente;
 - ogni immagine produce una vista completa e otto crop deterministici;
 - le nove chiamate usano una sessione, avvengono in sequenza e devono riuscire
   tutte;
@@ -67,15 +68,23 @@ La suite protegge in particolare questi comportamenti:
   box;
 - la NMS opera per classe con IoU 0,50 e criteri di pareggio stabili;
 - il filtro dell'operatore non altera inferenza, fusione o NMS;
+- output annotato, privacy o entrambi eseguono sempre una sessione, nove run e
+  una NMS prima di una sola delega finale;
+- il privacy usa esattamente margine 10%, floor/ceil, clipping, coordinate
+  destre/inferiori esclusive e raggio `max(8 px, 10% del lato corto)`;
+- le sovrapposizioni vengono sfocate in ordine e le classi disabilitate ignorate;
+- l'annotato viene scritto prima del privacy e resta presente se il secondo
+  salvataggio fallisce;
 - eccezioni di terze parti non divulgano dettagli nei messaggi applicativi;
-- un successo richiede un file di output regolare e non vuoto.
+- un successo richiede ogni file richiesto regolare e non vuoto, anche con zero
+  detection selezionate.
 
 ## Snapshot sulle immagini di riferimento
 
 Quando sono disponibili, le immagini di riferimento vengono elaborate con
 modello e dipendenze reali.
 Per ciascuna, il test confronta i conteggi multi-vista con valori approvati e
-verifica che gli output siano JPEG non vuoti con dimensioni attese.
+verifica che l'unico output annotato sia JPEG non vuoto con dimensioni attese.
 
 I conteggi esistenti devono restare invariati con la source RGB passata
 direttamente alle nove viste. Sono uno **snapshot di regressione**: segnalano
@@ -87,7 +96,8 @@ confidenza di ogni box siano semanticamente corrette.
 La selezione in `phenocam/classes/configuration.py` non modifica questi
 conteggi: il test li raccoglie prima del filtro applicato al rendering. Una
 configurazione invalida impedisce invece l'esecuzione; cambiare i booleani
-modifica soltanto quali box compaiono nei JPEG prodotti.
+modifica soltanto quali box compaiono nel JPEG annotato; il test non ripete il
+lavoro reale per il privacy, coperto da immagini sintetiche in `test_output.py`.
 
 ## Prestazioni
 
