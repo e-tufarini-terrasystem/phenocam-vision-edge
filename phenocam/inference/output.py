@@ -5,9 +5,15 @@ creates independent annotated/privacy products, writes them deterministically,
 and maps every output failure to one fixed non-sensitive error.
 """
 
-from PIL import ImageDraw, ImageFont
+from math import ceil, floor
+
+from PIL import ImageDraw, ImageFilter, ImageFont
 
 from .errors import OutputWriteError
+
+_PRIVACY_MARGIN_RATIO = 0.10
+_PRIVACY_BLUR_RADIUS_RATIO = 0.10
+_PRIVACY_MIN_BLUR_RADIUS = 8
 
 
 def write_outputs(
@@ -20,7 +26,9 @@ def write_outputs(
         _save_output(annotated, annotated_path)
     if privacy_path is not None:
         # Each product starts from the unmodified normalized source.
-        _save_output(source.copy(), privacy_path)
+        privacy = source.copy()
+        _render_privacy(privacy, detections, selected)
+        _save_output(privacy, privacy_path)
 
 
 def _render_annotated(image, detections, selected, model_names):
@@ -60,6 +68,33 @@ def _render_annotated(image, detections, selected, model_names):
                 stroke_width=1,
                 stroke_fill=colour,
             )
+    except Exception:
+        raise OutputWriteError() from None
+
+
+def _render_privacy(image, detections, selected):
+    try:
+        for detection in detections:
+            if detection.class_id not in selected:
+                continue
+            width = detection.x2 - detection.x1
+            height = detection.y2 - detection.y1
+            left = max(0, floor(detection.x1 - width * _PRIVACY_MARGIN_RATIO))
+            top = max(0, floor(detection.y1 - height * _PRIVACY_MARGIN_RATIO))
+            right = min(
+                image.width, ceil(detection.x2 + width * _PRIVACY_MARGIN_RATIO)
+            )
+            bottom = min(
+                image.height, ceil(detection.y2 + height * _PRIVACY_MARGIN_RATIO)
+            )
+            box = (left, top, right, bottom)
+            radius = max(
+                float(_PRIVACY_MIN_BLUR_RADIUS),
+                min(right - left, bottom - top) * _PRIVACY_BLUR_RADIUS_RATIO,
+            )
+            # Crop from the current image so overlaps are blurred in detection order.
+            region = image.crop(box).filter(ImageFilter.GaussianBlur(radius))
+            image.paste(region, box)
     except Exception:
         raise OutputWriteError() from None
 
