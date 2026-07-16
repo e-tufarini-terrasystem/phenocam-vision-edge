@@ -39,6 +39,25 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(output.getpixel((2, 2)), (10, 20, 30))
         self.assertEqual(self.source.getpixel((20, 20)), (10, 20, 30))
 
+    def test_annotated_label_preserves_name_and_confidence_format(self):
+        destination = self.root / "annotated.png"
+        draw = Mock()
+        draw.textbbox.return_value = (20, 20, 90, 32)
+        with patch("phenocam.inference.output.ImageDraw.Draw", return_value=draw), patch(
+            "phenocam.inference.output._save_output"
+        ):
+            write_outputs(
+                self.source, self.detections, (0,), self.names, destination, None
+            )
+
+        self.assertIn(
+            call((20, 20, 50, 45), outline=(255, 70, 40), width=2),
+            draw.rectangle.call_args_list,
+        )
+        draw.text.assert_called_once()
+        self.assertEqual(draw.text.call_args.args[1], "person 0.88")
+        self.assertEqual(draw.text.call_args.kwargs["fill"], (0, 0, 0))
+
     def test_both_outputs_are_independent_and_written_in_order(self):
         annotated = self.root / "annotated.png"
         privacy = self.root / "privacy.png"
