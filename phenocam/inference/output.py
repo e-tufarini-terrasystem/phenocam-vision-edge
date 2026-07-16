@@ -19,16 +19,21 @@ _PRIVACY_MIN_BLUR_RADIUS = 8
 def write_outputs(
     source, detections, enabled_ids, model_names, annotated_path, privacy_path
 ):
-    selected = set(enabled_ids)
-    if annotated_path is not None:
-        annotated = source.copy()
-        _render_annotated(annotated, detections, selected, model_names)
-        _save_output(annotated, annotated_path)
-    if privacy_path is not None:
-        # Each product starts from the unmodified normalized source.
-        privacy = source.copy()
-        _render_privacy(privacy, detections, selected)
-        _save_output(privacy, privacy_path)
+    try:
+        selected = set(enabled_ids)
+        if annotated_path is not None:
+            annotated = source.copy()
+            _render_annotated(annotated, detections, selected, model_names)
+            _save_output(annotated, annotated_path)
+        if privacy_path is not None:
+            # Each product starts from the unmodified normalized source.
+            privacy = source.copy()
+            _render_privacy(privacy, detections, selected)
+            _save_output(privacy, privacy_path)
+    except OutputWriteError:
+        raise
+    except Exception:
+        raise OutputWriteError() from None
 
 
 def _render_annotated(image, detections, selected, model_names):
