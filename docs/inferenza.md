@@ -150,9 +150,8 @@ Ogni riga e interpretata come:
 ```
 
 La riga viene ignorata se non ha sei valori convertibili in numeri finiti, se
-l'ID non e un intero esatto o se non compare nella mappa del modello. Una riga
-`car` richiede confidenza maggiore o uguale a 0,30; ogni altra classe richiede
-confidenza maggiore o uguale a 0,25. Entrambe le soglie sono inclusive.
+l'ID non e un intero esatto o se non compare nella mappa del modello. Ogni
+classe richiede confidenza maggiore o uguale a 0,30; la soglia e inclusiva.
 
 Le coordinate del modello vengono prima liberate dal padding e dalla scala,
 poi traslate con l'origine del crop:

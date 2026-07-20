@@ -24,8 +24,8 @@ view plus fifteen adaptive overlapping crops. Horizontal and square images use a
 The EXIF-normalized RGB source supplies all sixteen views and remains the final
 rendering background.
 Crop detections are converted to global image coordinates, all model classes
-are merged, and rows named `car` require confidence 0,30 while every other
-class requires 0,25. Duplicates are suppressed when IoU or smaller-box coverage
+are merged, and all rows require confidence greater than or equal to 0.30.
+Duplicates are suppressed when IoU or smaller-box coverage
 reaches 0,50; `car`, `bus`, and `truck` compete across labels, while other
 classes compete only with themselves. `phenocam/classes/configuration.py` then
 selects the final annotations and privacy regions.
