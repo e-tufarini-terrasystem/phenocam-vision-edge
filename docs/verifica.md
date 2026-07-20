@@ -46,11 +46,11 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
 | `tests/test_views.py` | EXIF, RGB, letterbox, tensore, quindici crop, copertura e ordine delle sedici viste. |
-| `tests/test_detections.py` | Soglia, valori non validi, conversione globale, clipping, IoU, NMS per classe e pareggi deterministici. |
+| `tests/test_detections.py` | Soglie per classe, valori non validi, conversione globale, clipping, IoU, copertura della box minore e dominio `car`, `bus`, `truck`. |
 | `tests/test_output.py` | Selezione, copie indipendenti, geometria/raggio privacy, ordine, persistenza e fallimento parziale. |
-| `tests/test_pipeline.py` | Una sessione, sedici run e una NMS per ogni combinazione di output; timing e ordine dei confini. |
+| `tests/test_pipeline.py` | Una sessione, sedici run e una soppressione globale per ogni combinazione di output; timing e ordine dei confini. |
 | `tests/test_command.py` | Delega delle due destinazioni, messaggi pubblici, stream e stati del processo. |
-| `tests/test_reference_images.py` | Inventario e dimensioni reali, output JPEG, durata float e IoU stessa classe inferiore a 0,50. |
+| `tests/test_reference_images.py` | Inventario, output JPEG, vincitori noti e invarianti finali per IoU e copertura nei domini di soppressione. |
 
 ## Invarianti verificati
 
@@ -66,10 +66,11 @@ La suite protegge in particolare questi comportamenti:
   tutte;
 - le coordinate vengono ricostruite e limitate prima di accettare l'area della
   box;
-- la NMS opera per classe con IoU 0,50 e criteri di pareggio stabili;
-- il filtro dell'operatore non altera inferenza, fusione o NMS;
+- la soppressione usa IoU o copertura della box minore a 0,50, con un dominio
+  condiviso per `car`, `bus`, `truck` e domini separati per le altre classi;
+- il filtro dell'operatore non altera inferenza, fusione o soppressione;
 - output annotato, privacy o entrambi eseguono sempre una sessione, sedici run e
-  una NMS prima di una sola delega finale;
+  una soppressione prima di una sola delega finale;
 - il privacy usa esattamente margine 10%, floor/ceil, clipping, coordinate
   destre/inferiori esclusive e raggio `max(8 px, 10% del lato corto)`;
 - le sovrapposizioni vengono sfocate in ordine e le classi disabilitate ignorate;
@@ -85,11 +86,18 @@ Quando sono disponibili, le immagini di riferimento vengono elaborate con
 modello e dipendenze reali. Il test garantisce l'inventario esatto delle sei
 JPEG, dimensioni sorgente `4608×2592`, durata restituita di tipo `float`, output
 JPEG regolare non vuoto con le stesse dimensioni e IoU strettamente inferiore a
-`0,50` per ogni coppia di detection finali della stessa classe.
+`0,50` per ogni coppia finale nello stesso dominio. Anche la copertura della box
+minore deve essere strettamente inferiore a `0,50`. Appartengono allo stesso
+dominio le detection della stessa classe e tutte le coppie i cui nomi sono tra
+`car`, `bus` e `truck`; classi diverse fuori da questo gruppo non vengono
+confrontate.
 
-I conteggi di persone e auto non sono asseriti e non sono ground truth. La
-selezione in `phenocam/classes/configuration.py` modifica soltanto quali box
-compaiono nell'output; il privacy resta coperto con immagini sintetiche in
+Le regressioni richiedono i tre vincitori `car` 0,70, 0,75 e 0,77 e il vincitore
+`truck` 0,91 nelle rispettive coordinate con tolleranza di due pixel. Non
+asseriscono conteggi totali: le immagini non sono ground truth. Questi controlli
+non dimostrano rifiuto universale dei cartelli, precision, recall, accuracy o
+mAP. La selezione in `phenocam/classes/configuration.py` modifica soltanto quali
+box compaiono nell'output; il privacy resta coperto con immagini sintetiche in
 `test_output.py`. Se le immagini ignorate non sono disponibili, lo stato e:
 `not verified — external verification: reference images are unavailable`.
 
