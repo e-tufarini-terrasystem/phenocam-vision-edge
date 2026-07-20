@@ -28,8 +28,8 @@ selezione avviene per nome, percio il modello puo associare ID diversi ai nomi
 purche l'inventario sia completo e senza duplicati. Gli ID finali sono ordinati.
 
 **Invariante:** la selezione non riduce il lavoro della rete. Tutte le classi
-partecipano alle sedici inferenze e alla NMS; il filtro viene applicato soltanto
-durante il rendering finale.
+partecipano alle sedici inferenze e alla soppressione globale; il filtro viene
+applicato soltanto durante il rendering finale.
 
 ## 2. Sessione e contratto ONNX
 
@@ -150,8 +150,9 @@ Ogni riga e interpretata come:
 ```
 
 La riga viene ignorata se non ha sei valori convertibili in numeri finiti, se
-la confidenza e minore di 0,25, se l'ID non e un intero esatto o se non compare
-nella mappa del modello.
+l'ID non e un intero esatto o se non compare nella mappa del modello. Una riga
+`car` richiede confidenza maggiore o uguale a 0,30; ogni altra classe richiede
+confidenza maggiore o uguale a 0,25. Entrambe le soglie sono inclusive.
 
 Le coordinate del modello vengono prima liberate dal padding e dalla scala,
 poi traslate con l'origine del crop:
@@ -166,26 +167,39 @@ Ogni coordinata viene limitata a `[0, larghezza - 1]` o
 `x2 > x1` e `y2 > y1`. La detection immutabile conserva inoltre priorita della
 vista e posizione originale della riga per risolvere i pareggi.
 
-## 8. NMS globale per classe
+## 8. Soppressione globale delle detection
 
-Le detection delle sedici viste vengono raggruppate per ID di classe. In ogni
-gruppo i candidati sono ordinati per:
+Le detection delle sedici viste vengono divise in domini di soppressione.
+`car`, `bus` e `truck` condividono un unico dominio e possono quindi competere
+anche con etichette diverse; ogni altra classe ha un dominio separato per ID.
+In ogni dominio i candidati sono ordinati per:
 
 1. confidenza decrescente;
 2. priorita crescente della vista;
 3. priorita crescente della riga.
 
-Un candidato viene scartato quando la sua Intersection over Union con una box
-gia accettata e maggiore o uguale a 0,50. Classi diverse non si sopprimono tra
-loro. L'ordinamento finale aggiunge l'ID classe come ultimo criterio, rendendo
-il risultato riproducibile anche in presenza di pareggi.
+L'IoU e l'area di intersezione divisa per l'area di unione. La copertura della
+box minore e la stessa intersezione divisa per la minore delle due aree. Un
+candidato viene scartato quando, rispetto a una box gia accettata nel dominio,
+l'IoU e maggiore o uguale a 0,50 **oppure** la copertura della box minore e
+maggiore o uguale a 0,50. Le soglie sono inclusive.
+
+Il vincitore conserva classe, confidenza e coordinate originali: non avvengono
+fusione, media o unione delle box. L'ordinamento finale resta confidenza
+decrescente, priorita della vista crescente, priorita della riga crescente e ID
+di classe crescente. La selezione configurata dall'operatore avviene soltanto
+dopo questa soppressione.
+
+Il post-processing geometrico e le soglie di confidenza riducono i falsi
+positivi noti, ma non puo garantire accuratezza semantica in scene arbitrarie.
 
 ## 9. Selezione e output finali
 
-Soltanto dopo la NMS `write_outputs()` converte una volta gli ID abilitati in un
-insieme e filtra le detection. La stessa selezione governa entrambi i prodotti;
-non cambia inferenza, fusione o NMS. La source RGB normalizzata non viene mutata:
-ogni prodotto richiesto parte da una copia indipendente.
+Soltanto dopo la soppressione `write_outputs()` converte una volta gli ID
+abilitati in un insieme e filtra le detection. La stessa selezione governa
+entrambi i prodotti; non cambia inferenza, fusione o soppressione. La source RGB
+normalizzata non viene mutata: ogni prodotto richiesto parte da una copia
+indipendente.
 
 ### Output annotato
 
@@ -197,7 +211,9 @@ precedente output annotato.
 ### Output privacy
 
 Il privacy parte dalla source senza annotazioni e non aggiunge box, nomi o
-confidenze. Per ogni detection selezionata, nell'ordine finale deterministico:
+confidenze. Soltanto le detection conservate raggiungono questo output: la
+soppressione non cambia geometria o intensita dello sfocamento. Per ogni
+detection selezionata, nell'ordine finale deterministico:
 
 1. calcola larghezza `x2 - x1` e altezza `y2 - y1`;
 2. espande ciascun lato del 10%, usando `_PRIVACY_MARGIN_RATIO = 0.10`;
