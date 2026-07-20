@@ -1,16 +1,15 @@
 """Normalize untrusted rows and suppress duplicate global detections.
 
-Rows receive class-specific confidence filtering and coordinate validation
-before deterministic same-class and competing car, bus, truck suppression.
-Class selection stays outside this boundary so every valid class participates.
+Rows receive uniform confidence filtering and coordinate validation before
+deterministic same-class and competing car, bus, truck suppression. Class
+selection stays outside this boundary so every valid class participates.
 """
 
 import math
 from dataclasses import dataclass
 
 
-_DEFAULT_CONFIDENCE_THRESHOLD = 0.25
-_CAR_CONFIDENCE_THRESHOLD = 0.30
+_CONFIDENCE_THRESHOLD = 0.30
 _OVERLAP_THRESHOLD = 0.50
 _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
@@ -40,12 +39,7 @@ def normalize_rows(rows, view, image_width, image_height, model_names):
             class_id = int(class_value)
             if class_value != class_id or class_id not in model_names:
                 continue
-            confidence_threshold = (
-                _CAR_CONFIDENCE_THRESHOLD
-                if model_names[class_id] == "car"
-                else _DEFAULT_CONFIDENCE_THRESHOLD
-            )
-            if confidence < confidence_threshold:
+            if confidence < _CONFIDENCE_THRESHOLD:
                 continue
 
             # Global coordinates are clipped before the positive-area invariant.

@@ -1,4 +1,4 @@
-"""Verify class-specific row normalization and deterministic suppression.
+"""Verify uniform confidence row normalization and deterministic suppression.
 
 Synthetic rows cover untrusted values and geometry; immutable detections cover
 IoU, smaller-box coverage, the competing road-vehicle domain, and tie breakers.
@@ -45,12 +45,13 @@ class DetectionTests(unittest.TestCase):
         self.assertEqual((detection.class_id, detection.view_priority), (42, 3))
         self.assertEqual(detection.row_priority, 0)
 
-    def test_car_threshold_is_class_specific_and_inclusive(self):
+    def test_confidence_threshold_is_uniform_and_inclusive(self):
         rows = np.array(
             [
                 [10, 20, 30, 40, 0.29, 42],
                 [10, 20, 30, 40, 0.30, 42],
                 [10, 20, 30, 40, 0.25, 17],
+                [10, 20, 30, 40, 0.30, 17],
             ],
             dtype=np.float32,
         )
@@ -58,9 +59,9 @@ class DetectionTests(unittest.TestCase):
         detections = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)
 
         self.assertEqual(tuple(item.class_id for item in detections), (42, 17))
-        self.assertEqual(tuple(item.row_priority for item in detections), (1, 2))
+        self.assertEqual(tuple(item.row_priority for item in detections), (1, 3))
         self.assertAlmostEqual(detections[0].confidence, 0.30)
-        self.assertAlmostEqual(detections[1].confidence, 0.25)
+        self.assertAlmostEqual(detections[1].confidence, 0.30)
 
     def test_clips_to_source_bounds_and_keeps_all_model_classes(self):
         rows = np.array(
