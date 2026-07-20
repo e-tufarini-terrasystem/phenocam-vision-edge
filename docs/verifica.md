@@ -45,12 +45,12 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 | `tests/test_arguments.py` | Due output opzionali, presenza minima, ordine e identita distinte tra input/output/output. |
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
-| `tests/test_views.py` | EXIF, RGB, letterbox, forma del tensore, geometria adattiva, copertura e ordine delle viste. |
+| `tests/test_views.py` | EXIF, RGB, letterbox, tensore, quindici crop, copertura e ordine delle sedici viste. |
 | `tests/test_detections.py` | Soglia, valori non validi, conversione globale, clipping, IoU, NMS per classe e pareggi deterministici. |
 | `tests/test_output.py` | Selezione, copie indipendenti, geometria/raggio privacy, ordine, persistenza e fallimento parziale. |
-| `tests/test_pipeline.py` | Una sessione, nove run e una NMS per ogni combinazione di output; timing e ordine dei confini. |
+| `tests/test_pipeline.py` | Una sessione, sedici run e una NMS per ogni combinazione di output; timing e ordine dei confini. |
 | `tests/test_command.py` | Delega delle due destinazioni, messaggi pubblici, stream e stati del processo. |
-| `tests/test_reference_images.py` | Un output annotato reale, conteggi pre-filtro e assenza di duplicati sopra IoU 0,50. |
+| `tests/test_reference_images.py` | Inventario e dimensioni reali, output JPEG, durata float e IoU stessa classe inferiore a 0,50. |
 
 ## Invarianti verificati
 
@@ -59,16 +59,16 @@ La suite protegge in particolare questi comportamenti:
 - i dati restituiti ai moduli successivi sono immutabili o trattati come tali;
 - configurazione, modello, immagine e output vengono validati ai rispettivi
   confini;
-- la stessa source RGB alimenta le nove viste e rimane non mutata, mentre ogni
+- la stessa source RGB alimenta le sedici viste e rimane non mutata, mentre ogni
   prodotto nasce da una copia indipendente;
-- ogni immagine produce una vista completa e otto crop deterministici;
-- le nove chiamate usano una sessione, avvengono in sequenza e devono riuscire
+- ogni immagine produce una vista completa e quindici crop deterministici;
+- le sedici chiamate usano una sessione, avvengono in sequenza e devono riuscire
   tutte;
 - le coordinate vengono ricostruite e limitate prima di accettare l'area della
   box;
 - la NMS opera per classe con IoU 0,50 e criteri di pareggio stabili;
 - il filtro dell'operatore non altera inferenza, fusione o NMS;
-- output annotato, privacy o entrambi eseguono sempre una sessione, nove run e
+- output annotato, privacy o entrambi eseguono sempre una sessione, sedici run e
   una NMS prima di una sola delega finale;
 - il privacy usa esattamente margine 10%, floor/ceil, clipping, coordinate
   destre/inferiori esclusive e raggio `max(8 px, 10% del lato corto)`;
@@ -79,29 +79,35 @@ La suite protegge in particolare questi comportamenti:
 - un successo richiede ogni file richiesto regolare e non vuoto, anche con zero
   detection selezionate.
 
-## Snapshot sulle immagini di riferimento
+## Integrazione sulle immagini di riferimento
 
 Quando sono disponibili, le immagini di riferimento vengono elaborate con
-modello e dipendenze reali.
-Per ciascuna, il test confronta i conteggi multi-vista con valori approvati e
-verifica che l'unico output annotato sia JPEG non vuoto con dimensioni attese.
+modello e dipendenze reali. Il test garantisce l'inventario esatto delle sei
+JPEG, dimensioni sorgente `4608×2592`, durata restituita di tipo `float`, output
+JPEG regolare non vuoto con le stesse dimensioni e IoU strettamente inferiore a
+`0,50` per ogni coppia di detection finali della stessa classe.
 
-I conteggi esistenti devono restare invariati con la source RGB passata
-direttamente alle nove viste. Sono uno **snapshot di regressione**: segnalano
-cambiamenti nel comportamento del modello, nella geometria o nel
-post-processing, ma non sono ground truth e non misurano accuracy, precision,
-recall o mAP. Un conteggio uguale non dimostra che posizione, classe e
-confidenza di ogni box siano semanticamente corrette.
+I conteggi di persone e auto non sono asseriti e non sono ground truth. La
+selezione in `phenocam/classes/configuration.py` modifica soltanto quali box
+compaiono nell'output; il privacy resta coperto con immagini sintetiche in
+`test_output.py`. Se le immagini ignorate non sono disponibili, lo stato e:
+`not verified — external verification: reference images are unavailable`.
 
-La selezione in `phenocam/classes/configuration.py` non modifica questi
-conteggi: il test li raccoglie prima del filtro applicato al rendering. Una
-configurazione invalida impedisce invece l'esecuzione; cambiare i booleani
-modifica soltanto quali box compaiono nel JPEG annotato; il test non ripete il
-lavoro reale per il privacy, coperto da immagini sintetiche in `test_output.py`.
+## Confronto aggregato osservato
+
+| Geometria | Inferenze totali | Persone | Auto | Tempo ONNX relativo |
+|---|---:|---:|---:|---:|
+| `4×2` corrente | 9 | 18 | 183 | `1,00×` |
+| `5×3` nuova | 16 | 22 | 210 | `1,67×` |
+
+I conteggi piu alti e la confidenza media sostanzialmente invariata non
+distinguono oggetti recuperati da falsi positivi. Queste osservazioni non
+dimostrano maggiore accuracy, precision, recall o mAP e non sono criteri di
+accettazione automatici.
 
 ## Prestazioni
 
-Il valore `Execution time` e verificabile come somma dei nove intervalli
+Il valore `Execution time` e verificabile come somma dei sedici intervalli
 `session.run()`, ma non rappresenta il tempo completo percepito dall'operatore.
 Per una misura end-to-end occorre cronometrare il processo esternamente,
 includendo avvio, sessione, I/O e post-processing.
