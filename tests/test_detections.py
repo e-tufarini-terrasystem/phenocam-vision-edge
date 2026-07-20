@@ -1,7 +1,7 @@
 """Verify class-specific row normalization and deterministic deduplication.
 
 Synthetic rows cover untrusted values and geometry; immutable detections cover
-IoU thresholds, class isolation, and every approved NMS tie breaker.
+IoU, smaller-box coverage, class isolation, and every approved tie breaker.
 """
 
 import unittest
@@ -123,11 +123,29 @@ class DetectionTests(unittest.TestCase):
         self.assertEqual(deduplicate((lower, higher)), (higher,))
 
     def test_exact_half_iou_is_suppressed_but_below_half_is_kept(self):
-        large = self.detection()
-        exact = self.detection(x2=5.0, confidence=0.8)
-        below = self.detection(x2=4.9, confidence=0.7)
-        self.assertEqual(deduplicate((large, exact)), (large,))
-        self.assertEqual(deduplicate((large, below)), (large, below))
+        left = self.detection(x2=6.0)
+        exact = self.detection(x1=2.0, x2=8.0, confidence=0.8)
+        below = self.detection(x1=5.1, x2=15.1, confidence=0.7)
+        self.assertEqual(deduplicate((left, exact)), (left,))
+        separate_left = self.detection()
+        self.assertEqual(
+            deduplicate((separate_left, below)), (separate_left, below)
+        )
+
+    def test_minimum_area_overlap_exact_half_is_suppressed(self):
+        large = self.detection(x2=20.0)
+        fragment = self.detection(x1=15.0, x2=25.0, confidence=0.8)
+        self.assertEqual(deduplicate((large, fragment)), (large,))
+
+    def test_minimum_area_overlap_below_half_is_retained(self):
+        large = self.detection(x2=20.0)
+        fragment = self.detection(x1=15.1, x2=25.1, confidence=0.8)
+        self.assertEqual(deduplicate((large, fragment)), (large, fragment))
+
+    def test_partial_box_is_suppressed_when_iou_is_below_half(self):
+        large = self.detection(x2=20.0, y2=20.0)
+        fragment = self.detection(x1=12.0, x2=22.0, confidence=0.8)
+        self.assertEqual(deduplicate((large, fragment)), (large,))
 
     def test_equal_confidence_prefers_full_then_earlier_crop(self):
         late = self.detection(view_priority=8)
