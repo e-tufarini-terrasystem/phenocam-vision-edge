@@ -1,9 +1,9 @@
 """
 Provide the process boundary for the single-image inference command.
 
-Argument handling, timing, configuration, model compatibility, inference, and
-output writing are delegated. Successful execution prints the prediction
-duration; this entry point contains no fixed paths or model metadata processing.
+Argument handling and two optional image destinations are delegated to the
+single inference transaction. This entry point owns only fixed process
+diagnostics and successful timing output.
 """
 
 import sys
@@ -11,15 +11,18 @@ from typing import Optional, Sequence
 
 from phenocam.arguments import ArgumentValidationError, parse_arguments
 from phenocam.inference.errors import InferenceError, OutputWriteError
-from phenocam.inference.pipeline import annotate_image
+from phenocam.inference.pipeline import process_image
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         arguments = parse_arguments(argv)
-        inference_seconds = annotate_image(
-            arguments.model, arguments.input, arguments.output
+        inference_seconds = process_image(
+            arguments.model,
+            arguments.input,
+            arguments.annotated_output,
+            arguments.privacy_output,
         )
     except ArgumentValidationError as error:
         print(str(error), file=sys.stderr)

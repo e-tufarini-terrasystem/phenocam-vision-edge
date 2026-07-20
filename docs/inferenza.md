@@ -1,6 +1,6 @@
 <!--
-Scopo: documentare l'algoritmo di inferenza multi-vista dall'immagine alle annotazioni.
-Responsabilita: rendere espliciti preprocessing, geometria, contratti e filtri.
+Scopo: documentare l'algoritmo multi-vista fino ai rendering annotato e privacy.
+Responsabilita: rendere espliciti preprocessing, geometria, contratti e output finali.
 Contesto: dettaglia la transazione coordinata da phenocam/inference/pipeline.py.
 -->
 
@@ -29,7 +29,7 @@ purche l'inventario sia completo e senza duplicati. Gli ID finali sono ordinati.
 
 **Invariante:** la selezione non riduce il lavoro della rete. Tutte le classi
 partecipano alle nove inferenze e alla NMS; il filtro viene applicato soltanto
-durante il disegno.
+durante il rendering finale.
 
 ## 2. Sessione e contratto ONNX
 
@@ -71,7 +71,8 @@ errore di inferenza generico. Il dettaglio dell'eccezione e il percorso non
 vengono inseriti nel messaggio pubblico.
 
 Lo stesso oggetto RGB alimenta direttamente tutte le nove viste, fornisce le
-dimensioni per la normalizzazione globale e rimane lo sfondo del rendering.
+dimensioni per la normalizzazione globale e resta la sorgente non mutata dei
+rendering finali.
 
 ## 4. Geometria delle nove viste
 
@@ -130,7 +131,7 @@ session.run((nome_output,), {nome_input: tensore})
 
 Il cronometro racchiude soltanto questa chiamata. Il valore stampato al termine
 e la somma dei nove intervalli ONNX; non include avvio Python, sessione, lettura
-immagine, preparazione, post-processing, disegno o scrittura.
+immagine, preparazione, post-processing, rendering o scrittura.
 
 Anche dopo il controllo statico del modello, il risultato dinamico deve essere
 una lista o tupla con un solo `numpy.ndarray`, tipo `float32`, tre dimensioni e
@@ -175,15 +176,46 @@ gia accettata e maggiore o uguale a 0,50. Classi diverse non si sopprimono tra
 loro. L'ordinamento finale aggiunge l'ID classe come ultimo criterio, rendendo
 il risultato riproducibile anche in presenza di pareggi.
 
-## 9. Filtro e output
+## 9. Selezione e output finali
 
-Soltanto ora gli ID non abilitati in `phenocam/classes/configuration.py` vengono
-esclusi. Le detection
-selezionate sono disegnate sull'immagine RGB completa con rettangolo, nome della
-classe e confidenza a due decimali. Dimensione del font e spessore della linea
-scalano rispetto al lato minore dell'immagine. La classe con ID 0 usa un colore
-rosso-arancio; le altre un azzurro.
+Soltanto dopo la NMS `write_outputs()` converte una volta gli ID abilitati in un
+insieme e filtra le detection. La stessa selezione governa entrambi i prodotti;
+non cambia inferenza, fusione o NMS. La source RGB normalizzata non viene mutata:
+ogni prodotto richiesto parte da una copia indipendente.
 
-Pillow deduce il formato dal percorso di output. Un file esistente puo essere
-sovrascritto. Dopo `save()`, il codice verifica che il percorso identifichi un
-file regolare e che la sua dimensione sia maggiore di zero.
+### Output annotato
+
+Le detection selezionate sono disegnate con rettangolo, nome della classe e
+confidenza a due decimali. Font e linea scalano rispetto al lato minore. La
+classe con ID 0 usa rosso-arancio, le altre azzurro. L'aspetto coincide con il
+precedente output annotato.
+
+### Output privacy
+
+Il privacy parte dalla source senza annotazioni e non aggiunge box, nomi o
+confidenze. Per ogni detection selezionata, nell'ordine finale deterministico:
+
+1. calcola larghezza `x2 - x1` e altezza `y2 - y1`;
+2. espande ciascun lato del 10%, usando `_PRIVACY_MARGIN_RATIO = 0.10`;
+3. applica floor a sinistra/alto e ceil a destra/basso;
+4. limita il rettangolo ai bordi, con destra/basso esclusivi secondo Pillow;
+5. usa raggio `max(8 px, 0.10 * lato corto della regione finale)`, fissato da
+   `_PRIVACY_MIN_BLUR_RADIUS = 8` e `_PRIVACY_BLUR_RADIUS_RATIO = 0.10`;
+6. applica `GaussianBlur` al crop corrente e lo reinserisce nello stesso punto.
+
+Le sovrapposizioni ricevono quindi piu blur in sequenza. Le detection di classi
+disabilitate non modificano pixel, anche quando si sovrappongono a una regione
+abilitata. Il contratto e rettangolare: non usa maschere o segmentazione.
+
+### Persistenza
+
+Con entrambi gli output, l'annotato viene renderizzato, salvato e verificato
+prima di iniziare il privacy. Un errore successivo non rimuove l'annotato gia
+completato. Zero detection selezionate non e un errore: ogni prodotto richiesto
+viene comunque salvato ed e pixel-equivalente alla source normalizzata nei
+formati lossless.
+
+Pillow deduce il formato dalla destinazione e puo sovrascrivere file esistenti.
+Dopo ogni `save()`, il percorso deve essere un file regolare non vuoto; qualunque
+errore di rendering, filtro, I/O o verifica diventa `OutputWriteError` senza
+dettagli privati.

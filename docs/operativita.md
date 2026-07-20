@@ -1,7 +1,7 @@
 <!--
 Scopo: spiegare come installare, configurare ed eseguire il software.
-Responsabilita: documentare il contratto operativo di CLI, batch, output ed export.
-Contesto: traduce l'architettura in procedure ripetibili per operatore e manutentore.
+Responsabilita: documentare il contratto operativo di CLI, batch, due output ed export.
+Contesto: traduce la scelta tra output annotato e privacy in procedure ripetibili.
 -->
 
 # Operativita
@@ -28,29 +28,47 @@ Su macOS Apple Silicon si puo creare allo stesso modo una virtualenv con Python
 
 ## Comando singolo
 
-Il modulo si esegue dalla radice del repository e richiede sempre tutte e tre
-le opzioni:
+Il modulo si esegue dalla radice del repository. `--input` e `--model` sono
+obbligatori; occorre richiedere almeno uno dei due output:
 
 ```sh
 .venv/bin/python -m phenocam \
   --input input/esempio.jpg \
-  --output output/esempio.jpg \
+  --annotated-output output/esempio_annotated.jpg \
+  --model models/yolo26n.onnx
+```
+
+Solo privacy, oppure entrambi con una singola inferenza:
+
+```sh
+.venv/bin/python -m phenocam \
+  --input input/esempio.jpg \
+  --privacy-output output/esempio_privacy.jpg \
+  --model models/yolo26n.onnx
+
+.venv/bin/python -m phenocam \
+  --input input/esempio.jpg \
+  --annotated-output output/esempio_annotated.jpg \
+  --privacy-output output/esempio_privacy.jpg \
   --model models/yolo26n.onnx
 ```
 
 | Opzione | Validazione |
 |---|---|
 | `--input` | Deve essere un file locale esistente e decodificabile come immagine. |
-| `--output` | La directory padre deve esistere; il percorso non puo essere una directory o la stessa identita del file di input. |
+| `--annotated-output` | Opzionale; la directory padre deve esistere e il percorso deve identificare un file distinto. |
+| `--privacy-output` | Opzionale; valgono gli stessi vincoli dell'annotato. |
 | `--model` | Deve essere un file locale esistente con estensione `.onnx`, senza distinzione tra maiuscole e minuscole. |
 
-Il confronto tra input e output risolve percorsi equivalenti e link simbolici;
-se l'output esiste gia, controlla anche l'identita reale dei file. Questo evita
-che il salvataggio distrugga accidentalmente l'immagine sorgente.
+`--output` non esiste piu e viene rifiutato da `argparse`. Il confronto risolve
+percorsi equivalenti e link simbolici; per file esistenti controlla anche gli
+hard link. Ogni output deve essere distinto dall'input e, quando sono richiesti
+entrambi, i due output devono essere distinti tra loro.
 
-La CLI non crea la directory di output. Un file di output distinto gia esistente
-viene sovrascritto. Il comando non apre finestre grafiche e non accetta URL,
-stream standard, video, webcam o directory.
+La CLI non crea directory. Un output esistente viene sovrascritto. Con entrambi,
+l'annotato viene salvato e verificato prima del privacy; se il secondo fallisce,
+il primo resta presente. Il comando non apre finestre e non accetta URL, stream
+standard, video, webcam o directory.
 
 ## Configurazione delle classi
 
@@ -69,9 +87,15 @@ La configurazione versionata abilita `person`, `bicycle`, `car`, `motorcycle`, `
 Modificare soltanto i booleani, mantenendo invariati nomi, ordine, categorie e
 tuple; almeno una classe deve restare `True`. Il file viene validato a ogni comando.
 
-Disabilitare una classe impedisce soltanto che le sue box vengano disegnate. Non
-riduce il numero di chiamate ONNX, il tempo del modello o la memoria necessaria
-alla preparazione dell'immagine.
+La stessa selezione controlla box/testo dell'annotato e regioni sfocate del
+privacy. Disabilitare una classe non riduce le nove chiamate ONNX, il tempo del
+modello o la memoria. Una configurazione valida con zero detection selezionate
+scrive comunque gli output invariati; disabilitare tutte le classi rende invece
+la configurazione invalida.
+
+Il privacy non contiene box, nomi o confidenze. Usa rettangoli: margine 10% per
+lato, clipping all'immagine e Gaussian blur con raggio pari al massimo tra 8 px
+e il 10% del lato corto della regione. Non usa segmentazione o maschere.
 
 ## Thread CPU
 
@@ -81,7 +105,7 @@ una latenza probabilmente maggiore:
 ```sh
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
   --input input/esempio.jpg \
-  --output output/esempio.jpg \
+  --annotated-output output/esempio_annotated.jpg \
   --model models/yolo26n.onnx
 ```
 
@@ -102,7 +126,7 @@ mantiene le dimensioni della sorgente dopo l'eventuale correzione EXIF.
 
 | Stato | Significato |
 |---:|---|
-| `0` | Inferenza completata e output non vuoto scritto. |
+| `0` | Inferenza completata e ogni output richiesto scritto e verificato. |
 | `1` | Percorso non valido, configurazione incompatibile, errore di inferenza o scrittura. |
 | `2` | Sintassi CLI non valida, opzione mancante o argomento sconosciuto gestito da `argparse`. |
 
@@ -113,9 +137,11 @@ interni. I principali sono:
 error: input image does not exist or is not a file
 error: model does not exist or is not a file
 error: model must be an ONNX file
+error: at least one output path is required
 error: output directory does not exist
 error: output path must be a file
 error: input and output paths must differ
+error: output paths must differ
 error: class configuration is invalid
 error: model classes are incompatible
 error: inference failed
@@ -137,10 +163,10 @@ Lo script:
 3. crea `output/`;
 4. considera JPG, JPEG, PNG, WEBP, BMP, TIF e TIFF senza distinzione tra
    maiuscole e minuscole;
-5. invoca `.venv/bin/python -m phenocam` separatamente per ciascun file, usando
-   sempre
-   `models/yolo26n.onnx`;
-6. conserva il nome originale nell'output;
+5. invoca `.venv/bin/python -m phenocam` una volta per ciascun file, chiedendo
+   entrambi gli output con `models/yolo26n.onnx`;
+6. genera `<stem>_annotated.<ext>` e `<stem>_privacy.<ext>` in `output/`,
+   preservando l'estensione originale;
 7. continua dopo un errore individuale, ma termina con stato 1 se almeno una
    immagine fallisce.
 
