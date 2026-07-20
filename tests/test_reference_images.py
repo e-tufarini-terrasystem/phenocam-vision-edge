@@ -1,7 +1,7 @@
 """Verify the six real images without treating counts as ground truth.
 
-The disposable annotated output and final same-class overlaps exercise the real
-multi-view pipeline. Complete wall-time remains an external Raspberry Pi check.
+Disposable output and final suppression domains exercise the real pipeline.
+Pairs are checked with IoU and smaller-box coverage; counts are not ground truth.
 """
 
 import tempfile
@@ -59,6 +59,7 @@ class ReferenceImageTests(unittest.TestCase):
                 privacy_destination,
             ):
                 captured["detections"] = detections
+                captured["model_names"] = model_names
                 real_write_outputs(
                     image,
                     detections,
@@ -84,32 +85,49 @@ class ReferenceImageTests(unittest.TestCase):
                 self.assertEqual(output.size, (4608, 2592))
 
         detections = captured["detections"]
+        model_names = captured["model_names"]
+        for detection in detections:
+            if model_names[detection.class_id] == "car":
+                self.assertGreaterEqual(
+                    detection.confidence, 0.30, (name, detection)
+                )
         for index, left in enumerate(detections):
             for right in detections[index + 1 :]:
-                if left.class_id != right.class_id:
+                left_name = model_names[left.class_id]
+                right_name = model_names[right.class_id]
+                same_domain = left.class_id == right.class_id or {
+                    left_name,
+                    right_name,
+                }.issubset({"car", "bus", "truck"})
+                if not same_domain:
                     continue
                 intersection = max(
                     0.0, min(left.x2, right.x2) - max(left.x1, right.x1)
                 ) * max(0.0, min(left.y2, right.y2) - max(left.y1, right.y1))
-                union = (
-                    (left.x2 - left.x1) * (left.y2 - left.y1)
-                    + (right.x2 - right.x1) * (right.y2 - right.y1)
-                    - intersection
+                left_area = (left.x2 - left.x1) * (left.y2 - left.y1)
+                right_area = (right.x2 - right.x1) * (right.y2 - right.y1)
+                iou = intersection / (left_area + right_area - intersection)
+                smaller_box_coverage = intersection / min(
+                    left_area, right_area
                 )
-                overlap = intersection / union
+                diagnostic = (
+                    name,
+                    left,
+                    right,
+                    left_name,
+                    right_name,
+                    left.view_priority,
+                    right.view_priority,
+                    left.confidence,
+                    right.confidence,
+                    iou,
+                    smaller_box_coverage,
+                )
                 self.assertLess(
-                    overlap,
-                    0.50,
-                    (
-                        name,
-                        left,
-                        right,
-                        left.confidence,
-                        right.confidence,
-                        left.view_priority,
-                        right.view_priority,
-                        overlap,
-                    ),
+                    iou, 0.50, diagnostic
+                )
+                self.assertLess(
+                    smaller_box_coverage, 0.50, diagnostic
                 )
 
     def test_2025_11_19_121905(self):
