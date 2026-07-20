@@ -1,14 +1,15 @@
 """Normalize untrusted rows and deduplicate immutable global detections.
 
-Coordinates are validated, inverted, and clipped before class-wise suppression.
-Class selection stays outside this boundary so every valid class is aggregated.
+Rows receive class-specific confidence filtering and coordinate validation
+before deterministic suppression. Class selection stays outside this boundary.
 """
 
 import math
 from dataclasses import dataclass
 
 
-_CONFIDENCE_THRESHOLD = 0.25
+_DEFAULT_CONFIDENCE_THRESHOLD = 0.25
+_CAR_CONFIDENCE_THRESHOLD = 0.30
 _NMS_IOU_THRESHOLD = 0.50
 
 
@@ -35,11 +36,14 @@ def normalize_rows(rows, view, image_width, image_height, model_names):
                 continue
             x1, y1, x2, y2, confidence, class_value = values
             class_id = int(class_value)
-            if (
-                confidence < _CONFIDENCE_THRESHOLD
-                or class_value != class_id
-                or class_id not in model_names
-            ):
+            if class_value != class_id or class_id not in model_names:
+                continue
+            confidence_threshold = (
+                _CAR_CONFIDENCE_THRESHOLD
+                if model_names[class_id] == "car"
+                else _DEFAULT_CONFIDENCE_THRESHOLD
+            )
+            if confidence < confidence_threshold:
                 continue
 
             # Global coordinates are clipped before the positive-area invariant.
