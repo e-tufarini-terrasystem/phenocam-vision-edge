@@ -72,8 +72,8 @@ file di export, risparmiando almeno 5,3 MiB oltre alle dipendenze di export.
 - Il runtime accetta il contratto del modello incluso: YOLO detection
   end-to-end, input float statico `[1,3,640,640]`, output `[1,N,6]` e 80 classi
   COCO. Un ONNX con output YOLO grezzo o classi personalizzate viene rifiutato.
-- La soglia di confidenza inclusiva e fissata a 0,30 per `car` e a 0,25 per
-  ogni altra classe; non e esposta nella CLI.
+- La soglia di confidenza inclusiva e fissata a 0,30 per tutte le classi; non e
+  esposta nella CLI.
 - Una vista completa e quindici ritagli adattivi usano griglie `5×3` per
   immagini orizzontali o quadrate e `3×5` per immagini verticali, con 20% di
   overlap nominale e coordinate globali. La soppressione usa IoU o copertura

@@ -46,7 +46,7 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
 | `tests/test_views.py` | EXIF, RGB, letterbox, tensore, quindici crop, copertura e ordine delle sedici viste. |
-| `tests/test_detections.py` | Soglie per classe, valori non validi, conversione globale, clipping, IoU, copertura della box minore e dominio `car`, `bus`, `truck`. |
+| `tests/test_detections.py` | Soglia di confidenza uniforme e inclusiva, valori non validi, conversione globale, clipping, IoU, copertura della box minore e dominio `car`, `bus`, `truck`. |
 | `tests/test_output.py` | Selezione, copie indipendenti, geometria/raggio privacy, ordine, persistenza e fallimento parziale. |
 | `tests/test_pipeline.py` | Una sessione, sedici run e una soppressione globale per ogni combinazione di output; timing e ordine dei confini. |
 | `tests/test_command.py` | Delega delle due destinazioni, messaggi pubblici, stream e stati del processo. |
@@ -66,6 +66,8 @@ La suite protegge in particolare questi comportamenti:
   tutte;
 - le coordinate vengono ricostruite e limitate prima di accettare l'area della
   box;
+- ogni classe usa la stessa soglia di confidenza inclusiva pari a 0,30 prima
+  della conversione delle coordinate;
 - la soppressione usa IoU o copertura della box minore a 0,50, con un dominio
   condiviso per `car`, `bus`, `truck` e domini separati per le altre classi;
 - il filtro dell'operatore non altera inferenza, fusione o soppressione;
@@ -86,7 +88,8 @@ Quando sono disponibili, le immagini di riferimento vengono elaborate con
 modello e dipendenze reali. Il test garantisce l'inventario esatto delle sei
 JPEG, dimensioni sorgente `4608×2592`, durata restituita di tipo `float`, output
 JPEG regolare non vuoto con le stesse dimensioni e IoU strettamente inferiore a
-`0,50` per ogni coppia finale nello stesso dominio. Anche la copertura della box
+`0,50` per ogni coppia finale nello stesso dominio. Ogni detection finale deve
+inoltre avere confidenza maggiore o uguale a 0,30. Anche la copertura della box
 minore deve essere strettamente inferiore a `0,50`. Appartengono allo stesso
 dominio le detection della stessa classe e tutte le coppie i cui nomi sono tra
 `car`, `bus` e `truck`; classi diverse fuori da questo gruppo non vengono
