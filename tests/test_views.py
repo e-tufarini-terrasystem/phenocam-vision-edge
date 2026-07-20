@@ -1,7 +1,7 @@
-"""Verify normalized image loading and adaptive model-ready view preparation.
+"""Verify normalized image loading and sixteen model-ready view preparations.
 
-Disposable images and pure coordinate checks cover orientation, deterministic
-priority, complete crop coverage, and tensor contracts without ONNX Runtime.
+Disposable images and pure coordinate checks cover fifteen adaptive crops,
+orientation, priority, complete coverage, and tensors without ONNX Runtime.
 """
 
 import tempfile
@@ -52,14 +52,21 @@ class ViewTests(unittest.TestCase):
         self.assertEqual(
             rectangles,
             (
-                (0, 0, 1356, 1440),
-                (1084, 0, 1356, 1440),
-                (2168, 0, 1356, 1440),
-                (3252, 0, 1356, 1440),
-                (0, 1152, 1356, 1440),
-                (1084, 1152, 1356, 1440),
-                (2168, 1152, 1356, 1440),
-                (3252, 1152, 1356, 1440),
+                (0, 0, 1098, 997),
+                (878, 0, 1098, 997),
+                (1755, 0, 1098, 997),
+                (2632, 0, 1098, 997),
+                (3510, 0, 1098, 997),
+                (0, 798, 1098, 997),
+                (878, 798, 1098, 997),
+                (1755, 798, 1098, 997),
+                (2632, 798, 1098, 997),
+                (3510, 798, 1098, 997),
+                (0, 1595, 1098, 997),
+                (878, 1595, 1098, 997),
+                (1755, 1595, 1098, 997),
+                (2632, 1595, 1098, 997),
+                (3510, 1595, 1098, 997),
             ),
         )
 
@@ -67,18 +74,18 @@ class ViewTests(unittest.TestCase):
         landscape = _crop_rectangles(100, 50)
         square = _crop_rectangles(50, 50)
         portrait = _crop_rectangles(50, 100)
-        self.assertEqual(len({x for x, _, _, _ in landscape}), 4)
-        self.assertEqual(len({y for _, y, _, _ in landscape}), 2)
-        self.assertEqual(len({x for x, _, _, _ in square}), 4)
-        self.assertEqual(len({y for _, y, _, _ in square}), 2)
-        self.assertEqual(len({x for x, _, _, _ in portrait}), 2)
-        self.assertEqual(len({y for _, y, _, _ in portrait}), 4)
+        self.assertEqual(len({x for x, _, _, _ in landscape}), 5)
+        self.assertEqual(len({y for _, y, _, _ in landscape}), 3)
+        self.assertEqual(len({x for x, _, _, _ in square}), 5)
+        self.assertEqual(len({y for _, y, _, _ in square}), 3)
+        self.assertEqual(len({x for x, _, _, _ in portrait}), 3)
+        self.assertEqual(len({y for _, y, _, _ in portrait}), 5)
 
-    def test_nine_views_are_row_major_anchored_and_in_bounds(self):
+    def test_sixteen_views_are_row_major_anchored_and_in_bounds(self):
         image = Image.new("RGB", (10, 6))
         views = tuple(iter_views(image, 8, 8))
-        self.assertEqual(len(views), 9)
-        self.assertEqual(tuple(view.priority for view in views), tuple(range(9)))
+        self.assertEqual(len(views), 16)
+        self.assertEqual(tuple(view.priority for view in views), tuple(range(16)))
         self.assertEqual(
             tuple((view.crop_x, view.crop_y) for view in views[1:]),
             tuple((x, y) for x, y, _, _ in _crop_rectangles(10, 6)),
@@ -99,9 +106,9 @@ class ViewTests(unittest.TestCase):
 
     def test_tiny_image_keeps_all_repeated_crop_attempts(self):
         rectangles = _crop_rectangles(1, 1)
-        self.assertEqual(rectangles, ((0, 0, 1, 1),) * 8)
+        self.assertEqual(rectangles, ((0, 0, 1, 1),) * 15)
         views = tuple(iter_views(Image.new("RGB", (1, 1)), 2, 2))
-        self.assertEqual(len(views), 9)
+        self.assertEqual(len(views), 16)
 
     def test_non_square_model_dimensions_keep_declared_order(self):
         view = next(iter_views(Image.new("RGB", (4, 2)), 6, 10))

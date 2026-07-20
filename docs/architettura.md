@@ -22,9 +22,9 @@ flowchart LR
     Selezione --> Coordinamento
     Sessione --> Coordinamento
     Immagine[Immagine locale] --> Coordinamento
-    Coordinamento -->|source RGB originale| Viste[1 vista completa + 8 crop]
+    Coordinamento -->|source RGB originale| Viste[1 vista completa + 15 crop 5×3/3×5]
     Viste --> Detection[Detection globali]
-    Detection --> NMS[NMS per classe]
+    Detection --> NMS[Soppressione globale]
     NMS --> Output[write_outputs]
     Coordinamento -->|source RGB non mutata| Output
     Output -->|copia indipendente| Annotato[Box, classe, confidenza]
@@ -32,9 +32,10 @@ flowchart LR
 ```
 
 L'invariante transazionale principale e: **un output viene scritto soltanto se
-tutte le nove viste sono state preparate ed eseguite correttamente**. Un errore
-in una vista interrompe il comando. I due prodotti condividono sessione, nove
-run e NMS; si separano soltanto nel confine finale.
+tutte le sedici viste sono state preparate ed eseguite correttamente**. Un errore
+in una vista, inclusa l'ultima, interrompe il comando prima dell'unica NMS e
+della scrittura. I due prodotti condividono sessione, sedici run e NMS; si
+separano soltanto nel confine finale.
 
 ## Responsabilita dei file
 
@@ -75,13 +76,13 @@ sequenceDiagram
     O-->>P: input, output e metadata
     P->>S: risolve nomi abilitati in ID
     P->>P: carica la source RGB normalizzata EXIF per tutte le viste
-    loop vista completa e otto crop
+    loop vista completa e quindici crop
         P->>P: prepara tensore
         P->>O: session.run()
         O-->>P: righe [x1,y1,x2,y2,conf,id]
         P->>P: valida e converte in coordinate globali
     end
-    P->>P: NMS per classe
+    P->>P: Soppressione globale
     P->>F: write_outputs(source, detection, ID, nomi, destinazioni)
     opt annotato richiesto
         F->>F: copia source e disegna detection selezionate
@@ -123,7 +124,7 @@ Gli oggetti `Arguments`, `View` e `Detection` sono dataclass immutabili. Questo
 rende esplicito che percorsi validati, geometria di una vista e detection
 normalizzate non vengono modificati dopo la costruzione.
 
-La transazione usa la stessa source RGB originale per nove viste, dimensioni e
+La transazione usa la stessa source RGB originale per sedici viste, dimensioni e
 prodotti finali. La pipeline non la copia ne la muta: `write_outputs` crea una
 copia indipendente per ciascun prodotto richiesto. Annotazioni e blur mutano
 solo queste copie. La sessione ONNX viene creata una volta per processo e
