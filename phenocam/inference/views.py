@@ -1,7 +1,8 @@
 """Decode one image and create adaptive model-ready views with inverse geometry.
 
-EXIF normalization and RGB ownership happen once here. One full image and eight
-covering crops are prepared on demand with deterministic geometry and priority.
+EXIF normalization and RGB ownership happen once here. One full image and
+fifteen covering crops are prepared on demand with deterministic geometry and
+priority.
 """
 
 import math
@@ -74,7 +75,7 @@ def _prepare_view(image, input_width, input_height, crop_x, crop_y, priority):
 
 
 def _crop_rectangles(width, height):
-    columns, rows = (4, 2) if width >= height else (2, 4)
+    columns, rows = (5, 3) if width >= height else (3, 5)
     crop_width = max(
         1, math.ceil(width / (columns - (columns - 1) * _OVERLAP))
     )
@@ -102,7 +103,7 @@ def _crop_rectangles(width, height):
 
 
 def iter_views(image, input_width, input_height):
-    """Yield one full view then eight adaptive crops in row-major order."""
+    """Yield one full view then fifteen adaptive crops in row-major order."""
     try:
         yield _prepare_view(image, input_width, input_height, 0, 0, 0)
         for priority, (x, y, width, height) in enumerate(
