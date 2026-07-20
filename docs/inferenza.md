@@ -28,7 +28,7 @@ selezione avviene per nome, percio il modello puo associare ID diversi ai nomi
 purche l'inventario sia completo e senza duplicati. Gli ID finali sono ordinati.
 
 **Invariante:** la selezione non riduce il lavoro della rete. Tutte le classi
-partecipano alle nove inferenze e alla NMS; il filtro viene applicato soltanto
+partecipano alle sedici inferenze e alla NMS; il filtro viene applicato soltanto
 durante il rendering finale.
 
 ## 2. Sessione e contratto ONNX
@@ -70,17 +70,17 @@ Un file non decodificabile o un'immagine senza dimensioni positive produce un
 errore di inferenza generico. Il dettaglio dell'eccezione e il percorso non
 vengono inseriti nel messaggio pubblico.
 
-Lo stesso oggetto RGB alimenta direttamente tutte le nove viste, fornisce le
+Lo stesso oggetto RGB alimenta direttamente tutte le sedici viste, fornisce le
 dimensioni per la normalizzazione globale e resta la sorgente non mutata dei
 rendering finali.
 
-## 4. Geometria delle nove viste
+## 4. Geometria delle sedici viste
 
-La prima vista contiene tutta l'immagine e ha priorita 0. Seguono otto crop in
-ordine per righe:
+La prima vista contiene tutta l'immagine e ha priorita 0. Seguono quindici crop
+con priorita da 1 a 15 in ordine per righe:
 
-- immagine orizzontale o quadrata: 4 colonne per 2 righe;
-- immagine verticale: 2 colonne per 4 righe.
+- immagine orizzontale o quadrata: 5 colonne per 3 righe (`5×3`);
+- immagine verticale: 3 colonne per 5 righe (`3×5`).
 
 Con dimensione sorgente `D`, numero di celle `n` e overlap nominale `o = 0,20`,
 la dimensione del crop sull'asse e:
@@ -93,8 +93,12 @@ La distanza disponibile `D - crop` viene divisa uniformemente tra i `n - 1`
 intervalli. Ogni posizione e arrotondata, mentre prima e ultima sono ancorate
 esplicitamente a `0` e `D - crop`. Questa scelta garantisce copertura completa,
 coordinate nei limiti e comportamento deterministico anche con dimensioni non
-divisibili. Immagini minuscole possono generare crop ripetuti: restano comunque
-nove tentativi intenzionali.
+divisibili.
+
+Per una sorgente `4608×2592`, la griglia `5×3` produce crop `1098×997`,
+origini X `0, 878, 1755, 2632, 3510` e origini Y `0, 798, 1595`.
+Immagini minuscole possono generare origini coincidenti: tutti i quindici
+tentativi restano intenzionali e mantengono le rispettive priorita.
 
 Ogni `View` conserva origine e dimensione del crop, fattore di scala, padding e
 priorita. Questi valori costituiscono la trasformazione inversa necessaria per
@@ -119,7 +123,7 @@ traspone da HWC a CHW, aggiunge la dimensione batch e divide per 255. Il risulta
 e un array contiguo con forma `[1, 3, Hm, Wm]` e valori tra 0 e 1.
 
 Le viste sono prodotte da un generatore: crop e tensori vengono preparati uno
-alla volta, invece di conservare nove input contemporaneamente.
+alla volta, invece di conservare sedici input contemporaneamente.
 
 ## 6. Esecuzione e tempo misurato
 
@@ -130,7 +134,7 @@ session.run((nome_output,), {nome_input: tensore})
 ```
 
 Il cronometro racchiude soltanto questa chiamata. Il valore stampato al termine
-e la somma dei nove intervalli ONNX; non include avvio Python, sessione, lettura
+e la somma dei sedici intervalli ONNX; non include avvio Python, sessione, lettura
 immagine, preparazione, post-processing, rendering o scrittura.
 
 Anche dopo il controllo statico del modello, il risultato dinamico deve essere
@@ -164,7 +168,7 @@ vista e posizione originale della riga per risolvere i pareggi.
 
 ## 8. NMS globale per classe
 
-Le detection delle nove viste vengono raggruppate per ID di classe. In ogni
+Le detection delle sedici viste vengono raggruppate per ID di classe. In ogni
 gruppo i candidati sono ordinati per:
 
 1. confidenza decrescente;
