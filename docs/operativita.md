@@ -88,10 +88,10 @@ Modificare soltanto i booleani, mantenendo invariati nomi, ordine, categorie e
 tuple; almeno una classe deve restare `True`. Il file viene validato a ogni comando.
 
 La stessa selezione controlla box/testo dell'annotato e regioni sfocate del
-privacy. Disabilitare una classe non riduce le nove chiamate ONNX, il tempo del
-modello o la memoria. Una configurazione valida con zero detection selezionate
-scrive comunque gli output invariati; disabilitare tutte le classi rende invece
-la configurazione invalida.
+privacy. Il filtro avviene dopo l'inferenza: disabilitare una classe non riduce
+le sedici chiamate ONNX, il tempo del modello o la memoria. Una configurazione
+valida con zero detection selezionate scrive comunque gli output invariati;
+disabilitare tutte le classi rende invece la configurazione invalida.
 
 Il privacy non contiene box, nomi o confidenze. Usa rettangoli: margine 10% per
 lato, clipping all'immagine e Gaussian blur con raggio pari al massimo tra 8 px
@@ -110,8 +110,8 @@ YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
 ```
 
 Sono validi soltanto `1`, `2`, `3` e `4`. Qualunque altro valore usa il default.
-Le nove viste restano sequenziali: questa variabile controlla i thread interni
-usati da ONNX Runtime, non crea nove inferenze concorrenti.
+Le sedici viste restano sequenziali: `YOLO_NUM_THREADS` controlla i thread
+interni usati da ONNX Runtime, non crea sedici inferenze concorrenti.
 
 ## Risultato e stato di uscita
 
@@ -188,7 +188,7 @@ python3 -m venv .venv-export
 `scripts/export/int8.py` richiede inoltre i dati di calibrazione `coco8.yaml` e
 produce una variante quantizzata sperimentale. Il runtime documentato e testato
 continua a usare `models/yolo26n.onnx`; sostituirlo richiede di verificare nuovamente
-contratto, snapshot e prestazioni.
+contratto, integrazione reale e prestazioni.
 
 ## Diagnosi essenziale
 

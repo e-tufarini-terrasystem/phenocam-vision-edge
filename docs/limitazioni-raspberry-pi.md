@@ -20,11 +20,14 @@ una prova specifica o una build dedicata di ONNX Runtime.
 
 ## Prestazioni
 
-- Il comando multi-vista esegue nove chiamate ONNX sequenziali nella stessa
-  sessione: una sull'immagine completa e otto su ritagli adattivi sovrapposti.
-- `Execution time` somma i nove intervalli `session.run()` e non comprende
+- Il comando multi-vista esegue sedici chiamate ONNX sequenziali nella stessa
+  sessione: una sull'immagine completa e quindici su ritagli adattivi sovrapposti.
+- `Execution time` somma i sedici intervalli `session.run()` e non comprende
   preparazione delle viste, NMS, rendering, scrittura, import o caricamento
   della sessione. Il wall time completo comprende invece l'intero processo CLI.
+- Il rapporto ONNX osservato `1,67×` rispetto alla precedente griglia `4×2` e
+  informativo: non e una soglia di accettazione e non predice la latenza
+  end-to-end sul Raspberry Pi.
 - not verified — external verification: reference Raspberry Pi 3 is unavailable.
   Il limite di 15 secondi per comando multi-vista resta un obiettivo di
   accettazione esterno non verificato, non un risultato misurato su workstation.
@@ -41,7 +44,8 @@ una prova specifica o una build dedicata di ONNX Runtime.
 
 - Il picco storico a vista singola è circa 209 MiB RSS. Il consumo multi-vista
   non è stato rimisurato sulla board; le viste sono comunque eseguite in
-  sequenza e non vengono conservati nove tensori contemporaneamente. Le
+  sequenza e viene preparato un solo tensore alla volta. Questo limita la memoria
+  simultanea delle viste, ma non elimina il costo delle sedici esecuzioni. Le
   esecuzioni parallele restano escluse perché aumenterebbero il consumo.
 - Le immagini sorgente sono 4608x2592: la decodifica RGB occupa molta più RAM
   del JPEG compresso. File con risoluzioni molto superiori possono aumentare il
@@ -69,14 +73,14 @@ file di export, risparmiando almeno 5,3 MiB oltre alle dipendenze di export.
   COCO. Un ONNX con output YOLO grezzo o classi personalizzate viene rifiutato.
 - La soglia di confidenza è fissata a 0,25, coerente con il comportamento
   precedente, e non è esposta nella CLI.
-- Una vista completa e otto ritagli adattivi usano griglie `4×2` o `2×4`, 20%
-  di overlap nominale, coordinate globali e NMS per classe con IoU 0,50.
-- Il filtro `phenocam/classes/configuration.py` agisce soltanto dopo le nove
+- Una vista completa e quindici ritagli adattivi usano griglie `5×3` per
+  immagini orizzontali o quadrate e `3×5` per immagini verticali, con 20% di
+  overlap nominale, coordinate globali e NMS per classe con IoU 0,50.
+- Il filtro `phenocam/classes/configuration.py` agisce soltanto dopo le sedici
   inferenze, la fusione e la
   NMS: disabilitare classi non riduce tempo CPU o RAM del modello.
-- I conteggi di riferimento sono uno snapshot di regressione, non una ground truth né una misura di accuracy, precision, recall o mAP.
-  Lo snapshot verifica riproducibilità e aumento dei conteggi, non la correttezza
-  delle singole box.
+- I conteggi di riferimento non sono asseriti: non sono ground truth ne una
+  misura di accuracy, precision, recall o mAP.
 - È supportata una sola immagine locale per processo. Non sono implementati
   batch, directory, video, webcam, URL o standard input.
 - La directory di output deve esistere e un file esistente viene sovrascritto.
