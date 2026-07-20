@@ -1,4 +1,4 @@
-"""Verify global normalization and deterministic class-wise deduplication.
+"""Verify class-specific row normalization and deterministic deduplication.
 
 Synthetic rows cover untrusted values and geometry; immutable detections cover
 IoU thresholds, class isolation, and every approved NMS tie breaker.
@@ -10,6 +10,16 @@ from types import SimpleNamespace
 import numpy as np
 
 from phenocam.inference.detections import Detection, deduplicate, normalize_rows
+
+
+MODEL_NAMES = {
+    17: "person",
+    4: "bicycle",
+    42: "car",
+    9: "motorcycle",
+    31: "bus",
+    6: "truck",
+}
 
 
 class DetectionTests(unittest.TestCase):
@@ -26,22 +36,39 @@ class DetectionTests(unittest.TestCase):
         return SimpleNamespace(**values)
 
     def test_inverse_letterbox_crop_origin_and_row_priority(self):
-        rows = np.array([[20, 40, 60, 100, 0.25, 2]], dtype=np.float32)
-        detection = normalize_rows(rows, self.view(), 500, 500, {2: "car"})[0]
+        rows = np.array([[20, 40, 60, 100, 0.30, 42]], dtype=np.float32)
+        detection = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)[0]
         self.assertEqual(
             (detection.x1, detection.y1, detection.x2, detection.y2),
             (105.0, 210.0, 125.0, 240.0),
         )
-        self.assertEqual((detection.class_id, detection.view_priority), (2, 3))
+        self.assertEqual((detection.class_id, detection.view_priority), (42, 3))
         self.assertEqual(detection.row_priority, 0)
+
+    def test_car_threshold_is_class_specific_and_inclusive(self):
+        rows = np.array(
+            [
+                [10, 20, 30, 40, 0.29, 42],
+                [10, 20, 30, 40, 0.30, 42],
+                [10, 20, 30, 40, 0.25, 17],
+            ],
+            dtype=np.float32,
+        )
+
+        detections = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)
+
+        self.assertEqual(tuple(item.class_id for item in detections), (42, 17))
+        self.assertEqual(tuple(item.row_priority for item in detections), (1, 2))
+        self.assertAlmostEqual(detections[0].confidence, 0.30)
+        self.assertAlmostEqual(detections[1].confidence, 0.25)
 
     def test_clips_to_source_bounds_and_keeps_all_model_classes(self):
         rows = np.array(
-            [[-100, -100, 1000, 1000, 0.9, 7], [10, 20, 30, 40, 0.8, 2]],
+            [[-100, -100, 1000, 1000, 0.9, 6], [10, 20, 30, 40, 0.8, 42]],
             dtype=np.float32,
         )
-        detections = normalize_rows(rows, self.view(), 120, 220, {2: "car", 7: "truck"})
-        self.assertEqual(tuple(item.class_id for item in detections), (7, 2))
+        detections = normalize_rows(rows, self.view(), 120, 220, MODEL_NAMES)
+        self.assertEqual(tuple(item.class_id for item in detections), (6, 42))
         self.assertEqual(
             (detections[0].x1, detections[0].y1, detections[0].x2, detections[0].y2),
             (45.0, 140.0, 119.0, 219.0),
@@ -50,21 +77,23 @@ class DetectionTests(unittest.TestCase):
     def test_invalid_rows_are_skipped_individually(self):
         rows = np.array(
             [
-                [10, 20, 30, 40, 0.24, 2],
-                [10, 20, 30, 40, np.nan, 2],
+                [10, 20, 30, 40, 0.29, 42],
+                [10, 20, 30, 40, np.nan, 42],
                 [10, 20, 30, 40, 0.9, 2.5],
                 [10, 20, 30, 40, 0.9, 99],
-                [30, 40, 10, 20, 0.9, 2],
-                [10, 20, 30, 40, 0.9, 2],
+                [30, 40, 10, 20, 0.9, 42],
+                [10, 20, 30, 40, 0.9, 42],
             ],
             dtype=np.float32,
         )
-        detections = normalize_rows(rows, self.view(), 500, 500, {2: "car"})
+        detections = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)
         self.assertEqual(len(detections), 1)
         self.assertEqual(detections[0].row_priority, 5)
 
     def test_empty_rows_return_immutable_empty_collection(self):
-        self.assertEqual(normalize_rows(np.empty((0, 6)), self.view(), 2, 2, {}), ())
+        self.assertEqual(
+            normalize_rows(np.empty((0, 6)), self.view(), 2, 2, MODEL_NAMES), ()
+        )
 
     def detection(
         self,
