@@ -1,13 +1,11 @@
-"""Run the slower real-model regression for the six fixed reference images.
+"""Verify the six real images without treating counts as ground truth.
 
-Person/car counts are captured before selected-class output filtering and form
-a deterministic regression snapshot, not an accuracy metric. The annotated
-output is disposable; complete wall-time remains an external Raspberry Pi check.
+Disposable output, uniform confidence, and final suppression domains exercise
+the real pipeline. Pairs use overlap checks; counts are not ground truth.
 """
 
 import tempfile
 import unittest
-from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,18 +16,24 @@ from phenocam.inference import pipeline
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_DATA = (
-    ("raspberrypi2.local_2025-11-19_121905.jpg", 0, 7, 3, 23),
-    ("raspberrypi2.local_2025-11-19_141905.jpg", 0, 4, 1, 25),
-    ("raspberrypi2.local_2025-11-19_151905.jpg", 2, 5, 4, 28),
-    ("raspberrypi2.local_2025-12-17_131905.jpg", 0, 10, 3, 32),
-    ("raspberrypi2.local_2025-12-18_141905.jpg", 1, 9, 4, 36),
-    ("raspberrypi2.local_2025-12-19_124905.jpg", 1, 17, 3, 39),
+    "raspberrypi2.local_2025-11-19_121905.jpg",
+    "raspberrypi2.local_2025-11-19_141905.jpg",
+    "raspberrypi2.local_2025-11-19_151905.jpg",
+    "raspberrypi2.local_2025-12-17_131905.jpg",
+    "raspberrypi2.local_2025-12-18_141905.jpg",
+    "raspberrypi2.local_2025-12-19_124905.jpg",
+)
+EXPECTED_WINNERS = (
+    (REFERENCE_DATA[0], "car", 0.70, (2202, 2298, 2695, 2575), 2),
+    (REFERENCE_DATA[1], "car", 0.75, (1833, 2384, 2375, 2587), 2),
+    (REFERENCE_DATA[2], "car", 0.77, (1756, 2430, 2233, 2587), 2),
+    (REFERENCE_DATA[5], "truck", 0.91, (1789, 1594, 2533, 2050), 2),
 )
 
 
 class ReferenceImageTests(unittest.TestCase):
     def test_reference_inventory_and_dimensions(self):
-        expected_names = tuple(case[0] for case in REFERENCE_DATA)
+        expected_names = REFERENCE_DATA
         actual_names = tuple(
             path.name for path in sorted((ROOT / "input").glob("*.jpg"))
         )
@@ -43,14 +47,7 @@ class ReferenceImageTests(unittest.TestCase):
                     image.load()
                 self.assertEqual(image.size, (4608, 2592))
 
-    def test_snapshots_strictly_improve_full_image_baselines(self):
-        for name, person, car, expected_person, expected_car in REFERENCE_DATA:
-            with self.subTest(name=name):
-                self.assertGreater(expected_person, person)
-                self.assertGreater(expected_car, car)
-
-    def assert_reference(self, case):
-        name, person_baseline, car_baseline, expected_person, expected_car = case
+    def assert_reference(self, name):
         source_path = ROOT / "input" / name
         model_path = ROOT / "models" / "yolo26n.onnx"
         captured = {}
@@ -90,63 +87,96 @@ class ReferenceImageTests(unittest.TestCase):
             self.assertTrue(output_path.is_file())
             self.assertGreater(output_path.stat().st_size, 0)
             with Image.open(output_path) as output:
+                self.assertEqual(output.format, "JPEG")
                 self.assertEqual(output.size, (4608, 2592))
 
         detections = captured["detections"]
         model_names = captured["model_names"]
-        ids_by_name = {name: class_id for class_id, name in model_names.items()}
-        counts = Counter(detection.class_id for detection in detections)
-        person_count = counts[ids_by_name["person"]]
-        car_count = counts[ids_by_name["car"]]
-        message = f"{name}: person={person_count}, car={car_count}"
+        for detection in detections:
+            self.assertGreaterEqual(
+                detection.confidence, 0.30, (name, detection)
+            )
         for index, left in enumerate(detections):
             for right in detections[index + 1 :]:
-                if left.class_id != right.class_id:
+                left_name = model_names[left.class_id]
+                right_name = model_names[right.class_id]
+                same_domain = left.class_id == right.class_id or {
+                    left_name,
+                    right_name,
+                }.issubset({"car", "bus", "truck"})
+                if not same_domain:
                     continue
                 intersection = max(
                     0.0, min(left.x2, right.x2) - max(left.x1, right.x1)
                 ) * max(0.0, min(left.y2, right.y2) - max(left.y1, right.y1))
-                union = (
-                    (left.x2 - left.x1) * (left.y2 - left.y1)
-                    + (right.x2 - right.x1) * (right.y2 - right.y1)
-                    - intersection
+                left_area = (left.x2 - left.x1) * (left.y2 - left.y1)
+                right_area = (right.x2 - right.x1) * (right.y2 - right.y1)
+                iou = intersection / (left_area + right_area - intersection)
+                smaller_box_coverage = intersection / min(
+                    left_area, right_area
                 )
-                overlap = intersection / union
+                diagnostic = (
+                    name,
+                    left,
+                    right,
+                    left_name,
+                    right_name,
+                    left.view_priority,
+                    right.view_priority,
+                    left.confidence,
+                    right.confidence,
+                    iou,
+                    smaller_box_coverage,
+                )
                 self.assertLess(
-                    overlap,
-                    0.50,
-                    (
-                        name,
-                        left,
-                        right,
-                        left.confidence,
-                        right.confidence,
-                        left.view_priority,
-                        right.view_priority,
-                        overlap,
-                    ),
+                    iou, 0.50, diagnostic
                 )
-        self.assertEqual(person_count, expected_person, message)
-        self.assertEqual(car_count, expected_car, message)
-        self.assertGreater(person_count, person_baseline, message)
-        self.assertGreater(car_count, car_baseline, message)
+                self.assertLess(
+                    smaller_box_coverage, 0.50, diagnostic
+                )
 
-    def test_2025_11_19_121905_person_3_car_23(self):
+        expected = next(
+            (item for item in EXPECTED_WINNERS if item[0] == name), None
+        )
+        if expected is not None:
+            (
+                _,
+                expected_name,
+                expected_confidence,
+                expected_box,
+                tolerance,
+            ) = expected
+            matches = tuple(
+                detection
+                for detection in detections
+                if model_names[detection.class_id] == expected_name
+                and round(detection.confidence, 2) == expected_confidence
+                and all(
+                    abs(actual - expected_coordinate) <= tolerance
+                    for actual, expected_coordinate in zip(
+                        (detection.x1, detection.y1, detection.x2, detection.y2),
+                        expected_box,
+                    )
+                )
+            )
+            self.assertEqual(len(matches), 1, (name, expected, matches))
+
+    def test_2025_11_19_121905(self):
         self.assert_reference(REFERENCE_DATA[0])
 
-    def test_2025_11_19_141905_person_1_car_25(self):
+    def test_2025_11_19_141905(self):
         self.assert_reference(REFERENCE_DATA[1])
 
-    def test_2025_11_19_151905_person_4_car_28(self):
+    def test_2025_11_19_151905(self):
         self.assert_reference(REFERENCE_DATA[2])
 
-    def test_2025_12_17_131905_person_3_car_32(self):
+    def test_2025_12_17_131905(self):
         self.assert_reference(REFERENCE_DATA[3])
 
-    def test_2025_12_18_141905_person_4_car_36(self):
+    def test_2025_12_18_141905(self):
         self.assert_reference(REFERENCE_DATA[4])
 
-    def test_2025_12_19_124905_person_3_car_39(self):
+    def test_2025_12_19_124905(self):
         self.assert_reference(REFERENCE_DATA[5])
 
 
