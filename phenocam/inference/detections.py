@@ -1,7 +1,8 @@
-"""Normalize untrusted rows and deduplicate immutable global detections.
+"""Normalize untrusted rows and suppress duplicate global detections.
 
 Rows receive class-specific confidence filtering and coordinate validation
-before deterministic suppression. Class selection stays outside this boundary.
+before deterministic same-class and competing car, bus, truck suppression.
+Class selection stays outside this boundary so every valid class participates.
 """
 
 import math
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 _DEFAULT_CONFIDENCE_THRESHOLD = 0.25
 _CAR_CONFIDENCE_THRESHOLD = 0.30
 _OVERLAP_THRESHOLD = 0.50
+_ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
 
 @dataclass(frozen=True)
@@ -86,13 +88,17 @@ def _overlaps(left, right):
     )
 
 
-def deduplicate(detections):
-    by_class = {}
+def deduplicate(detections, model_names):
+    by_domain = {}
     for detection in detections:
-        by_class.setdefault(detection.class_id, []).append(detection)
+        if model_names[detection.class_id] in _ROAD_VEHICLE_NAMES:
+            domain = ("road_vehicle",)
+        else:
+            domain = ("class", detection.class_id)
+        by_domain.setdefault(domain, []).append(detection)
 
     kept = []
-    for candidates in by_class.values():
+    for candidates in by_domain.values():
         candidates.sort(
             key=lambda item: (-item.confidence, item.view_priority, item.row_priority)
         )
