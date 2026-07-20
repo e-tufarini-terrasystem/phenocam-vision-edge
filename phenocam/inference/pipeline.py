@@ -1,8 +1,8 @@
 """Own the complete single-image, sixteen-view inference transaction.
 
 The original normalized RGB source supplies every view and requested final
-image product. All sixteen views must succeed before global NMS and output, and
-the returned duration includes only ONNX execution time.
+image product. All sixteen views must succeed before global suppression and
+output, and the returned duration includes only ONNX execution time.
 """
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
@@ -47,7 +47,7 @@ def process_image(
                     model_names,
                 )
             )
-        detections = deduplicate(detections)
+        detections = deduplicate(detections, model_names)
     except InferenceError:
         raise
     except Exception:

@@ -1,8 +1,8 @@
 """Verify the public sixteen-view inference transaction with boundary doubles.
 
 One or two outputs never duplicate inference, and final product generation
-occurs only after successful NMS. Doubles prove ordering, aggregation, timing,
-error sanitization, and source ownership.
+occurs only after successful global suppression. Doubles prove ordering,
+aggregation, timing, error sanitization, and source ownership.
 """
 
 import tempfile
@@ -92,7 +92,7 @@ class InferenceTests(unittest.TestCase):
             ],
         )
         mocks["nms"].assert_called_once_with(
-            [("detection", index) for index in range(16)]
+            [("detection", index) for index in range(16)], self.contract[4]
         )
         for normalized in mocks["normalize"].call_args_list:
             self.assertEqual(normalized.args[2:4], (100, 80))
