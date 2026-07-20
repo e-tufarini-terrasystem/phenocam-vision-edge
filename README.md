@@ -24,9 +24,11 @@ view plus fifteen adaptive overlapping crops. Horizontal and square images use a
 The EXIF-normalized RGB source supplies all sixteen views and remains the final
 rendering background.
 Crop detections are converted to global image coordinates, all model classes
-are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
-`phenocam/classes/configuration.py` selects the final annotations and privacy
-regions.
+are merged, and rows named `car` require confidence 0,30 while every other
+class requires 0,25. Duplicates are suppressed when IoU or smaller-box coverage
+reaches 0,50; `car`, `bus`, and `truck` compete across labels, while other
+classes compete only with themselves. `phenocam/classes/configuration.py` then
+selects the final annotations and privacy regions.
 
 ## Runtime requirements
 
@@ -130,14 +132,15 @@ uses rectangular regions only: each selected box expands by 10% on every side,
 clips to the image, and receives Gaussian blur with radius
 `max(8 px, 10% of the region's shorter side)`. It adds no boxes, names, or
 confidence text. All model classes still participate in the sixteen inference
-calls, merge, and NMS, so disabling classes does not reduce compute or memory.
+calls, merge, and global suppression, so disabling classes does not reduce
+compute or memory.
 
 ## Timing
 
 A successful command prints `Execution time: N.NNN s`. This is the measured
 sum of the sixteen ONNX `session.run()` intervals. It excludes Python startup,
 model/session creation, image decoding, view preparation, coordinate merging,
-NMS, final rendering, and image writing.
+global suppression, final rendering, and image writing.
 
 Raspberry Pi multi-view timing is not verified — external verification:
 reference Raspberry Pi 3 is unavailable. The 15-second complete-command limit
@@ -145,9 +148,9 @@ remains an unverified acceptance target and is not inferred from workstation
 measurements.
 
 When the six ignored reference images are available, real integration tests
-verify valid annotated outputs and the post-NMS same-class overlap contract.
-Person and car counts are not asserted because they are not ground truth or a
-measurement of accuracy, precision, recall, or mAP.
+verify valid annotated outputs and the final suppression-domain overlap
+contract. Person and car counts are not asserted because they are not ground
+truth or a measurement of accuracy, precision, recall, or mAP.
 
 See `docs/modifiche-raspberry-pi.md` for the full measurements and
 `docs/limitazioni-raspberry-pi.md` for deployment constraints.
