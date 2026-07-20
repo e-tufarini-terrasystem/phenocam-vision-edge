@@ -24,7 +24,7 @@ flowchart LR
     Immagine[Immagine locale] --> Coordinamento
     Coordinamento -->|source RGB originale| Viste[1 vista completa + 15 crop 5×3/3×5]
     Viste --> Detection[Detection globali]
-    Detection --> NMS[NMS per classe]
+    Detection --> NMS[Soppressione globale]
     NMS --> Output[write_outputs]
     Coordinamento -->|source RGB non mutata| Output
     Output -->|copia indipendente| Annotato[Box, classe, confidenza]
@@ -82,7 +82,7 @@ sequenceDiagram
         O-->>P: righe [x1,y1,x2,y2,conf,id]
         P->>P: valida e converte in coordinate globali
     end
-    P->>P: NMS per classe
+    P->>P: Soppressione globale
     P->>F: write_outputs(source, detection, ID, nomi, destinazioni)
     opt annotato richiesto
         F->>F: copia source e disegna detection selezionate
