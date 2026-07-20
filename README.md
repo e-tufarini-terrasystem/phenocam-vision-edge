@@ -19,9 +19,9 @@ graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
 not install Ultralytics, PyTorch, or OpenCV.
 
 Each image is processed sequentially in one ONNX session using one full-image
-view plus eight adaptive overlapping crops. Horizontal and square images use a
-`4×2` crop grid, while vertical images use `2×4`; both use 20% nominal overlap.
-The EXIF-normalized RGB source supplies all nine views and remains the final
+view plus fifteen adaptive overlapping crops. Horizontal and square images use a
+`5×3` crop grid, while vertical images use `3×5`; both use 20% nominal overlap.
+The EXIF-normalized RGB source supplies all sixteen views and remains the final
 rendering background.
 Crop detections are converted to global image coordinates, all model classes
 are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
@@ -129,13 +129,13 @@ Class filtering controls both final annotations and privacy regions. Privacy
 uses rectangular regions only: each selected box expands by 10% on every side,
 clips to the image, and receives Gaussian blur with radius
 `max(8 px, 10% of the region's shorter side)`. It adds no boxes, names, or
-confidence text. All model classes still participate in the nine inference
+confidence text. All model classes still participate in the sixteen inference
 calls, merge, and NMS, so disabling classes does not reduce compute or memory.
 
 ## Timing
 
 A successful command prints `Execution time: N.NNN s`. This is the measured
-sum of the nine ONNX `session.run()` intervals. It excludes Python startup,
+sum of the sixteen ONNX `session.run()` intervals. It excludes Python startup,
 model/session creation, image decoding, view preparation, coordinate merging,
 NMS, final rendering, and image writing.
 
@@ -144,10 +144,10 @@ reference Raspberry Pi 3 is unavailable. The 15-second complete-command limit
 remains an unverified acceptance target and is not inferred from workstation
 measurements.
 
-When the six ignored reference images are available, fixed detection-count
-snapshots detect behavioral regressions in the committed model and dependencies.
-Reference counts are a regression snapshot, not ground truth or a measurement of accuracy, precision, recall, or mAP.
-They do not prove that individual boxes are correct.
+When the six ignored reference images are available, real integration tests
+verify valid annotated outputs and the post-NMS same-class overlap contract.
+Person and car counts are not asserted because they are not ground truth or a
+measurement of accuracy, precision, recall, or mAP.
 
 See `docs/modifiche-raspberry-pi.md` for the full measurements and
 `docs/limitazioni-raspberry-pi.md` for deployment constraints.
