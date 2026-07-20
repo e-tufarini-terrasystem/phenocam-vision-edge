@@ -148,6 +148,5 @@ La suite locale verifica correttezza strutturale e regressioni note. Compatibili
 con filesystem particolari, immagini eccezionalmente grandi, build diverse di
 ONNX Runtime e comportamento termico richiedono prove nell'ambiente reale.
 
-Per risultati e vincoli gia registrati consultare
-[Modifiche per Raspberry Pi](modifiche-raspberry-pi.md) e
+Per risultati e vincoli gia registrati consultare le
 [Limitazioni Raspberry Pi](limitazioni-raspberry-pi.md).

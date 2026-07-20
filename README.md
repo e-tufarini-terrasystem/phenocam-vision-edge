@@ -53,13 +53,14 @@ python3 -m venv .venv
 .venv/bin/python -m pip install --no-cache-dir -r requirements/runtime.txt
 ```
 
-The tested virtual environment occupies about 154 MiB. The application,
-environment, included models, source images, and generated test outputs occupy
-about 187 MiB in total.
+### 8 GB microSD deployment
 
-For the smallest deployment copy, `models/yolo26n.pt`, `scripts/export/fp32.py`,
-`scripts/export/int8.py`, and `requirements/export.txt` may be omitted. They are
-export-time assets and are not read by the `phenocam` runtime. Keep
+The tested 8 GB microSD exposes about 6.9 GiB. The deployment stays small by
+installing only NumPy, ONNX Runtime, and Pillow with `--no-cache-dir`;
+Ultralytics, PyTorch, OpenCV, and the export toolchain are not required on the
+Pi. The virtual environment occupies about 154 MiB and the complete tested
+working copy about 187 MiB. A minimal copy may also omit `models/yolo26n.pt`,
+the export scripts, and `requirements/export.txt`, but must retain
 `models/yolo26n.onnx`.
 
 ## macOS installation
@@ -152,8 +153,8 @@ verify valid annotated outputs and the final suppression-domain overlap
 contract. Person and car counts are not asserted because they are not ground
 truth or a measurement of accuracy, precision, recall, or mAP.
 
-See `docs/modifiche-raspberry-pi.md` for the full measurements and
-`docs/limitazioni-raspberry-pi.md` for deployment constraints.
+See `docs/limitazioni-raspberry-pi.md` for recorded measurements and deployment
+constraints.
 
 ## Arguments
 
