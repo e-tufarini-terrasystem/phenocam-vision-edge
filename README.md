@@ -1,12 +1,13 @@
 <!--
 Scopo: fornire il percorso minimo completo per installare e usare il progetto.
-Responsabilita: presentare quick start, configurazione, comandi e limiti operativi.
+Responsabilita: presentare quick start, scelta degli output, configurazione e limiti operativi.
 Contesto: e il punto di ingresso per operatori e rimanda ai dettagli sotto docs/.
 -->
 
 # YOLO single-image inference on Raspberry Pi
 
-This project annotates one local image with the included YOLO26n ONNX model.
+This project creates an annotated image, a privacy-blurred image, or both from
+one local image with the included YOLO26n ONNX model.
 The deployment runtime is designed and tested for a Raspberry Pi 3 with 1 GB
 RAM and a 64-bit Raspberry Pi OS installation.
 
@@ -24,7 +25,8 @@ The EXIF-normalized RGB source supplies all nine views and remains the final
 rendering background.
 Crop detections are converted to global image coordinates, all model classes
 are merged, and same-class boxes are deduplicated with IoU-0.50 NMS before
-`phenocam/classes/configuration.py` selects the final annotations.
+`phenocam/classes/configuration.py` selects the final annotations and privacy
+regions.
 
 ## Runtime requirements
 
@@ -77,22 +79,39 @@ started with `./scripts/batch.sh`.
 
 ## Usage
 
-Run inference with all three required options:
+Request an annotated output:
 
 ```sh
 .venv/bin/python -m phenocam \
   --input input/raspberrypi2.local_2025-12-18_141905.jpg \
-  --output output/annotated.jpg \
+  --annotated-output output/annotated.jpg \
   --model models/yolo26n.onnx
 ```
 
-The output directory must already exist. The default uses all four Pi 3 CPU
+Request privacy output only, or both products from the same inference:
+
+```sh
+.venv/bin/python -m phenocam \
+  --input input/example.jpg \
+  --privacy-output output/privacy.jpg \
+  --model models/yolo26n.onnx
+
+.venv/bin/python -m phenocam \
+  --input input/example.jpg \
+  --annotated-output output/annotated.jpg \
+  --privacy-output output/privacy.jpg \
+  --model models/yolo26n.onnx
+```
+
+At least one output option is required. `--output` has been removed without an
+alias. Output directories must already exist. The default uses all four Pi 3 CPU
 cores. To reduce CPU load or temperature at the cost of latency, set the
 thread count to a value from 1 to 4:
 
 ```sh
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
-  --input input/example.jpg --output output/example.jpg --model models/yolo26n.onnx
+  --input input/example.jpg --annotated-output output/example.jpg \
+  --model models/yolo26n.onnx
 ```
 
 ## Class selection
@@ -106,16 +125,19 @@ The ONNX model must expose exactly the standard 80 COCO classes and the
 end-to-end six-column detection output used by the included YOLO26n model.
 Incompatible metadata or tensor shapes are rejected before inference.
 
-Class filtering controls which final detections are annotated. All model
-classes still participate in the nine inference calls, merge, and NMS, so
-disabling classes does not reduce neural-network compute or memory requirements.
+Class filtering controls both final annotations and privacy regions. Privacy
+uses rectangular regions only: each selected box expands by 10% on every side,
+clips to the image, and receives Gaussian blur with radius
+`max(8 px, 10% of the region's shorter side)`. It adds no boxes, names, or
+confidence text. All model classes still participate in the nine inference
+calls, merge, and NMS, so disabling classes does not reduce compute or memory.
 
 ## Timing
 
 A successful command prints `Execution time: N.NNN s`. This is the measured
 sum of the nine ONNX `session.run()` intervals. It excludes Python startup,
 model/session creation, image decoding, view preparation, coordinate merging,
-NMS, drawing, and JPEG writing.
+NMS, final rendering, and image writing.
 
 Raspberry Pi multi-view timing is not verified — external verification:
 reference Raspberry Pi 3 is unavailable. The 15-second complete-command limit
@@ -135,11 +157,16 @@ See `docs/modifiche-raspberry-pi.md` for the full measurements and
 | Option | Constraint |
 |---|---|
 | `--input` | Existing local image file. |
-| `--output` | Output path distinct from the input; parent must exist. |
+| `--annotated-output` | Optional annotated image path; parent must exist. |
+| `--privacy-output` | Optional privacy image path; parent must exist. |
 | `--model` | Existing local file with a case-insensitive `.onnx` extension. |
 
-An existing output file is overwritten. The command is headless and does not
-open a graphical window.
+Requested outputs must be distinct from the input and from each other after
+path, symbolic-link, and existing hard-link resolution. Existing outputs are
+overwritten. With both products, annotated saving finishes first; if privacy
+saving then fails, the completed annotated file remains. Zero selected
+detections still writes each requested normalized source image. The command is
+headless and does not open a graphical window.
 
 ## Batch usage
 
@@ -149,10 +176,10 @@ Run inference on every supported image directly inside `input/`:
 ./scripts/batch.sh
 ```
 
-The script creates `output/` when needed and writes each result with the input
-filename. Existing output files with the same name are overwritten. Processing
-continues after individual failures, but the script exits with a non-zero status
-if any image fails.
+The script creates `output/` when needed and writes `<stem>_annotated.<ext>` and
+`<stem>_privacy.<ext>` in one process per input, preserving extension spelling.
+Existing files are overwritten. Processing continues after individual failures,
+but the script exits with status `1` if any image fails or none is supported.
 
 ## Exit statuses
 

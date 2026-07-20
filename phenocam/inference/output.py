@@ -1,17 +1,43 @@
-"""Render final selected detections and persist one verified output image.
+"""Own selected-class rendering and verified final-image persistence.
 
-Geometry and row validation are complete before this boundary. Class selection
-is final here, and output failures reveal no filesystem internals.
+Geometry and detection validation are complete before this boundary. This file
+creates independent annotated/privacy products, writes them deterministically,
+and maps every output failure to one fixed non-sensitive error.
 """
 
-from PIL import ImageDraw, ImageFont
+from math import ceil, floor
+
+from PIL import ImageDraw, ImageFilter, ImageFont
 
 from .errors import OutputWriteError
 
+_PRIVACY_MARGIN_RATIO = 0.10
+_PRIVACY_BLUR_RADIUS_RATIO = 0.10
+_PRIVACY_MIN_BLUR_RADIUS = 8
 
-def write_output(image, detections, enabled_ids, model_names, output_path):
+
+def write_outputs(
+    source, detections, enabled_ids, model_names, annotated_path, privacy_path
+):
     try:
         selected = set(enabled_ids)
+        if annotated_path is not None:
+            annotated = source.copy()
+            _render_annotated(annotated, detections, selected, model_names)
+            _save_output(annotated, annotated_path)
+        if privacy_path is not None:
+            # Each product starts from the unmodified normalized source.
+            privacy = source.copy()
+            _render_privacy(privacy, detections, selected)
+            _save_output(privacy, privacy_path)
+    except OutputWriteError:
+        raise
+    except Exception:
+        raise OutputWriteError() from None
+
+
+def _render_annotated(image, detections, selected, model_names):
+    try:
         width, height = image.size
         draw = ImageDraw.Draw(image)
         font = ImageFont.load_default(size=max(12, round(min(width, height) / 120)))
@@ -47,7 +73,39 @@ def write_output(image, detections, enabled_ids, model_names, output_path):
                 stroke_width=1,
                 stroke_fill=colour,
             )
+    except Exception:
+        raise OutputWriteError() from None
 
+
+def _render_privacy(image, detections, selected):
+    try:
+        for detection in detections:
+            if detection.class_id not in selected:
+                continue
+            width = detection.x2 - detection.x1
+            height = detection.y2 - detection.y1
+            left = max(0, floor(detection.x1 - width * _PRIVACY_MARGIN_RATIO))
+            top = max(0, floor(detection.y1 - height * _PRIVACY_MARGIN_RATIO))
+            right = min(
+                image.width, ceil(detection.x2 + width * _PRIVACY_MARGIN_RATIO)
+            )
+            bottom = min(
+                image.height, ceil(detection.y2 + height * _PRIVACY_MARGIN_RATIO)
+            )
+            box = (left, top, right, bottom)
+            radius = max(
+                float(_PRIVACY_MIN_BLUR_RADIUS),
+                min(right - left, bottom - top) * _PRIVACY_BLUR_RADIUS_RATIO,
+            )
+            # Crop from the current image so overlaps are blurred in detection order.
+            region = image.crop(box).filter(ImageFilter.GaussianBlur(radius))
+            image.paste(region, box)
+    except Exception:
+        raise OutputWriteError() from None
+
+
+def _save_output(image, output_path):
+    try:
         image.save(output_path)
         if not output_path.is_file() or output_path.stat().st_size == 0:
             raise OutputWriteError()

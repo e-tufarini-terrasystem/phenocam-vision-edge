@@ -1,20 +1,22 @@
 """Own the complete single-image, nine-view inference transaction.
 
-The original RGB source supplies all nine views and remains the output
-background. All views must succeed before global NMS and output, and the
-returned duration includes only ONNX execution time.
+The original normalized RGB source supplies every view and requested final
+image product. All nine views must succeed before global NMS and output, and
+the returned duration includes only ONNX execution time.
 """
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
 
 from .detections import deduplicate, normalize_rows
 from .errors import InferenceError, OutputWriteError
-from .output import write_output
+from .output import write_outputs
 from .runtime import create_session, model_contract, run_tensor
 from .views import iter_views, load_image
 
 
-def annotate_image(model_path, input_path, output_path) -> float:
+def process_image(
+    model_path, input_path, annotated_output_path, privacy_output_path
+) -> float:
     enabled_names = enabled_class_names()
     try:
         session = create_session(model_path)
@@ -51,5 +53,12 @@ def annotate_image(model_path, input_path, output_path) -> float:
     except Exception:
         raise InferenceError() from None
 
-    write_output(source_image, detections, enabled_ids, model_names, output_path)
+    write_outputs(
+        source_image,
+        detections,
+        enabled_ids,
+        model_names,
+        annotated_output_path,
+        privacy_output_path,
+    )
     return elapsed
