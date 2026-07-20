@@ -1,4 +1,4 @@
-"""Verify the public nine-view inference transaction with boundary doubles.
+"""Verify the public sixteen-view inference transaction with boundary doubles.
 
 One or two outputs never duplicate inference, and final product generation
 occurs only after successful NMS. Doubles prove ordering, aggregation, timing,
@@ -32,7 +32,7 @@ class InferenceTests(unittest.TestCase):
         self.image = SimpleNamespace(width=100, height=80)
         self.views = tuple(
             SimpleNamespace(tensor=object(), priority=priority)
-            for priority in range(9)
+            for priority in range(16)
         )
         self.session = Mock()
         self.contract = (
@@ -58,11 +58,11 @@ class InferenceTests(unittest.TestCase):
             "views": patch("phenocam.inference.pipeline.iter_views", return_value=iter(self.views)),
             "runtime": patch(
                 "phenocam.inference.pipeline.run_tensor",
-                side_effect=[(np.empty((0, 6)), index / 10) for index in range(9)],
+                side_effect=[(np.empty((0, 6)), index / 10) for index in range(16)],
             ),
             "normalize": patch(
                 "phenocam.inference.pipeline.normalize_rows",
-                side_effect=[(("detection", index),) for index in range(9)],
+                side_effect=[(("detection", index),) for index in range(16)],
             ),
             "nms": patch("phenocam.inference.pipeline.deduplicate", return_value=("final",)),
             "output": patch("phenocam.inference.pipeline.write_outputs"),
@@ -73,17 +73,17 @@ class InferenceTests(unittest.TestCase):
         for patcher in reversed(tuple(patchers.values())):
             patcher.stop()
 
-    def test_success_uses_one_session_nine_runs_one_nms_and_exact_sum(self):
+    def test_success_uses_one_session_sixteen_runs_one_nms_and_exact_sum(self):
         mocks, patchers = self.boundaries()
         try:
             elapsed = process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
 
-        self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(9)))
+        self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(16)))
         mocks["session"].assert_called_once_with(self.paths[0])
         mocks["views"].assert_called_once_with(self.image, 640, 640)
-        self.assertEqual(mocks["runtime"].call_count, 9)
+        self.assertEqual(mocks["runtime"].call_count, 16)
         self.assertEqual(
             mocks["runtime"].call_args_list,
             [
@@ -92,7 +92,7 @@ class InferenceTests(unittest.TestCase):
             ],
         )
         mocks["nms"].assert_called_once_with(
-            [("detection", index) for index in range(9)]
+            [("detection", index) for index in range(16)]
         )
         for normalized in mocks["normalize"].call_args_list:
             self.assertEqual(normalized.args[2:4], (100, 80))
@@ -119,7 +119,7 @@ class InferenceTests(unittest.TestCase):
                 finally:
                     self.stop_boundaries(patchers)
                 mocks["session"].assert_called_once()
-                self.assertEqual(mocks["runtime"].call_count, 9)
+                self.assertEqual(mocks["runtime"].call_count, 16)
                 mocks["nms"].assert_called_once()
                 mocks["output"].assert_called_once_with(
                     self.image,
@@ -160,12 +160,12 @@ class InferenceTests(unittest.TestCase):
             )
         self.assertEqual(events, expected)
 
-    def test_real_runtime_boundary_reads_clock_eighteen_times(self):
+    def test_real_runtime_boundary_reads_clock_thirty_two_times(self):
         output = np.empty((1, 0, 6), dtype=np.float32)
         self.session.run.return_value = [output]
         mocks, patchers = self.boundaries()
         mocks["runtime"].side_effect = timed_run_tensor
-        clock_values = tuple(value for _ in range(9) for value in (10.0, 11.0))
+        clock_values = tuple(value for _ in range(16) for value in (10.0, 11.0))
         try:
             with patch(
                 "phenocam.inference.runtime.perf_counter", side_effect=clock_values
@@ -173,9 +173,9 @@ class InferenceTests(unittest.TestCase):
                 elapsed = process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
-        self.assertEqual(elapsed, 9.0)
-        self.assertEqual(clock.call_count, 18)
-        self.assertEqual(self.session.run.call_count, 9)
+        self.assertEqual(elapsed, 16.0)
+        self.assertEqual(clock.call_count, 32)
+        self.assertEqual(self.session.run.call_count, 16)
 
     def test_configuration_and_model_validation_precede_inference(self):
         events = []
@@ -214,7 +214,7 @@ class InferenceTests(unittest.TestCase):
         )
 
     def test_failure_at_first_middle_or_final_view_never_writes(self):
-        for failing_index in (0, 4, 8):
+        for failing_index in (0, 7, 15):
             with self.subTest(failing_index=failing_index):
                 mocks, patchers = self.boundaries()
                 results = [
@@ -268,7 +268,7 @@ class InferenceTests(unittest.TestCase):
 
     def test_zero_detections_still_reaches_output(self):
         mocks, patchers = self.boundaries()
-        mocks["normalize"].side_effect = [() for _ in range(9)]
+        mocks["normalize"].side_effect = [() for _ in range(16)]
         mocks["nms"].return_value = ()
         try:
             process_image(*self.paths)

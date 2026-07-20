@@ -1,7 +1,7 @@
-"""Own the complete single-image, nine-view inference transaction.
+"""Own the complete single-image, sixteen-view inference transaction.
 
 The original normalized RGB source supplies every view and requested final
-image product. All nine views must succeed before global NMS and output, and
+image product. All sixteen views must succeed before global NMS and output, and
 the returned duration includes only ONNX execution time.
 """
 
