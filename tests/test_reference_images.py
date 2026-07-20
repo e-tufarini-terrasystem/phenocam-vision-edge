@@ -1,7 +1,7 @@
 """Verify the six real images without treating counts as ground truth.
 
-Disposable output and final suppression domains exercise the real pipeline.
-Pairs are checked with IoU and smaller-box coverage; counts are not ground truth.
+Disposable output, uniform confidence, and final suppression domains exercise
+the real pipeline. Pairs use overlap checks; counts are not ground truth.
 """
 
 import tempfile
@@ -93,10 +93,9 @@ class ReferenceImageTests(unittest.TestCase):
         detections = captured["detections"]
         model_names = captured["model_names"]
         for detection in detections:
-            if model_names[detection.class_id] == "car":
-                self.assertGreaterEqual(
-                    detection.confidence, 0.30, (name, detection)
-                )
+            self.assertGreaterEqual(
+                detection.confidence, 0.30, (name, detection)
+            )
         for index, left in enumerate(detections):
             for right in detections[index + 1 :]:
                 left_name = model_names[left.class_id]
