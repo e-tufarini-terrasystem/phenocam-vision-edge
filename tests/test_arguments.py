@@ -1,8 +1,9 @@
 """
-Verify two optional output paths at the public CLI boundary.
+Verify output paths and optional metadata at the public CLI boundary.
 
 Temporary entries prove the at-least-one and pairwise identity invariants for
-untrusted paths without modifying production files.
+untrusted paths. Metadata cases also enforce regular-file validation and prevent
+serialized output paths from injecting lines without modifying production files.
 """
 
 import contextlib
@@ -23,8 +24,10 @@ class ArgumentTests(unittest.TestCase):
         self.input = self.root / "input.jpg"
         self.model = self.root / "model.onnx"
         self.output = self.root / "output.jpg"
+        self.metadata = self.root / "image.meta"
         self.input.write_bytes(b"image")
         self.model.write_bytes(b"model")
+        self.metadata.write_bytes(b"metadata")
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -56,7 +59,7 @@ class ArgumentTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            arguments, Arguments(self.input, self.output, None, self.model)
+            arguments, Arguments(self.input, self.output, None, self.model, None)
         )
         with self.assertRaises(AttributeError):
             arguments.input = self.output
@@ -71,9 +74,101 @@ class ArgumentTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            privacy_only, Arguments(self.input, None, privacy, self.model)
+            privacy_only, Arguments(self.input, None, privacy, self.model, None)
         )
-        self.assertEqual(dual, Arguments(self.input, self.output, privacy, self.model))
+        self.assertEqual(
+            dual, Arguments(self.input, self.output, privacy, self.model, None)
+        )
+
+    def test_metadata_option_retains_cli_path_spelling(self):
+        spelling = self.root / "." / self.metadata.name
+        arguments = parse_arguments([*self.argv(), "--meta", str(spelling)])
+        self.assertEqual(
+            arguments,
+            Arguments(self.input, self.output, None, self.model, spelling),
+        )
+
+    def test_metadata_suffix_is_case_insensitive(self):
+        metadata = self.root / "image.META"
+        metadata.write_bytes(b"metadata")
+        self.assertEqual(
+            parse_arguments([*self.argv(), "--meta", str(metadata)]).meta,
+            metadata,
+        )
+
+    def test_missing_metadata_has_fixed_error(self):
+        missing = self.root / "missing.meta"
+        self.assert_validation_error(
+            "error: metadata file does not exist or is not a file",
+            [*self.argv(), "--meta", str(missing)],
+        )
+
+    def test_metadata_directory_has_fixed_error(self):
+        directory = self.root / "directory.meta"
+        directory.mkdir()
+        self.assert_validation_error(
+            "error: metadata file does not exist or is not a file",
+            [*self.argv(), "--meta", str(directory)],
+        )
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_metadata_symlink_is_rejected(self):
+        link = self.root / "link.meta"
+        try:
+            link.symlink_to(self.metadata)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error.errno}")
+        self.assert_validation_error(
+            "error: metadata file does not exist or is not a file",
+            [*self.argv(), "--meta", str(link)],
+        )
+
+    def test_metadata_wrong_suffix_has_fixed_error(self):
+        metadata = self.root / "image.txt"
+        metadata.write_bytes(b"metadata")
+        self.assert_validation_error(
+            "error: metadata file must use the .meta extension",
+            [*self.argv(), "--meta", str(metadata)],
+        )
+
+    @unittest.skipUnless(hasattr(os, "link"), "hard links are unavailable")
+    def test_metadata_aliases_input_model_or_outputs_are_rejected(self):
+        privacy = self.root / "privacy.jpg"
+        self.output.write_bytes(b"output")
+        privacy.write_bytes(b"privacy")
+        protected = (self.input, self.model, self.output, privacy)
+        for index, target in enumerate(protected):
+            alias = self.root / f"alias-{index}.meta"
+            try:
+                os.link(target, alias)
+            except OSError as error:
+                self.skipTest(f"hard-link creation is unavailable: {error.errno}")
+            argv = [*self.argv(), "--privacy-output", str(privacy), "--meta", str(alias)]
+            with self.subTest(target=target):
+                self.assert_validation_error(
+                    "error: metadata path must differ from input, model, and output paths",
+                    argv,
+                )
+            alias.unlink()
+
+    def test_metadata_output_identity_by_resolution_is_rejected(self):
+        self.assert_validation_error(
+            "error: metadata path must differ from input, model, and output paths",
+            self.argv(output=self.metadata) + ["--meta", str(self.metadata)],
+        )
+
+    def test_metadata_rejects_carriage_return_or_line_feed_in_outputs(self):
+        for character in ("\r", "\n"):
+            output = self.root / f"unsafe{character}name.jpg"
+            with self.subTest(character=repr(character)):
+                self.assert_validation_error(
+                    "error: output path cannot be stored in metadata",
+                    self.argv(output=output) + ["--meta", str(self.metadata)],
+                )
+
+    def test_output_line_breaks_remain_accepted_without_metadata(self):
+        output = self.root / "compatible\nname.jpg"
+        self.assertEqual(parse_arguments(self.argv(output=output)).annotated_output, output)
 
     def test_repeated_option_uses_last_value(self):
         other_input = self.root / "other.jpg"
