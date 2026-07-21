@@ -1,11 +1,13 @@
 """Own the complete single-image, sixteen-view inference transaction.
 
 The original normalized RGB source supplies every view and requested final
-image product. All sixteen views must succeed before global suppression and
-output, and the returned duration includes only ONNX execution time.
+image product. All sixteen views precede global suppression, requested output
+persistence, and the optional metadata commit in that strict order. The
+returned duration includes only ONNX execution time.
 """
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
+from phenocam.metadata import update_detection_metadata
 
 from .detections import deduplicate, normalize_rows
 from .errors import InferenceError, OutputWriteError
@@ -15,7 +17,11 @@ from .views import iter_views, load_image
 
 
 def process_image(
-    model_path, input_path, annotated_output_path, privacy_output_path
+    model_path,
+    input_path,
+    annotated_output_path,
+    privacy_output_path,
+    metadata_path=None,
 ) -> float:
     enabled_names = enabled_class_names()
     try:
@@ -61,4 +67,14 @@ def process_image(
         annotated_output_path,
         privacy_output_path,
     )
+    if metadata_path is not None:
+        # The same final collection and selection now commit both result forms.
+        update_detection_metadata(
+            metadata_path,
+            detections,
+            enabled_names,
+            model_names,
+            annotated_output_path,
+            privacy_output_path,
+        )
     return elapsed

@@ -1,8 +1,9 @@
 """
-Verify both optional destinations, statuses, diagnostics, and success timing.
+Verify optional image/metadata destinations, diagnostics, and success timing.
 
 The argument boundary and `process_image` are mocked; their own modules retain
-path, inventory, and inference behavior coverage.
+path, inventory, inference, and transaction-order coverage. This boundary owns
+the fixed metadata failure status without exposing its private cause.
 """
 
 import contextlib
@@ -17,6 +18,7 @@ from phenocam.arguments import ArgumentValidationError, Arguments
 from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.__main__ import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
+from phenocam.metadata import MetadataWriteError
 
 
 class RunTests(unittest.TestCase):
@@ -26,6 +28,7 @@ class RunTests(unittest.TestCase):
             annotated_output=Path("annotated.jpg"),
             privacy_output=Path("privacy.jpg"),
             model=Path("model.onnx"),
+            meta=Path("input.meta"),
         )
 
     def call_main(self, argv=None):
@@ -45,6 +48,7 @@ class RunTests(unittest.TestCase):
             self.arguments.input,
             self.arguments.annotated_output,
             self.arguments.privacy_output,
+            self.arguments.meta,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 1.234 s\n", "")
@@ -58,14 +62,22 @@ class RunTests(unittest.TestCase):
         )
         for annotated, privacy in combinations:
             arguments = Arguments(
-                self.arguments.input, annotated, privacy, self.arguments.model
+                self.arguments.input,
+                annotated,
+                privacy,
+                self.arguments.model,
+                self.arguments.meta,
             )
             with self.subTest(annotated=annotated, privacy=privacy), patch(
                 "phenocam.__main__.parse_arguments", return_value=arguments
             ), patch("phenocam.__main__.process_image", return_value=0.5) as process:
                 status, stdout, stderr = self.call_main([])
             process.assert_called_once_with(
-                arguments.model, arguments.input, annotated, privacy
+                arguments.model,
+                arguments.input,
+                annotated,
+                privacy,
+                arguments.meta,
             )
             self.assertEqual(
                 (status, stdout, stderr), (0, "Execution time: 0.500 s\n", "")
@@ -81,6 +93,10 @@ class RunTests(unittest.TestCase):
             "error: output path must be a file",
             "error: input and output paths must differ",
             "error: output paths must differ",
+            "error: metadata file does not exist or is not a file",
+            "error: metadata file must use the .meta extension",
+            "error: output path cannot be stored in metadata",
+            "error: metadata path must differ from input, model, and output paths",
         ]
         for message in messages:
             with self.subTest(message=message), patch(
@@ -139,6 +155,20 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("private detail", stderr)
         self.assertNotIn("Traceback", stderr)
 
+    def test_metadata_write_error_has_fixed_diagnostic(self):
+        error = MetadataWriteError("private detail")
+        error.__cause__ = RuntimeError("private cause\nTraceback")
+        with patch(
+            "phenocam.__main__.parse_arguments", return_value=self.arguments
+        ), patch("phenocam.__main__.process_image", side_effect=error):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr),
+            (1, "", "error: metadata file could not be updated\n"),
+        )
+        self.assertNotIn("private", stderr)
+        self.assertNotIn("Traceback", stderr)
+
     def test_missing_arguments_keep_argparse_status_two_and_stderr_usage(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -195,6 +225,7 @@ class RunTests(unittest.TestCase):
         self.assertIn("--input", help_text)
         self.assertIn("--annotated-output", help_text)
         self.assertIn("--privacy-output", help_text)
+        self.assertIn("--meta", help_text)
         self.assertNotIn("--output", help_text)
         self.assertNotIn("Execution time:", stdout.getvalue())
         self.assertEqual(stderr.getvalue(), "")
