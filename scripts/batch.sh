@@ -1,7 +1,8 @@
 #!/bin/sh
 # Run single-image inference over the project's input/ directory.
 # This developer helper creates deterministic annotated/privacy names and asks
-# one phenocam process per source to write both final products.
+# one phenocam process per source to write both final products. A regular,
+# non-symlink same-stem metadata file is passed when present.
 # Image validation, inference, and output writing remain inside phenocam.
 
 set -u
@@ -32,7 +33,12 @@ for image in "$input_dir"/*; do
     stem=${name%.*}
     annotated="$output_dir/${stem}_annotated.${extension}"
     privacy="$output_dir/${stem}_privacy.${extension}"
-    if ! "$python" -m phenocam --input "$image" --model "$root/models/yolo26n.onnx" --annotated-output "$annotated" --privacy-output "$privacy"; then
+    metadata="$input_dir/${stem}.meta"
+    set -- "$python" -m phenocam --input "$image" --model "$root/models/yolo26n.onnx" --annotated-output "$annotated" --privacy-output "$privacy"
+    if [ -f "$metadata" ] && [ ! -L "$metadata" ]; then
+        set -- "$@" --meta "$metadata"
+    fi
+    if ! "$@"; then
         echo "error: inference failed for $name" >&2
         status=1
     fi
