@@ -1,7 +1,7 @@
 <!--
 Scopo: spiegare come installare, configurare ed eseguire il software.
-Responsabilita: documentare il contratto operativo di CLI, batch, due output ed export.
-Contesto: traduce la scelta tra output annotato e privacy in procedure ripetibili.
+Responsabilita: documentare CLI, batch, due output, metadata opzionali ed export.
+Contesto: traduce output, sostituzione metadata e pairing batch in procedure ripetibili.
 -->
 
 # Operativita
@@ -50,6 +50,7 @@ Solo privacy, oppure entrambi con una singola inferenza:
   --input input/esempio.jpg \
   --annotated-output output/esempio_annotated.jpg \
   --privacy-output output/esempio_privacy.jpg \
+  --meta input/esempio.meta \
   --model models/yolo26n.onnx
 ```
 
@@ -59,6 +60,7 @@ Solo privacy, oppure entrambi con una singola inferenza:
 | `--annotated-output` | Opzionale; la directory padre deve esistere e il percorso deve identificare un file distinto. |
 | `--privacy-output` | Opzionale; valgono gli stessi vincoli dell'annotato. |
 | `--model` | Deve essere un file locale esistente con estensione `.onnx`, senza distinzione tra maiuscole e minuscole. |
+| `--meta` | Opzionale; deve essere un file regolare esistente, non simbolico, con suffisso `.meta` case-insensitive e distinto da input, modello e output. |
 
 `--output` non esiste piu e viene rifiutato da `argparse`. Il confronto risolve
 percorsi equivalenti e link simbolici; per file esistenti controlla anche gli
@@ -69,6 +71,37 @@ La CLI non crea directory. Un output esistente viene sovrascritto. Con entrambi,
 l'annotato viene salvato e verificato prima del privacy; se il secondo fallisce,
 il primo resta presente. Il comando non apre finestre e non accetta URL, stream
 standard, video, webcam o directory.
+
+## Metadata delle detection
+
+Il file indicato con `--meta` deve essere creato dall'operatore: il comando non
+lo crea. Dopo la scrittura e verifica di tutti gli output richiesti, ogni vecchia
+sezione esatta lowercase `[detection]` viene rimossa e una sola sezione corrente
+viene aggiunta atomicamente in fondo, preservando gli altri byte:
+
+```text
+[detection]
+detected=true|false
+software_name=phenocam-detection
+software_version=1.0.0
+model_id=yolo26n
+model_version=1.0.0
+annotated_image=<percorso CLI o vuoto>
+privacy_image=<percorso CLI o vuoto>
+classes=<nomi rilevati separati da virgola o vuoto>
+<class-key>_count=<intero positivo, solo classi rilevate>
+total_count=<somma, oppure 0>
+```
+
+I conteggi usano soltanto detection finali dopo soppressione globale e filtro
+delle classi abilitate; classi e campi conteggio seguono l'ordine COCO. Con zero
+detection selezionate si ottengono `detected=false`, `classes=` e
+`total_count=0`, senza campi `*_count`. I percorsi mantengono esattamente la
+spelling CLI. Esecuzioni ripetute sostituiscono il risultato, senza storico.
+
+Se il commit metadata fallisce, gli output completati restano presenti e il
+precedente file metadata rimane disponibile. Il comando termina con stato `1`
+senza stampare contenuto, percorso temporaneo, eccezione o stack trace.
 
 ## Configurazione delle classi
 
@@ -126,8 +159,8 @@ mantiene le dimensioni della sorgente dopo l'eventuale correzione EXIF.
 
 | Stato | Significato |
 |---:|---|
-| `0` | Inferenza completata e ogni output richiesto scritto e verificato. |
-| `1` | Percorso non valido, configurazione incompatibile, errore di inferenza o scrittura. |
+| `0` | Inferenza, output richiesti ed eventuale metadata completati. |
+| `1` | Percorso non valido o errore di configurazione, inferenza, output o metadata. |
 | `2` | Sintassi CLI non valida, opzione mancante o argomento sconosciuto gestito da `argparse`. |
 
 I diagnostici applicativi vengono scritti su standard error e omettono dettagli
@@ -142,10 +175,15 @@ error: output directory does not exist
 error: output path must be a file
 error: input and output paths must differ
 error: output paths must differ
+error: metadata file does not exist or is not a file
+error: metadata file must use the .meta extension
+error: output path cannot be stored in metadata
+error: metadata path must differ from input, model, and output paths
 error: class configuration is invalid
 error: model classes are incompatible
 error: inference failed
 error: output image could not be written
+error: metadata file could not be updated
 ```
 
 ## Elaborazione batch
@@ -167,7 +205,10 @@ Lo script:
    entrambi gli output con `models/yolo26n.onnx`;
 6. genera `<stem>_annotated.<ext>` e `<stem>_privacy.<ext>` in `output/`,
    preservando l'estensione originale;
-7. continua dopo un errore individuale, ma termina con stato 1 se almeno una
+7. passa `input/<stem>.meta` tramite `--meta` solo quando e un file regolare non
+   simbolico; un match mancante non viene creato e non e un errore;
+8. continua dopo un errore individuale, incluso il commit metadata, ma termina
+   con stato 1 se almeno una
    immagine fallisce.
 
 Le sottodirectory non vengono visitate. Anche i file con estensione supportata

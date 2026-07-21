@@ -1,7 +1,7 @@
 <!--
 Scopo: descrivere come il comportamento del software viene verificato.
-Responsabilita: collegare invarianti, rendering privacy, test e limiti delle prove.
-Contesto: separa le garanzie locali sui due output dalle verifiche esterne.
+Responsabilita: collegare invarianti di output/metadata, test e limiti delle prove.
+Contesto: separa le garanzie locali su output, transazione e batch dalle verifiche esterne.
 -->
 
 # Verifica
@@ -20,7 +20,7 @@ contratto del comando, sintassi batch e hash degli asset:
 ```sh
 .venv/bin/python -m compileall -q phenocam scripts tests
 .venv/bin/python -m pip check
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m phenocam --help
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m phenocam --help | rg -- '--meta'
 sh -n scripts/batch.sh
 test -x scripts/batch.sh
 test -d input
@@ -42,14 +42,16 @@ nelle directory operative e, dove non serve, senza caricare ONNX Runtime.
 
 | Test | Contratto principale |
 |---|---|
-| `tests/test_arguments.py` | Due output opzionali, presenza minima, ordine e identita distinte tra input/output/output. |
+| `tests/test_arguments.py` | Output opzionali, `--meta`, file regolare, identita distinte e prevenzione di CR/LF serializzati. |
+| `tests/test_metadata.py` | Schema `[detection]`, conteggi selezionati, ordine, byte estranei, sostituzione atomica e fallimenti. |
+| `tests/test_batch.py` | Pairing same-stem opzionale, quoting, continuazione e stato aggregato. |
 | `tests/test_selection.py` | Inventario COCO esatto, soli booleani modificabili, almeno una classe e metadata del modello completi. |
 | `tests/test_runtime.py` | Thread, opzioni della sessione, contratto tensoriale e validazione dell'output dinamico. |
 | `tests/test_views.py` | EXIF, RGB, letterbox, tensore, quindici crop, copertura e ordine delle sedici viste. |
 | `tests/test_detections.py` | Soglia di confidenza uniforme e inclusiva, valori non validi, conversione globale, clipping, IoU, copertura della box minore e dominio `car`, `bus`, `truck`. |
 | `tests/test_output.py` | Selezione, copie indipendenti, geometria/raggio privacy, ordine, persistenza e fallimento parziale. |
-| `tests/test_pipeline.py` | Una sessione, sedici run e una soppressione globale per ogni combinazione di output; timing e ordine dei confini. |
-| `tests/test_command.py` | Delega delle due destinazioni, messaggi pubblici, stream e stati del processo. |
+| `tests/test_pipeline.py` | Una sessione, sedici run, output prima del metadata opzionale e propagazione degli errori. |
+| `tests/test_command.py` | Delega delle destinazioni, messaggi pubblici incluso metadata, stream e stati. |
 | `tests/test_reference_images.py` | Inventario, output JPEG, vincitori noti e invarianti finali per IoU e copertura nei domini di soppressione. |
 
 ## Invarianti verificati
@@ -78,6 +80,12 @@ La suite protegge in particolare questi comportamenti:
 - le sovrapposizioni vengono sfocate in ordine e le classi disabilitate ignorate;
 - l'annotato viene scritto prima del privacy e resta presente se il secondo
   salvataggio fallisce;
+- il metadata conta le sole detection finali abilitate, emette schema e ordine
+  deterministici e sostituisce tutte le precedenti sezioni `[detection]`;
+- il commit metadata avviene una volta dopo gli output, preserva byte estranei e
+  file precedente sui fallimenti pre-commit, senza annullare immagini riuscite;
+- il batch passa `--meta` soltanto per un file same-stem regolare non simbolico,
+  continua dopo i fallimenti e non crea match mancanti;
 - eccezioni di terze parti non divulgano dettagli nei messaggi applicativi;
 - un successo richiede ogni file richiesto regolare e non vuoto, anche con zero
   detection selezionate.

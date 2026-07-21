@@ -1,7 +1,7 @@
 <!--
 Scopo: descrivere la struttura statica e il flusso complessivo del software.
-Responsabilita: definire componenti, errori e invarianti tra moduli.
-Contesto: collega la CLI ai due prodotti finali dettagliati in inferenza.md.
+Responsabilita: definire componenti, errori e invarianti tra moduli e persistenza metadata.
+Contesto: collega la CLI ai due prodotti e al commit metadata opzionale dettagliati in inferenza.md.
 -->
 
 # Architettura
@@ -10,8 +10,9 @@ Contesto: collega la CLI ai due prodotti finali dettagliati in inferenza.md.
 
 Il software e un processo sincrono e headless che trasforma un'immagine locale
 in un output annotato, privacy o entrambi. Ogni invocazione gestisce un input,
-un modello e una o due destinazioni. Non mantiene stato tra processi e non usa
-rete, database, code, worker o inferenze parallele.
+un modello, una o due destinazioni e un eventuale file `--meta`. Aggiorna solo
+quel file esplicitamente fornito, senza storico interno; non usa rete, database,
+code, worker o inferenze parallele.
 
 ```mermaid
 flowchart LR
@@ -29,6 +30,7 @@ flowchart LR
     Coordinamento -->|source RGB non mutata| Output
     Output -->|copia indipendente| Annotato[Box, classe, confidenza]
     Output -->|copia indipendente| Privacy[Gaussian blur rettangolare]
+    Output --> Metadata[Commit atomico detection metadata]
 ```
 
 L'invariante transazionale principale e: **un output viene scritto soltanto se
@@ -43,6 +45,7 @@ separano soltanto nel confine finale.
 |---|---|
 | `phenocam/__main__.py` | Definisce il confine del processo, traduce gli errori in messaggi pubblici e restituisce lo stato di uscita. |
 | `phenocam/arguments.py` | Costruisce la CLI e valida input, modello e una o due destinazioni distinte. |
+| `phenocam/metadata.py` | Genera la sezione `[detection]`, rimuove le precedenti sezioni esatte e sostituisce atomicamente il file metadata. |
 | `phenocam/classes/configuration.py` | Contiene l'inventario COCO fisso e i soli booleani configurabili dall'operatore. |
 | `phenocam/classes/selection.py` | Valida configurazione e metadata delle classi, quindi risolve i nomi abilitati negli ID del modello. |
 | `phenocam/inference/pipeline.py` | Espone `process_image`, coordina la transazione multi-vista e somma il tempo ONNX. |
@@ -67,10 +70,11 @@ sequenceDiagram
     participant F as output.write_outputs
     participant A as File annotato
     participant V as File privacy
+    participant M as phenocam/metadata.py
 
-    U->>R: --input, uno/due output, --model
+    U->>R: --input, uno/due output, --model, [--meta]
     R->>R: valida presenza, tipi e identita
-    R->>P: process_image(model, input, annotated, privacy)
+    R->>P: process_image(model, input, annotated, privacy, meta)
     P->>S: carica e valida configuration.py
     P->>O: crea sessione CPU
     O-->>P: input, output e metadata
@@ -91,6 +95,11 @@ sequenceDiagram
     opt privacy richiesto
         F->>F: copia source e sfoca regioni selezionate
         F->>V: salva e verifica file regolare non vuoto
+    end
+    opt metadata richiesti e output riusciti
+        P->>M: detection finali, classi abilitate, percorsi CLI
+        M->>M: preserva byte estranei e costruisce [detection]
+        M->>M: file temporaneo, fsync, sostituzione atomica
     end
     P-->>R: somma dei tempi ONNX
     R-->>U: Execution time e stato 0
@@ -113,6 +122,8 @@ file locali:
   area positiva;
 - ogni salvataggio e riuscito solo se il percorso finale e un file regolare non
   vuoto; ogni errore diventa il solo confine pubblico `OutputWriteError`.
+- il documento metadata deve essere UTF-8 valido; i suoi contenuti sono dati non
+  affidabili e ogni fallimento diventa `MetadataWriteError` senza dettagli.
 
 Gli errori delle librerie non attraversano il confine pubblico con dettagli
 interni, stack trace o percorsi sensibili. Il comando espone messaggi fissi per
@@ -128,7 +139,9 @@ La transazione usa la stessa source RGB originale per sedici viste, dimensioni e
 prodotti finali. La pipeline non la copia ne la muta: `write_outputs` crea una
 copia indipendente per ciascun prodotto richiesto. Annotazioni e blur mutano
 solo queste copie. La sessione ONNX viene creata una volta per processo e
-riutilizzata in sequenza per tutte le viste.
+riutilizzata in sequenza per tutte le viste. Se richiesto, il metadata riusa la
+stessa collezione finale e la stessa selezione degli output; il commit avviene
+solo dopo entrambi i salvataggi richiesti.
 
 ## Dipendenze
 
@@ -140,4 +153,4 @@ Il percorso di runtime ha tre dipendenze dirette:
 
 Ultralytics e una dipendenza separata, usata soltanto dagli script di export.
 PyTorch e OpenCV non fanno parte del percorso di deploy.
-I due prodotti non introducono moduli o dipendenze aggiuntive.
+I due prodotti e il metadata non introducono dipendenze aggiuntive.
