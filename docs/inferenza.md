@@ -1,6 +1,6 @@
 <!--
-Scopo: documentare l'algoritmo multi-vista fino ai rendering annotato e privacy.
-Responsabilita: rendere espliciti preprocessing, geometria, contratti e output finali.
+Scopo: documentare l'algoritmo multi-vista fino ai rendering e metadata finali.
+Responsabilita: rendere espliciti preprocessing, geometria, output e riepilogo detection.
 Contesto: dettaglia la transazione coordinata da phenocam/inference/pipeline.py.
 -->
 
@@ -29,7 +29,7 @@ purche l'inventario sia completo e senza duplicati. Gli ID finali sono ordinati.
 
 **Invariante:** la selezione non riduce il lavoro della rete. Tutte le classi
 partecipano alle sedici inferenze e alla soppressione globale; il filtro viene
-applicato soltanto durante il rendering finale.
+applicato soltanto durante il rendering finale e il riepilogo metadata.
 
 ## 2. Sessione e contratto ONNX
 
@@ -238,3 +238,28 @@ Pillow deduce il formato dalla destinazione e puo sovrascrivere file esistenti.
 Dopo ogni `save()`, il percorso deve essere un file regolare non vuoto; qualunque
 errore di rendering, filtro, I/O o verifica diventa `OutputWriteError` senza
 dettagli privati.
+
+## 10. Metadata delle detection finali
+
+Quando la CLI riceve `--meta`, la pipeline chiama
+`update_detection_metadata()` soltanto dopo che tutti gli output richiesti sono
+stati salvati e verificati. La funzione riceve le stesse detection dopo la
+soppressione globale, gli stessi nomi abilitati e la stessa mappa ID-nome usati
+dal rendering: non esiste un secondo filtro che possa produrre conteggi diversi.
+
+La nuova sezione `[detection]` ordina le classi secondo COCO, non secondo
+confidenza o scoperta. Include solo classi abilitate con conteggio positivo,
+sostituisce gli spazi ASCII con underscore nelle sole chiavi `*_count` e deriva
+`detected` e `total_count` dagli stessi conteggi. Con zero detection selezionate,
+`detected=false`, `classes=` e `total_count=0`, senza campi per classe. I campi
+identita sono costanti: software `phenocam-detection` versione `1.0.0` e modello
+`yolo26n` versione `1.0.0`; i due percorsi output conservano la spelling CLI o
+restano vuoti quando non richiesti.
+
+Il documento esistente deve essere UTF-8 valido. Tutte le precedenti sezioni
+esatte lowercase `[detection]` vengono eliminate, i byte delle altre sezioni
+restano invariati e un solo risultato viene aggiunto in fondo. Un file
+temporaneo nella stessa directory eredita i bit di permesso, viene scritto,
+sincronizzato e sostituito atomicamente. Il fallimento non annulla immagini gia
+completate e non espone dettagli interni; nessun aggiornamento metadata avviene
+se configurazione, modello, immagine, inferenza o output falliscono prima.
