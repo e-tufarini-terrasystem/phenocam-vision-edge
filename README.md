@@ -222,7 +222,6 @@ stack. Install it in a separate environment only when regeneration is needed:
 python3 -m venv .venv-export
 .venv-export/bin/python -m pip install -r requirements/export.txt
 .venv-export/bin/python scripts/export/fp32.py
-.venv-export/bin/python scripts/export/int8.py
 ```
 
 The included and tested `models/yolo26n.onnx` does not need to be exported on the Pi.
