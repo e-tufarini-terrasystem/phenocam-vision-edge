@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Phenocam Vision Edge logo" width="220">
+</p>
+
 # YOLO single-image inference on Raspberry Pi
 
 This project creates an annotated image, a privacy-blurred image, or both from
