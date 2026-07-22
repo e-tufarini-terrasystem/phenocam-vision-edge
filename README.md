@@ -1,18 +1,9 @@
-<!--
-Scopo: fornire il percorso minimo completo per installare e usare il progetto.
-Responsabilita: presentare quick start, output, metadata opzionali, configurazione e limiti operativi.
-Contesto: e il punto di ingresso per operatori e rimanda ai dettagli sotto docs/.
--->
-
 # YOLO single-image inference on Raspberry Pi
 
 This project creates an annotated image, a privacy-blurred image, or both from
 one local image with the included YOLO26n ONNX model.
 The deployment runtime is designed and tested for a Raspberry Pi 3 with 1 GB
 RAM and a 64-bit Raspberry Pi OS installation.
-
-Detailed Italian documentation is available in [`docs/`](docs/README.md),
-including architecture, inference internals, operations, and verification.
 
 Inference still uses the original `models/yolo26n.onnx` model and its end-to-end ONNX
 graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
@@ -153,9 +144,6 @@ When the six ignored reference images are available, real integration tests
 verify valid annotated outputs and the final suppression-domain overlap
 contract. Person and car counts are not asserted because they are not ground
 truth or a measurement of accuracy, precision, recall, or mAP.
-
-See `docs/limitazioni-raspberry-pi.md` for recorded measurements and deployment
-constraints.
 
 ## Arguments
 
