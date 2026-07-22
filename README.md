@@ -1,18 +1,9 @@
-<!--
-Scopo: fornire il percorso minimo completo per installare e usare il progetto.
-Responsabilita: presentare quick start, scelta degli output, configurazione e limiti operativi.
-Contesto: e il punto di ingresso per operatori e rimanda ai dettagli sotto docs/.
--->
-
 # YOLO single-image inference on Raspberry Pi
 
 This project creates an annotated image, a privacy-blurred image, or both from
 one local image with the included YOLO26n ONNX model.
 The deployment runtime is designed and tested for a Raspberry Pi 3 with 1 GB
 RAM and a 64-bit Raspberry Pi OS installation.
-
-Detailed Italian documentation is available in [`docs/`](docs/README.md),
-including architecture, inference internals, operations, and verification.
 
 Inference still uses the original `models/yolo26n.onnx` model and its end-to-end ONNX
 graph. The Raspberry Pi runtime calls it directly through ONNX Runtime; it does
@@ -103,6 +94,7 @@ Request privacy output only, or both products from the same inference:
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
   --privacy-output output/privacy.jpg \
+  --meta input/example.meta \
   --model models/yolo26n.onnx
 ```
 
@@ -153,9 +145,6 @@ verify valid annotated outputs and the final suppression-domain overlap
 contract. Person and car counts are not asserted because they are not ground
 truth or a measurement of accuracy, precision, recall, or mAP.
 
-See `docs/limitazioni-raspberry-pi.md` for recorded measurements and deployment
-constraints.
-
 ## Arguments
 
 | Option | Constraint |
@@ -164,6 +153,7 @@ constraints.
 | `--annotated-output` | Optional annotated image path; parent must exist. |
 | `--privacy-output` | Optional privacy image path; parent must exist. |
 | `--model` | Existing local file with a case-insensitive `.onnx` extension. |
+| `--meta` | Optional existing regular non-symlink `.meta` file, distinct from input, model, and outputs. |
 
 Requested outputs must be distinct from the input and from each other after
 path, symbolic-link, and existing hard-link resolution. Existing outputs are
@@ -171,6 +161,34 @@ overwritten. With both products, annotated saving finishes first; if privacy
 saving then fails, the completed annotated file remains. Zero selected
 detections still writes each requested normalized source image. The command is
 headless and does not open a graphical window.
+
+### Detection metadata
+
+When `--meta` is supplied, the existing file is updated only after every
+requested image has been written and verified. All previous exact lowercase
+`[detection]` sections are removed and one current section is appended
+atomically; other bytes are retained and no history is created. Counts include
+only enabled final detections after global suppression, in canonical COCO order:
+
+```text
+[detection]
+detected=true|false
+software_name=phenocam-detection
+software_version=1.0.0
+model_id=yolo26n
+model_version=1.0.0
+annotated_image=<CLI path or empty>
+privacy_image=<CLI path or empty>
+classes=<comma-separated detected classes or empty>
+<class-key>_count=<positive integer, detected classes only>
+total_count=<sum, or 0>
+```
+
+Output paths retain their CLI spelling. A metadata failure keeps completed
+images and the previous metadata file available, returns status `1`, and prints
+`error: metadata file could not be updated`. Invalid explicit metadata paths
+fail before inference with `error: metadata file does not exist or is not a file` or `error: metadata file must use the .meta extension`,
+and with `error: output path cannot be stored in metadata` or `error: metadata path must differ from input, model, and output paths`.
 
 ## Batch usage
 
@@ -182,15 +200,17 @@ Run inference on every supported image directly inside `input/`:
 
 The script creates `output/` when needed and writes `<stem>_annotated.<ext>` and
 `<stem>_privacy.<ext>` in one process per input, preserving extension spelling.
-Existing files are overwritten. Processing continues after individual failures,
-but the script exits with status `1` if any image fails or none is supported.
+If regular non-symlink `input/<stem>.meta` exists, it is passed through
+`--meta`; a missing match is not created and does not fail that image. Existing
+files are overwritten. Processing continues after individual failures, but the
+script exits with status `1` if any image fails or none is supported.
 
 ## Exit statuses
 
 | Status | Meaning |
 |---|---|
-| `0` | Inference and output writing succeeded. |
-| `1` | Validation, inference, or output writing failed. |
+| `0` | Inference, output writing, and requested metadata update succeeded. |
+| `1` | Validation, inference, output writing, or metadata update failed. |
 | `2` | Command-line syntax is invalid. |
 
 ## Optional model export
