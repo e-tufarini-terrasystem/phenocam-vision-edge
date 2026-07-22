@@ -1,8 +1,8 @@
-"""Verify the public sixteen-view inference transaction with boundary doubles.
+"""Verify the public inference and optional metadata transaction with doubles.
 
 One or two outputs never duplicate inference, and final product generation
-occurs only after successful global suppression. Doubles prove ordering,
-aggregation, timing, error sanitization, and source ownership.
+occurs only after successful global suppression. Metadata follows output
+persistence and propagates failures. Doubles prove ordering, timing, and data.
 """
 
 import tempfile
@@ -16,6 +16,7 @@ import numpy as np
 from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import process_image
 from phenocam.inference.runtime import run_tensor as timed_run_tensor
+from phenocam.metadata import MetadataWriteError
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -28,6 +29,7 @@ class InferenceTests(unittest.TestCase):
             self.root / "input.jpg",
             self.root / "annotated.jpg",
             self.root / "privacy.jpg",
+            self.root / "input.meta",
         )
         self.image = SimpleNamespace(width=100, height=80)
         self.views = tuple(
@@ -66,6 +68,9 @@ class InferenceTests(unittest.TestCase):
             ),
             "nms": patch("phenocam.inference.pipeline.deduplicate", return_value=("final",)),
             "output": patch("phenocam.inference.pipeline.write_outputs"),
+            "metadata": patch(
+                "phenocam.inference.pipeline.update_detection_metadata"
+            ),
         }
         return {name: patcher.start() for name, patcher in patchers.items()}, patchers
 
@@ -104,6 +109,14 @@ class InferenceTests(unittest.TestCase):
             self.paths[2],
             self.paths[3],
         )
+        mocks["metadata"].assert_called_once_with(
+            self.paths[4],
+            ("final",),
+            ("person", "car"),
+            self.contract[4],
+            self.paths[2],
+            self.paths[3],
+        )
 
     def test_each_output_combination_runs_the_same_inference_transaction(self):
         combinations = (
@@ -115,7 +128,9 @@ class InferenceTests(unittest.TestCase):
             with self.subTest(annotated=annotated, privacy=privacy):
                 mocks, patchers = self.boundaries()
                 try:
-                    process_image(self.paths[0], self.paths[1], annotated, privacy)
+                    process_image(
+                        self.paths[0], self.paths[1], annotated, privacy, None
+                    )
                 finally:
                     self.stop_boundaries(patchers)
                 mocks["session"].assert_called_once()
@@ -129,6 +144,18 @@ class InferenceTests(unittest.TestCase):
                     annotated,
                     privacy,
                 )
+                mocks["metadata"].assert_not_called()
+
+    def test_metadata_runs_once_after_outputs(self):
+        events = []
+        mocks, patchers = self.boundaries()
+        mocks["output"].side_effect = lambda *args: events.append("output")
+        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
+        try:
+            process_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertEqual(events, ["output", "metadata"])
 
     def test_views_are_consumed_and_normalized_sequentially(self):
         events = []
@@ -230,15 +257,21 @@ class InferenceTests(unittest.TestCase):
                 self.assertEqual(mocks["runtime"].call_count, failing_index + 1)
                 mocks["nms"].assert_not_called()
                 mocks["output"].assert_not_called()
+                mocks["metadata"].assert_not_called()
 
     def test_configuration_error_prevents_session_and_preserves_output(self):
         self.paths[2].write_bytes(b"existing")
         with patch(
             "phenocam.inference.pipeline.enabled_class_names", side_effect=ClassConfigurationError()
-        ), patch("phenocam.inference.pipeline.create_session") as create_session:
+        ), patch(
+            "phenocam.inference.pipeline.create_session"
+        ) as create_session, patch(
+            "phenocam.inference.pipeline.update_detection_metadata"
+        ) as metadata:
             with self.assertRaises(ClassConfigurationError):
                 process_image(*self.paths)
         create_session.assert_not_called()
+        metadata.assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
     def test_model_error_prevents_inference_and_preserves_output(self):
@@ -248,11 +281,14 @@ class InferenceTests(unittest.TestCase):
             "phenocam.inference.pipeline.create_session", return_value=self.session
         ), patch("phenocam.inference.pipeline.model_contract", side_effect=expected), patch(
             "phenocam.inference.pipeline.run_tensor"
-        ) as run_tensor:
+        ) as run_tensor, patch(
+            "phenocam.inference.pipeline.update_detection_metadata"
+        ) as metadata:
             with self.assertRaises(ModelClassesError) as error:
                 process_image(*self.paths)
         self.assertIs(error.exception, expected)
         run_tensor.assert_not_called()
+        metadata.assert_not_called()
         self.assertEqual(self.paths[2].read_bytes(), b"existing")
 
     def test_internal_failure_is_hidden_and_prevents_output(self):
@@ -265,6 +301,7 @@ class InferenceTests(unittest.TestCase):
             self.stop_boundaries(patchers)
         self.assertNotIn("private detail", str(error.exception))
         mocks["output"].assert_not_called()
+        mocks["metadata"].assert_not_called()
 
     def test_zero_detections_still_reaches_output(self):
         mocks, patchers = self.boundaries()
@@ -286,6 +323,19 @@ class InferenceTests(unittest.TestCase):
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
+        mocks["metadata"].assert_not_called()
+
+    def test_metadata_error_is_preserved_after_outputs(self):
+        mocks, patchers = self.boundaries()
+        expected = MetadataWriteError()
+        mocks["metadata"].side_effect = expected
+        try:
+            with self.assertRaises(MetadataWriteError) as error:
+                process_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertIs(error.exception, expected)
+        mocks["output"].assert_called_once()
 
 
 if __name__ == "__main__":

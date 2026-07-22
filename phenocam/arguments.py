@@ -2,8 +2,9 @@
 Define and validate the command-line boundary for the application.
 
 CLI values are untrusted input. Downstream code may rely on the returned paths
-identifying valid input/model files, at least one requested output, existing
-output parents, and pairwise-distinct file identities.
+identifying valid input/model files, an optional validated metadata file, at
+least one requested output, existing output parents, and pairwise-distinct file
+identities. Metadata-bound output paths cannot inject serialized lines.
 """
 
 from argparse import ArgumentParser
@@ -18,6 +19,7 @@ class Arguments:
     annotated_output: Optional[Path]
     privacy_output: Optional[Path]
     model: Path
+    meta: Optional[Path]
 
 
 class ArgumentValidationError(ValueError):
@@ -32,7 +34,18 @@ def build_parser() -> ArgumentParser:
     parser.add_argument("--annotated-output", type=Path, help="annotated output image")
     parser.add_argument("--privacy-output", type=Path, help="privacy output image")
     parser.add_argument("--model", required=True, type=Path, help="local ONNX model")
+    parser.add_argument("--meta", type=Path, help="existing detection metadata file")
     return parser
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    same_identity = left.resolve() == right.resolve()
+    if left.exists() and right.exists() and not same_identity:
+        try:
+            same_identity = left.samefile(right)
+        except OSError:
+            same_identity = False
+    return same_identity
 
 
 def validate_arguments(
@@ -40,6 +53,7 @@ def validate_arguments(
     annotated_output_path: Optional[Path],
     privacy_output_path: Optional[Path],
     model_path: Path,
+    metadata_path: Optional[Path],
 ) -> Arguments:
     if not input_path.is_file():
         raise ArgumentValidationError("error: input image does not exist or is not a file")
@@ -63,41 +77,51 @@ def validate_arguments(
         if output_path is None:
             continue
         # Resolution catches equivalent spellings and symlinks before output exists.
-        same_identity = input_path.resolve() == output_path.resolve()
-        if output_path.exists() and not same_identity:
-            try:
-                same_identity = input_path.samefile(output_path)
-            except OSError:
-                same_identity = False
-        if same_identity:
+        if _same_file(input_path, output_path):
             raise ArgumentValidationError("error: input and output paths must differ")
 
     if annotated_output_path is not None and privacy_output_path is not None:
-        same_identity = (
-            annotated_output_path.resolve() == privacy_output_path.resolve()
-        )
-        if (
-            annotated_output_path.exists()
-            and privacy_output_path.exists()
-            and not same_identity
-        ):
-            try:
-                same_identity = annotated_output_path.samefile(privacy_output_path)
-            except OSError:
-                same_identity = False
-        if same_identity:
+        if _same_file(annotated_output_path, privacy_output_path):
             raise ArgumentValidationError("error: output paths must differ")
+
+    if metadata_path is not None:
+        if metadata_path.is_symlink() or not metadata_path.is_file():
+            raise ArgumentValidationError(
+                "error: metadata file does not exist or is not a file"
+            )
+        if metadata_path.suffix.lower() != ".meta":
+            raise ArgumentValidationError("error: metadata file must use the .meta extension")
+        if any(
+            "\r" in str(output_path) or "\n" in str(output_path)
+            for output_path in outputs
+            if output_path is not None
+        ):
+            raise ArgumentValidationError("error: output path cannot be stored in metadata")
+        protected_paths = (input_path, model_path, *outputs)
+        if any(
+            _same_file(metadata_path, protected_path)
+            for protected_path in protected_paths
+            if protected_path is not None
+        ):
+            raise ArgumentValidationError(
+                "error: metadata path must differ from input, model, and output paths"
+            )
 
     return Arguments(
         input=input_path,
         annotated_output=annotated_output_path,
         privacy_output=privacy_output_path,
         model=model_path,
+        meta=metadata_path,
     )
 
 
 def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
     values = build_parser().parse_args(argv)
     return validate_arguments(
-        values.input, values.annotated_output, values.privacy_output, values.model
+        values.input,
+        values.annotated_output,
+        values.privacy_output,
+        values.model,
+        values.meta,
     )
