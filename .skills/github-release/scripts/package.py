@@ -27,6 +27,7 @@ REQUIRED = (
     "scripts/batch.sh",
     "scripts/installer.sh",
 )
+DOCUMENTATION = ("docs/development.md", "docs/manual.md")
 
 
 class PackageError(RuntimeError):
@@ -85,6 +86,10 @@ def source_files(reference):
         if path not in tree:
             raise PackageError(f"required source path does not exist: {path}")
         selected[safe_path(path)] = tree[path]
+    # Older source commits remain packageable; current commits carry their versioned docs.
+    for path in DOCUMENTATION:
+        if path in tree:
+            selected[safe_path(path)] = tree[path]
     for path, entry in tree.items():
         if path.startswith("phenocam/") and path.endswith(".py"):
             selected[safe_path(path)] = entry

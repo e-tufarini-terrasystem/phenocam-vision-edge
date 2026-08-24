@@ -35,6 +35,8 @@ class ReleasePackageTests(unittest.TestCase):
         files = {
             "README.md": b"committed readme\n",
             "assets/logo.svg": b"<svg/>\n",
+            "docs/development.md": b"development guide\n",
+            "docs/manual.md": b"operator manual\n",
             "phenocam/__init__.py": b'"""Package."""\n',
             "phenocam/classes/naïve.py": b"VALUE = 1\n",
             "models/yolo26n.onnx": b"model bytes\x00",
@@ -107,6 +109,8 @@ class ReleasePackageTests(unittest.TestCase):
             expected_files = {
                 f"{root}/README.md",
                 f"{root}/assets/logo.svg",
+                f"{root}/docs/development.md",
+                f"{root}/docs/manual.md",
                 f"{root}/models/yolo26n.onnx",
                 f"{root}/phenocam/__init__.py",
                 f"{root}/phenocam/classes/naïve.py",
