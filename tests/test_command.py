@@ -1,9 +1,9 @@
 """
-Verify optional image/metadata destinations, diagnostics, and success timing.
+Verify optional products, deletion delegation, diagnostics, and success timing.
 
 The argument boundary and `process_image` are mocked; their own modules retain
 path, inventory, inference, and transaction-order coverage. This boundary owns
-the fixed metadata failure status without exposing its private cause.
+fixed metadata and source-deletion statuses without exposing private causes.
 """
 
 import contextlib
@@ -19,6 +19,7 @@ from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.__main__ import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 from phenocam.metadata import MetadataWriteError
+from phenocam.source import SourceDeleteError
 
 
 class RunTests(unittest.TestCase):
@@ -29,6 +30,8 @@ class RunTests(unittest.TestCase):
             privacy_output=Path("privacy.jpg"),
             model=Path("model.onnx"),
             meta=Path("input.meta"),
+            delete_input_on_detection=False,
+            input_identity=(17, 23),
         )
 
     def call_main(self, argv=None):
@@ -49,6 +52,8 @@ class RunTests(unittest.TestCase):
             self.arguments.annotated_output,
             self.arguments.privacy_output,
             self.arguments.meta,
+            self.arguments.delete_input_on_detection,
+            self.arguments.input_identity,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 1.234 s\n", "")
@@ -67,6 +72,8 @@ class RunTests(unittest.TestCase):
                 privacy,
                 self.arguments.model,
                 self.arguments.meta,
+                self.arguments.delete_input_on_detection,
+                self.arguments.input_identity,
             )
             with self.subTest(annotated=annotated, privacy=privacy), patch(
                 "phenocam.__main__.parse_arguments", return_value=arguments
@@ -78,10 +85,40 @@ class RunTests(unittest.TestCase):
                 annotated,
                 privacy,
                 arguments.meta,
+                arguments.delete_input_on_detection,
+                arguments.input_identity,
             )
             self.assertEqual(
                 (status, stdout, stderr), (0, "Execution time: 0.500 s\n", "")
             )
+
+    def test_enabled_deletion_intent_and_identity_are_delegated(self):
+        arguments = Arguments(
+            self.arguments.input,
+            None,
+            None,
+            self.arguments.model,
+            self.arguments.meta,
+            True,
+            self.arguments.input_identity,
+        )
+        with patch(
+            "phenocam.__main__.parse_arguments", return_value=arguments
+        ), patch("phenocam.__main__.process_image", return_value=0.25) as process:
+            status, stdout, stderr = self.call_main([])
+
+        process.assert_called_once_with(
+            arguments.model,
+            arguments.input,
+            None,
+            None,
+            arguments.meta,
+            True,
+            arguments.input_identity,
+        )
+        self.assertEqual(
+            (status, stdout, stderr), (0, "Execution time: 0.250 s\n", "")
+        )
 
     def test_each_argument_error_is_exactly_reported(self):
         messages = [
@@ -89,6 +126,7 @@ class RunTests(unittest.TestCase):
             "error: model does not exist or is not a file",
             "error: model must be an ONNX file",
             "error: at least one output path is required",
+            "error: input image must not be a symbolic link when deletion is enabled",
             "error: output directory does not exist",
             "error: output path must be a file",
             "error: input and output paths must differ",
@@ -169,6 +207,20 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("private", stderr)
         self.assertNotIn("Traceback", stderr)
 
+    def test_source_delete_error_has_fixed_diagnostic_without_timing(self):
+        error = SourceDeleteError("private path")
+        error.__cause__ = RuntimeError("private cause\nTraceback")
+        with patch(
+            "phenocam.__main__.parse_arguments", return_value=self.arguments
+        ), patch("phenocam.__main__.process_image", side_effect=error):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr),
+            (1, "", "error: input image could not be deleted\n"),
+        )
+        self.assertNotIn("private", stderr)
+        self.assertNotIn("Traceback", stderr)
+
     def test_missing_arguments_keep_argparse_status_two_and_stderr_usage(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -226,6 +278,7 @@ class RunTests(unittest.TestCase):
         self.assertIn("--annotated-output", help_text)
         self.assertIn("--privacy-output", help_text)
         self.assertIn("--meta", help_text)
+        self.assertIn("--delete-input-on-detection", help_text)
         self.assertNotIn("--output", help_text)
         self.assertNotIn("Execution time:", stdout.getvalue())
         self.assertEqual(stderr.getvalue(), "")

@@ -1,9 +1,9 @@
 """
 Provide the process boundary for the single-image inference command.
 
-Argument handling, two optional image destinations, and an optional metadata
-destination after those outputs are delegated to the single inference
-transaction. This entry point owns only fixed diagnostics and success timing.
+Argument handling, optional image/metadata destinations, and source deletion
+intent are delegated to the single inference transaction. This entry point owns
+only fixed diagnostics, including deletion failure, and success timing.
 """
 
 import sys
@@ -13,6 +13,7 @@ from phenocam.arguments import ArgumentValidationError, parse_arguments
 from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import process_image
 from phenocam.metadata import MetadataWriteError
+from phenocam.source import SourceDeleteError
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -25,6 +26,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             arguments.annotated_output,
             arguments.privacy_output,
             arguments.meta,
+            arguments.delete_input_on_detection,
+            arguments.input_identity,
         )
     except ArgumentValidationError as error:
         print(str(error), file=sys.stderr)
@@ -43,6 +46,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     except MetadataWriteError:
         print("error: metadata file could not be updated", file=sys.stderr)
+        return 1
+    except SourceDeleteError:
+        print("error: input image could not be deleted", file=sys.stderr)
         return 1
     print(f"Execution time: {inference_seconds:.3f} s")
     return 0
