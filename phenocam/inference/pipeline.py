@@ -37,9 +37,7 @@ def process_image(
     try:
         session = create_session(model_path)
         input_name, output_name, width, height, model_names = model_contract(session)
-    except ModelClassesError:
-        raise
-    except InferenceError:
+    except (ModelClassesError, InferenceError):
         raise
     except Exception:
         raise InferenceError() from None
@@ -69,10 +67,6 @@ def process_image(
     except Exception:
         raise InferenceError() from None
 
-    enabled_detection = any(
-        detection.class_id in enabled_ids for detection in detections
-    )
-
     write_outputs(
         source_image,
         detections,
@@ -91,7 +85,9 @@ def process_image(
             annotated_output_path,
             privacy_output_path,
         )
-    if delete_input_on_detection and enabled_detection:
+    if delete_input_on_detection and any(
+        detection.class_id in enabled_ids for detection in detections
+    ):
         # Every requested durable product has committed before source mutation.
         delete_source(input_path, input_identity)
     return elapsed

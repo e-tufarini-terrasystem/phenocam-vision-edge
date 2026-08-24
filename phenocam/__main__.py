@@ -29,13 +29,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             arguments.delete_input_on_detection,
             arguments.input_identity,
         )
-    except ArgumentValidationError as error:
-        print(str(error), file=sys.stderr)
-        return 1
-    except ClassConfigurationError as error:
-        print(str(error), file=sys.stderr)
-        return 1
-    except ModelClassesError as error:
+    except (ArgumentValidationError, ClassConfigurationError, ModelClassesError) as error:
         print(str(error), file=sys.stderr)
         return 1
     except InferenceError:

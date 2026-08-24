@@ -56,9 +56,7 @@ def enabled_class_names():
         module = importlib.util.module_from_spec(specification)
         specification.loader.exec_module(module)
         configured = module.COCO_CLASSES
-    except KeyboardInterrupt:
-        raise
-    except ClassConfigurationError:
+    except (KeyboardInterrupt, ClassConfigurationError):
         raise
     except BaseException:
         raise ClassConfigurationError() from None

@@ -29,7 +29,7 @@ class ArgumentValidationError(ValueError):
     """Report one fixed, public path-validation error."""
 
 
-def build_parser() -> ArgumentParser:
+def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
     parser = ArgumentParser(
         description="Create selected annotated/privacy products from one local image."
     )
@@ -43,7 +43,15 @@ def build_parser() -> ArgumentParser:
         action="store_true",
         help="delete input when an enabled class is detected",
     )
-    return parser
+    values = parser.parse_args(argv)
+    return validate_arguments(
+        values.input,
+        values.annotated_output,
+        values.privacy_output,
+        values.model,
+        values.meta,
+        values.delete_input_on_detection,
+    )
 
 
 def _same_file(left: Path, right: Path) -> bool:
@@ -138,16 +146,4 @@ def validate_arguments(
         meta=metadata_path,
         delete_input_on_detection=delete_input_on_detection,
         input_identity=(input_stat.st_dev, input_stat.st_ino),
-    )
-
-
-def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
-    values = build_parser().parse_args(argv)
-    return validate_arguments(
-        values.input,
-        values.annotated_output,
-        values.privacy_output,
-        values.model,
-        values.meta,
-        values.delete_input_on_detection,
     )

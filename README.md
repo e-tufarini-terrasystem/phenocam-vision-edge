@@ -254,6 +254,16 @@ explicit choice for direct CLI calls.
 | `1` | Validation, inference, output writing, metadata update, or conditional deletion failed. |
 | `2` | Command-line syntax is invalid. |
 
+## Verification
+
+Run the complete test suite from the project directory with the runtime
+environment. The six real-image integration cases and their inventory check are
+skipped when the named, untracked reference images are not present in `input/`.
+
+```sh
+.venv/bin/python -m unittest discover -s tests -v
+```
+
 ## Optional model export
 
 Export is a workstation task because Ultralytics brings a much larger Python
