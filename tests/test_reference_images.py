@@ -1,7 +1,7 @@
-"""Verify the six real images without treating counts as ground truth.
+"""Verify named external images when available, without owning ``input/``.
 
 Disposable output, uniform confidence, and final suppression domains exercise
-the real pipeline. Pairs use overlap checks; counts are not ground truth.
+the real pipeline. Missing named images skip; unrelated images are ignored.
 """
 
 import tempfile
@@ -34,13 +34,14 @@ EXPECTED_WINNERS = (
 class ReferenceImageTests(unittest.TestCase):
     def test_reference_inventory_and_dimensions(self):
         expected_names = REFERENCE_DATA
-        actual_names = tuple(
-            path.name for path in sorted((ROOT / "input").glob("*.jpg"))
+        available_names = tuple(
+            name for name in expected_names if (ROOT / "input" / name).is_file()
         )
 
         self.assertEqual(len(set(expected_names)), len(expected_names))
-        self.assertEqual(actual_names, expected_names)
-        for name in expected_names:
+        if not available_names:
+            self.skipTest("named reference images are unavailable")
+        for name in available_names:
             with self.subTest(name=name):
                 with Image.open(ROOT / "input" / name) as source:
                     image = ImageOps.exif_transpose(source)
@@ -49,6 +50,8 @@ class ReferenceImageTests(unittest.TestCase):
 
     def assert_reference(self, name):
         source_path = ROOT / "input" / name
+        if not source_path.is_file():
+            self.skipTest(f"reference image is unavailable: {name}")
         model_path = ROOT / "models" / "yolo26n.onnx"
         captured = {}
         real_write_outputs = pipeline.write_outputs
