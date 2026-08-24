@@ -27,7 +27,7 @@ REQUIRED = (
     "scripts/batch.sh",
     "scripts/installer.sh",
 )
-DOCUMENTATION = ("docs/development.md", "docs/manual.md")
+DOCUMENTATION = ("docs/cli.md", "docs/development.md", "docs/manual.md")
 
 
 class PackageError(RuntimeError):

@@ -62,5 +62,6 @@ signature.
 
 ## Documentation
 
-- [Operation and manual configuration](docs/manual.md)
+- [Software operation instructions and CLI reference](docs/cli.md)
+- [Manual installation and configuration](docs/manual.md)
 - [Development, verification, and model export](docs/development.md)
