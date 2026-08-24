@@ -5,8 +5,17 @@
  width="736.000000pt" height="1024.000000pt" viewBox="0 0 736.000000 1024.000000"
  preserveAspectRatio="xMidYMid meet">
 
-<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
-fill="#000000" stroke="none">
+<defs>
+  <linearGradient id="cobalt-turquoise" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#2563EB"/>
+    <stop offset="100%" stop-color="#14B8A6"/>
+  </linearGradient>
+</defs>
+<style type="text/css"><![CDATA[
+  .logo-mark { fill: url(#cobalt-turquoise); }
+]]></style>
+<g class="logo-mark" transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="#2563EB" stroke="none">
 <path d="M3305 8774 c-69 -10 -220 -55 -236 -71 -13 -13 -14 -130 -2 -178 10
 -38 39 -104 67 -153 21 -36 87 -102 120 -119 l29 -15 -49 -43 c-61 -53 -92
 -114 -100 -196 -6 -57 -11 -68 -47 -104 -43 -44 -61 -78 -77 -150 -13 -58 8
