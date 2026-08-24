@@ -13,9 +13,9 @@ from pathlib import Path
 
 
 SOFTWARE_NAME = "phenocam-detection"
-SOFTWARE_VERSION = "1.0.0"
+SOFTWARE_VERSION = "0.1.0"
 MODEL_ID = "yolo26n"
-MODEL_VERSION = "1.0.0"
+MODEL_VERSION = "0.1.0"
 
 _LINE_ENDING = re.compile(r"\r\n|\r|\n")
 _SECTION_HEADER = re.compile(r"\[([^\[\]]+)\]")
