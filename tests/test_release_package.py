@@ -200,11 +200,16 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertEqual(result.stderr, "error: output directory does not exist\n")
         self.assertFalse(missing.exists())
 
-    def test_missing_git_has_exact_error(self):
-        result = self.run_packager(env={"PATH": ""})
-        self.assertEqual(result.returncode, 1)
-        self.assertEqual(result.stderr, "error: git is required\n")
-        self.assertEqual(tuple(self.output.iterdir()), ())
+    def test_missing_or_unexecutable_git_has_exact_error(self):
+        unavailable = self.root / "unavailable git"
+        unavailable.mkdir()
+        (unavailable / "git").write_text("not executable\n", encoding="utf-8")
+        for path in ("", str(unavailable)):
+            with self.subTest(path=path):
+                result = self.run_packager(env={"PATH": path})
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stderr, "error: git is required\n")
+                self.assertEqual(tuple(self.output.iterdir()), ())
 
     def test_blob_read_failure_is_sanitized_and_cleaned(self):
         command_directory = self.root / "failing git"

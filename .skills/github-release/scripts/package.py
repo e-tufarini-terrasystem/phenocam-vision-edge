@@ -43,7 +43,7 @@ def run_git(*arguments):
             stderr=subprocess.DEVNULL,
             check=False,
         )
-    except FileNotFoundError:
+    except OSError:
         raise PackageError("git is required") from None
 
 
@@ -168,6 +168,7 @@ def build(version, reference, output_directory):
         with os.fdopen(descriptor, "w", encoding="ascii", newline="") as checksum:
             checksum.write(f"{digest}  {archive_name}\n")
 
+        # Final names stay absent until both temporary assets pass validation.
         if archive_path.exists() or checksum_path.exists():
             raise PackageError("release asset already exists")
         temporary_archive.rename(archive_path)
