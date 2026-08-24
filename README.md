@@ -1,3 +1,9 @@
+<!--
+This document owns supported-runtime, installation, usage, metadata, batch, and
+verification guidance. Source files remain the authority for implementation
+details.
+-->
+
 <p align="center">
   <img src="assets/logo.svg" alt="Phenocam Vision Edge logo" width="220">
 </p>
@@ -30,6 +36,7 @@ selects the final annotations and privacy regions.
 
 - Raspberry Pi OS 64-bit (`aarch64`)
 - Python 3.11 or newer and `python3-venv` (tested with Python 3.13.5)
+- `curl`, `tar`, and `sha256sum`
 - `numpy`, `onnxruntime`, and `Pillow` from `requirements/runtime.txt`
 
 The Python 3.13 dependency set in the requirements file was installed and
@@ -39,8 +46,55 @@ on the Pi.
 
 ## Raspberry Pi installation
 
-Create an isolated environment and disable pip's download cache to save space
-on a small microSD card:
+Install the operating-system prerequisites separately before installing the
+application. The versioned command below never invokes `sudo`, `apt`, or another
+system package manager.
+
+### Versioned installation (v0.1.0)
+
+Run this command from the directory that should contain the installation. It
+stops before downloading when `phenocam-vision-edge-0.1.0/` already exists,
+downloads both release assets with one `curl` process, verifies their SHA-256
+checksum, extracts the archive, and runs the bundled installer:
+
+```sh
+[ ! -e phenocam-vision-edge-0.1.0 ] && \
+curl --fail --fail-early --location --silent --show-error \
+  --output phenocam-vision-edge-0.1.0.tar.gz \
+  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.1.0/phenocam-vision-edge-0.1.0.tar.gz \
+  --output phenocam-vision-edge-0.1.0.tar.gz.sha256 \
+  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.1.0/phenocam-vision-edge-0.1.0.tar.gz.sha256 && \
+sha256sum -c phenocam-vision-edge-0.1.0.tar.gz.sha256 && \
+tar -xzf phenocam-vision-edge-0.1.0.tar.gz && \
+./phenocam-vision-edge-0.1.0/scripts/installer.sh
+```
+
+Success leaves the configured application at
+`./phenocam-vision-edge-0.1.0/`, including the ONNX model, `.venv/`, `input/`,
+and `output/`. The downloaded archive and checksum remain in the current
+directory. The checksum detects corruption or a mismatched download; it is not
+a publisher signature.
+
+A failed download stops before checksum validation. A checksum failure stops
+before extraction, and an extraction failure stops before installer execution.
+An installer failure returns non-zero and retains the extracted package and any
+partial `.venv` for inspection. The installer reports one of these terminal
+errors without additional host details:
+
+- `error: Raspberry Pi aarch64 is required`
+- `error: Python 3.11 or newer is required`
+- `error: python3-venv is required`
+- `error: virtual environment already exists`
+- `error: runtime requirements do not exist`
+- `error: virtual environment could not be created`
+- `error: runtime dependencies could not be installed`
+- `error: input directory could not be created`
+- `error: output directory could not be created`
+
+### Manual setup from source
+
+From a source checkout, create an isolated environment and disable pip's
+download cache to save space on a small microSD card:
 
 ```sh
 sudo apt update
@@ -213,9 +267,9 @@ only enabled final detections after global suppression, in canonical COCO order:
 [detection]
 detected=true|false
 software_name=phenocam-detection
-software_version=1.0.0
+software_version=0.1.0
 model_id=yolo26n
-model_version=1.0.0
+model_version=0.1.0
 annotated_image=<CLI path or empty>
 privacy_image=<CLI path or empty>
 classes=<comma-separated detected classes or empty>
