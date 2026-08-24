@@ -1,9 +1,9 @@
-# Exclude local/generated artifacts rather than versioned product files.
+# Ignore virtual environments, generated data, and local planning artifacts.
+# Repository-owned operational skills remain tracked.
 .venv/
 .venv-export/
 __pycache__/
 .DS_Store
-.skills/
 input/
 output/
 plans/
