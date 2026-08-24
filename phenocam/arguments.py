@@ -3,8 +3,9 @@ Define and validate the command-line boundary for the application.
 
 CLI values are untrusted input. Downstream code may rely on the returned paths
 identifying valid input/model files, an optional validated metadata file, at
-least one requested output, existing output parents, and pairwise-distinct file
-identities. Metadata-bound output paths cannot inject serialized lines.
+least one requested final action, existing output parents, and pairwise-distinct
+file identities. The result also carries deletion intent and the validated,
+immutable input identity. Metadata-bound output paths cannot inject lines.
 """
 
 from argparse import ArgumentParser
@@ -20,6 +21,8 @@ class Arguments:
     privacy_output: Optional[Path]
     model: Path
     meta: Optional[Path]
+    delete_input_on_detection: bool
+    input_identity: tuple[int, int]
 
 
 class ArgumentValidationError(ValueError):
@@ -35,6 +38,11 @@ def build_parser() -> ArgumentParser:
     parser.add_argument("--privacy-output", type=Path, help="privacy output image")
     parser.add_argument("--model", required=True, type=Path, help="local ONNX model")
     parser.add_argument("--meta", type=Path, help="existing detection metadata file")
+    parser.add_argument(
+        "--delete-input-on-detection",
+        action="store_true",
+        help="delete input when an enabled class is detected",
+    )
     return parser
 
 
@@ -54,14 +62,29 @@ def validate_arguments(
     privacy_output_path: Optional[Path],
     model_path: Path,
     metadata_path: Optional[Path],
+    delete_input_on_detection: bool,
 ) -> Arguments:
     if not input_path.is_file():
         raise ArgumentValidationError("error: input image does not exist or is not a file")
+    if delete_input_on_detection and input_path.is_symlink():
+        raise ArgumentValidationError(
+            "error: input image must not be a symbolic link when deletion is enabled"
+        )
+    try:
+        input_stat = input_path.stat()
+    except OSError:
+        raise ArgumentValidationError(
+            "error: input image does not exist or is not a file"
+        ) from None
     if not model_path.is_file():
         raise ArgumentValidationError("error: model does not exist or is not a file")
     if model_path.suffix.lower() != ".onnx":
         raise ArgumentValidationError("error: model must be an ONNX file")
-    if annotated_output_path is None and privacy_output_path is None:
+    if (
+        annotated_output_path is None
+        and privacy_output_path is None
+        and not delete_input_on_detection
+    ):
         raise ArgumentValidationError("error: at least one output path is required")
 
     outputs = (annotated_output_path, privacy_output_path)
@@ -113,6 +136,8 @@ def validate_arguments(
         privacy_output=privacy_output_path,
         model=model_path,
         meta=metadata_path,
+        delete_input_on_detection=delete_input_on_detection,
+        input_identity=(input_stat.st_dev, input_stat.st_ino),
     )
 
 
@@ -124,4 +149,5 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
         values.privacy_output,
         values.model,
         values.meta,
+        values.delete_input_on_detection,
     )

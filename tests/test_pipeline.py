@@ -1,4 +1,4 @@
-"""Verify the public inference and optional metadata transaction with doubles.
+"""Verify the ordered inference, product, metadata, and deletion transaction.
 
 One or two outputs never duplicate inference, and final product generation
 occurs only after successful global suppression. Metadata follows output
@@ -17,6 +17,7 @@ from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import process_image
 from phenocam.inference.runtime import run_tensor as timed_run_tensor
 from phenocam.metadata import MetadataWriteError
+from phenocam.source import SourceDeleteError
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -37,6 +38,9 @@ class InferenceTests(unittest.TestCase):
             for priority in range(16)
         )
         self.session = Mock()
+        self.input_identity = (17, 23)
+        self.enabled_detection = SimpleNamespace(class_id=0)
+        self.disabled_detection = SimpleNamespace(class_id=7)
         self.contract = (
             "images",
             "output0",
@@ -66,11 +70,15 @@ class InferenceTests(unittest.TestCase):
                 "phenocam.inference.pipeline.normalize_rows",
                 side_effect=[(("detection", index),) for index in range(16)],
             ),
-            "nms": patch("phenocam.inference.pipeline.deduplicate", return_value=("final",)),
+            "nms": patch(
+                "phenocam.inference.pipeline.deduplicate",
+                return_value=(self.enabled_detection,),
+            ),
             "output": patch("phenocam.inference.pipeline.write_outputs"),
             "metadata": patch(
                 "phenocam.inference.pipeline.update_detection_metadata"
             ),
+            "delete": patch("phenocam.inference.pipeline.delete_source"),
         }
         return {name: patcher.start() for name, patcher in patchers.items()}, patchers
 
@@ -103,7 +111,7 @@ class InferenceTests(unittest.TestCase):
             self.assertEqual(normalized.args[2:4], (100, 80))
         mocks["output"].assert_called_once_with(
             self.image,
-            ("final",),
+            (self.enabled_detection,),
             (0, 2),
             self.contract[4],
             self.paths[2],
@@ -111,12 +119,13 @@ class InferenceTests(unittest.TestCase):
         )
         mocks["metadata"].assert_called_once_with(
             self.paths[4],
-            ("final",),
+            (self.enabled_detection,),
             ("person", "car"),
             self.contract[4],
             self.paths[2],
             self.paths[3],
         )
+        mocks["delete"].assert_not_called()
 
     def test_each_output_combination_runs_the_same_inference_transaction(self):
         combinations = (
@@ -138,13 +147,14 @@ class InferenceTests(unittest.TestCase):
                 mocks["nms"].assert_called_once()
                 mocks["output"].assert_called_once_with(
                     self.image,
-                    ("final",),
+                    (self.enabled_detection,),
                     (0, 2),
                     self.contract[4],
                     annotated,
                     privacy,
                 )
                 mocks["metadata"].assert_not_called()
+                mocks["delete"].assert_not_called()
 
     def test_metadata_runs_once_after_outputs(self):
         events = []
@@ -156,6 +166,121 @@ class InferenceTests(unittest.TestCase):
         finally:
             self.stop_boundaries(patchers)
         self.assertEqual(events, ["output", "metadata"])
+
+    def test_enabled_detection_deletes_after_outputs_and_metadata(self):
+        events = []
+        mocks, patchers = self.boundaries()
+        mocks["output"].side_effect = lambda *args: events.append("output")
+        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
+        mocks["delete"].side_effect = lambda *args: events.append("delete")
+        try:
+            process_image(*self.paths, True, self.input_identity)
+        finally:
+            self.stop_boundaries(patchers)
+
+        self.assertEqual(events, ["output", "metadata", "delete"])
+        mocks["delete"].assert_called_once_with(self.paths[1], self.input_identity)
+
+    def test_disabled_or_absent_final_detections_do_not_delete(self):
+        for detections in ((self.disabled_detection,), ()):
+            with self.subTest(detections=detections):
+                mocks, patchers = self.boundaries()
+                mocks["nms"].return_value = detections
+                try:
+                    process_image(*self.paths, True, self.input_identity)
+                finally:
+                    self.stop_boundaries(patchers)
+                mocks["delete"].assert_not_called()
+
+    def test_deletion_only_mode_still_runs_outputs_boundary(self):
+        mocks, patchers = self.boundaries()
+        try:
+            process_image(
+                self.paths[0],
+                self.paths[1],
+                None,
+                None,
+                None,
+                True,
+                self.input_identity,
+            )
+        finally:
+            self.stop_boundaries(patchers)
+
+        mocks["output"].assert_called_once_with(
+            self.image,
+            (self.enabled_detection,),
+            (0, 2),
+            self.contract[4],
+            None,
+            None,
+        )
+        mocks["metadata"].assert_not_called()
+        mocks["delete"].assert_called_once_with(self.paths[1], self.input_identity)
+
+    def test_metadata_without_outputs_commits_before_deletion(self):
+        events = []
+        mocks, patchers = self.boundaries()
+        mocks["output"].side_effect = lambda *args: events.append("output")
+        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
+        mocks["delete"].side_effect = lambda *args: events.append("delete")
+        try:
+            process_image(
+                self.paths[0],
+                self.paths[1],
+                None,
+                None,
+                self.paths[4],
+                True,
+                self.input_identity,
+            )
+        finally:
+            self.stop_boundaries(patchers)
+
+        self.assertEqual(events, ["output", "metadata", "delete"])
+        mocks["metadata"].assert_called_once_with(
+            self.paths[4],
+            (self.enabled_detection,),
+            ("person", "car"),
+            self.contract[4],
+            None,
+            None,
+        )
+
+    def test_deletion_requires_valid_identity_before_configuration(self):
+        invalid_identities = (None, (1,), (1, 2, 3), [1, 2], (True, 2), (1, False))
+        for identity in invalid_identities:
+            with self.subTest(identity=identity), patch(
+                "phenocam.inference.pipeline.enabled_class_names"
+            ) as configuration, patch(
+                "phenocam.inference.pipeline.create_session"
+            ) as session:
+                with self.assertRaises(SourceDeleteError):
+                    process_image(
+                        self.paths[0],
+                        self.paths[1],
+                        None,
+                        None,
+                        None,
+                        True,
+                        identity,
+                    )
+                configuration.assert_not_called()
+                session.assert_not_called()
+
+    def test_deletion_error_is_preserved_after_products(self):
+        mocks, patchers = self.boundaries()
+        expected = SourceDeleteError("private detail")
+        mocks["delete"].side_effect = expected
+        try:
+            with self.assertRaises(SourceDeleteError) as error:
+                process_image(*self.paths, True, self.input_identity)
+        finally:
+            self.stop_boundaries(patchers)
+
+        self.assertIs(error.exception, expected)
+        mocks["output"].assert_called_once()
+        mocks["metadata"].assert_called_once()
 
     def test_views_are_consumed_and_normalized_sequentially(self):
         events = []
@@ -251,13 +376,14 @@ class InferenceTests(unittest.TestCase):
                 mocks["runtime"].side_effect = results
                 try:
                     with self.assertRaises(InferenceError):
-                        process_image(*self.paths)
+                        process_image(*self.paths, True, self.input_identity)
                 finally:
                     self.stop_boundaries(patchers)
                 self.assertEqual(mocks["runtime"].call_count, failing_index + 1)
                 mocks["nms"].assert_not_called()
                 mocks["output"].assert_not_called()
                 mocks["metadata"].assert_not_called()
+                mocks["delete"].assert_not_called()
 
     def test_configuration_error_prevents_session_and_preserves_output(self):
         self.paths[2].write_bytes(b"existing")
@@ -296,12 +422,13 @@ class InferenceTests(unittest.TestCase):
         mocks["normalize"].side_effect = ValueError("private detail")
         try:
             with self.assertRaises(InferenceError) as error:
-                process_image(*self.paths)
+                process_image(*self.paths, True, self.input_identity)
         finally:
             self.stop_boundaries(patchers)
         self.assertNotIn("private detail", str(error.exception))
         mocks["output"].assert_not_called()
         mocks["metadata"].assert_not_called()
+        mocks["delete"].assert_not_called()
 
     def test_zero_detections_still_reaches_output(self):
         mocks, patchers = self.boundaries()
@@ -319,11 +446,12 @@ class InferenceTests(unittest.TestCase):
         mocks["output"].side_effect = expected
         try:
             with self.assertRaises(OutputWriteError) as error:
-                process_image(*self.paths)
+                process_image(*self.paths, True, self.input_identity)
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
         mocks["metadata"].assert_not_called()
+        mocks["delete"].assert_not_called()
 
     def test_metadata_error_is_preserved_after_outputs(self):
         mocks, patchers = self.boundaries()
@@ -331,11 +459,12 @@ class InferenceTests(unittest.TestCase):
         mocks["metadata"].side_effect = expected
         try:
             with self.assertRaises(MetadataWriteError) as error:
-                process_image(*self.paths)
+                process_image(*self.paths, True, self.input_identity)
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
         mocks["output"].assert_called_once()
+        mocks["delete"].assert_not_called()
 
 
 if __name__ == "__main__":

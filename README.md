@@ -4,8 +4,9 @@
 
 # YOLO single-image inference on Raspberry Pi
 
-This project creates an annotated image, a privacy-blurred image, or both from
-one local image with the included YOLO26n ONNX model.
+This project analyzes one local image with the included YOLO26n ONNX model. It
+can create an annotated image, a privacy-blurred image, or both, and can
+optionally delete the input when an enabled class is detected.
 The deployment runtime is designed and tested for a Raspberry Pi 3 with 1 GB
 RAM and a 64-bit Raspberry Pi OS installation.
 
@@ -102,10 +103,29 @@ Request privacy output only, or both products from the same inference:
   --model models/yolo26n.onnx
 ```
 
-At least one output option is required. `--output` has been removed without an
-alias. Output directories must already exist. The default uses all four Pi 3 CPU
-cores. To reduce CPU load or temperature at the cost of latency, set the
-thread count to a value from 1 to 4:
+Request products and conditional input deletion together, or deletion without
+creating an image product:
+
+```sh
+.venv/bin/python -m phenocam \
+  --input input/example.jpg \
+  --annotated-output output/annotated.jpg \
+  --privacy-output output/privacy.jpg \
+  --model models/yolo26n.onnx \
+  --delete-input-on-detection
+
+.venv/bin/python -m phenocam \
+  --input input/example.jpg \
+  --model models/yolo26n.onnx \
+  --delete-input-on-detection
+```
+
+At least one image output or `--delete-input-on-detection` is required;
+metadata alone is not a final action. Deletion-only mode still performs the
+complete inference. `--output` has been removed without an alias. Output
+directories must already exist. The default uses all four Pi 3 CPU cores. To
+reduce CPU load or temperature at the cost of latency, set the thread count to
+a value from 1 to 4:
 
 ```sh
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
@@ -124,7 +144,9 @@ The ONNX model must expose exactly the standard 80 COCO classes and the
 end-to-end six-column detection output used by the included YOLO26n model.
 Incompatible metadata or tensor shapes are rejected before inference.
 
-Class filtering controls both final annotations and privacy regions. Privacy
+Class filtering controls final annotations, privacy regions, and the conditional
+deletion trigger. The input is eligible for deletion only when at least one
+enabled detection remains after normalization and global suppression. Privacy
 uses rectangular regions only: each selected box expands by 10% on every side,
 clips to the image, and receives Gaussian blur with radius
 `max(8 px, 10% of the region's shorter side)`. It adds no boxes, names, or
@@ -158,13 +180,26 @@ truth or a measurement of accuracy, precision, recall, or mAP.
 | `--privacy-output` | Optional privacy image path; parent must exist. |
 | `--model` | Existing local file with a case-insensitive `.onnx` extension. |
 | `--meta` | Optional existing regular non-symlink `.meta` file, distinct from input, model, and outputs. |
+| `--delete-input-on-detection` | Optional boolean flag. Delete the validated input only after an enabled final detection and all requested products succeed; symbolic-link inputs are rejected. |
 
 Requested outputs must be distinct from the input and from each other after
 path, symbolic-link, and existing hard-link resolution. Existing outputs are
 overwritten. With both products, annotated saving finishes first; if privacy
 saving then fails, the completed annotated file remains. Zero selected
-detections still writes each requested normalized source image. The command is
-headless and does not open a graphical window.
+detections still writes each requested normalized source image. With conditional
+deletion enabled, zero enabled final detections retain the input and the command
+still succeeds. The command is headless and does not open a graphical window.
+
+Conditional deletion is opt-in and is always the final transaction step:
+inference completes first, then requested images, then requested metadata, and
+only then deletion. Any earlier failure retains the input. A deletion failure
+does not roll back completed products; it returns status `1` and prints exactly
+`error: input image could not be deleted`. Immediately before unlinking, the
+command verifies that the path is still a regular file with the validated
+device/inode identity. This check does not claim atomic protection against a
+hostile replacement between verification and unlink. Symbolic-link inputs are
+rejected when deletion is enabled. Hard links are allowed, and only the exact
+directory entry passed to `--input` is removed.
 
 ### Detection metadata
 
@@ -207,14 +242,16 @@ The script creates `output/` when needed and writes `<stem>_annotated.<ext>` and
 If regular non-symlink `input/<stem>.meta` exists, it is passed through
 `--meta`; a missing match is not created and does not fail that image. Existing
 files are overwritten. Processing continues after individual failures, but the
-script exits with status `1` if any image fails or none is supported.
+script exits with status `1` if any image fails or none is supported. The batch
+script never enables `--delete-input-on-detection`; input deletion remains an
+explicit choice for direct CLI calls.
 
 ## Exit statuses
 
 | Status | Meaning |
 |---|---|
-| `0` | Inference, output writing, and requested metadata update succeeded. |
-| `1` | Validation, inference, output writing, or metadata update failed. |
+| `0` | Inference and every requested output, metadata update, and conditional deletion succeeded. |
+| `1` | Validation, inference, output writing, metadata update, or conditional deletion failed. |
 | `2` | Command-line syntax is invalid. |
 
 ## Optional model export

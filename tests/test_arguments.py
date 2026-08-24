@@ -1,5 +1,5 @@
 """
-Verify output paths and optional metadata at the public CLI boundary.
+Verify paths, deletion intent, identity, and metadata at the CLI boundary.
 
 Temporary entries prove the at-least-one and pairwise identity invariants for
 untrusted paths. Metadata cases also enforce regular-file validation and prevent
@@ -28,6 +28,8 @@ class ArgumentTests(unittest.TestCase):
         self.input.write_bytes(b"image")
         self.model.write_bytes(b"model")
         self.metadata.write_bytes(b"metadata")
+        input_stat = self.input.stat()
+        self.input_identity = (input_stat.st_dev, input_stat.st_ino)
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -59,7 +61,16 @@ class ArgumentTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            arguments, Arguments(self.input, self.output, None, self.model, None)
+            arguments,
+            Arguments(
+                self.input,
+                self.output,
+                None,
+                self.model,
+                None,
+                False,
+                self.input_identity,
+            ),
         )
         with self.assertRaises(AttributeError):
             arguments.input = self.output
@@ -74,10 +85,28 @@ class ArgumentTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            privacy_only, Arguments(self.input, None, privacy, self.model, None)
+            privacy_only,
+            Arguments(
+                self.input,
+                None,
+                privacy,
+                self.model,
+                None,
+                False,
+                self.input_identity,
+            ),
         )
         self.assertEqual(
-            dual, Arguments(self.input, self.output, privacy, self.model, None)
+            dual,
+            Arguments(
+                self.input,
+                self.output,
+                privacy,
+                self.model,
+                None,
+                False,
+                self.input_identity,
+            ),
         )
 
     def test_metadata_option_retains_cli_path_spelling(self):
@@ -85,8 +114,104 @@ class ArgumentTests(unittest.TestCase):
         arguments = parse_arguments([*self.argv(), "--meta", str(spelling)])
         self.assertEqual(
             arguments,
-            Arguments(self.input, self.output, None, self.model, spelling),
+            Arguments(
+                self.input,
+                self.output,
+                None,
+                self.model,
+                spelling,
+                False,
+                self.input_identity,
+            ),
         )
+
+    def test_deletion_flag_is_boolean_and_captures_input_identity(self):
+        arguments = parse_arguments([*self.argv(), "--delete-input-on-detection"])
+
+        self.assertTrue(arguments.delete_input_on_detection)
+        self.assertEqual(arguments.input_identity, self.input_identity)
+
+    def test_deletion_flag_accepts_no_value(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+            parse_arguments([*self.argv(), "--delete-input-on-detection", "true"])
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("usage:", stderr.getvalue())
+
+    def test_deletion_allows_no_image_outputs(self):
+        arguments = parse_arguments(
+            [
+                "--input",
+                str(self.input),
+                "--model",
+                str(self.model),
+                "--delete-input-on-detection",
+            ]
+        )
+
+        self.assertIsNone(arguments.annotated_output)
+        self.assertIsNone(arguments.privacy_output)
+        self.assertTrue(arguments.delete_input_on_detection)
+
+    def test_metadata_only_without_deletion_still_requires_an_output(self):
+        self.assert_validation_error(
+            "error: at least one output path is required",
+            [
+                "--input",
+                str(self.input),
+                "--model",
+                str(self.model),
+                "--meta",
+                str(self.metadata),
+            ],
+        )
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_input_symlink_is_accepted_only_without_deletion(self):
+        link = self.root / "input-link.jpg"
+        try:
+            link.symlink_to(self.input)
+        except OSError as error:
+            self.skipTest(f"symlink creation is unavailable: {error.errno}")
+
+        accepted = parse_arguments(
+            ["--input", str(link), *self.argv()[2:]]
+        )
+        self.assertEqual(accepted.input_identity, self.input_identity)
+        self.assert_validation_error(
+            "error: input image must not be a symbolic link when deletion is enabled",
+            [
+                "--input",
+                str(link),
+                *self.argv()[2:],
+                "--delete-input-on-detection",
+            ],
+        )
+
+    @unittest.skipUnless(hasattr(os, "link"), "hard links are unavailable")
+    def test_hard_link_input_is_accepted_with_deletion(self):
+        link = self.root / "input-hard-link.jpg"
+        try:
+            os.link(self.input, link)
+        except OSError as error:
+            self.skipTest(f"hard-link creation is unavailable: {error.errno}")
+
+        arguments = parse_arguments(
+            [
+                "--input",
+                str(link),
+                *self.argv()[2:],
+                "--delete-input-on-detection",
+            ]
+        )
+        self.assertEqual(arguments.input_identity, self.input_identity)
+
+    def test_input_stat_failure_uses_fixed_input_error(self):
+        real_stat = self.input.stat()
+        with patch.object(Path, "stat", side_effect=[real_stat, OSError("private")]):
+            self.assert_validation_error(
+                "error: input image does not exist or is not a file", self.argv()
+            )
 
     def test_metadata_suffix_is_case_insensitive(self):
         metadata = self.root / "image.META"

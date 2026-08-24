@@ -99,6 +99,9 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(len(calls), 2)
         self.assertIn("--meta", calls[0])
         self.assertNotIn("--meta", calls[1])
+        self.assertTrue(
+            all("--delete-input-on-detection" not in call for call in calls)
+        )
         self.assertIn("error: inference failed for a.jpg", result.stderr)
 
 

@@ -1,16 +1,17 @@
 """Own the complete single-image, sixteen-view inference transaction.
 
 The original normalized RGB source supplies every view and requested final
-image product. All sixteen views precede global suppression, requested output
-persistence, and the optional metadata commit in that strict order. The
-returned duration includes only ONNX execution time.
+image product. All sixteen views precede global suppression, output persistence,
+optional metadata commit, and optional source deletion in that strict order.
+The returned duration includes only ONNX execution time.
 """
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
 from phenocam.metadata import update_detection_metadata
+from phenocam.source import SourceDeleteError, delete_source
 
 from .detections import deduplicate, normalize_rows
-from .errors import InferenceError, OutputWriteError
+from .errors import InferenceError
 from .output import write_outputs
 from .runtime import create_session, model_contract, run_tensor
 from .views import iter_views, load_image
@@ -22,7 +23,16 @@ def process_image(
     annotated_output_path,
     privacy_output_path,
     metadata_path=None,
+    delete_input_on_detection=False,
+    input_identity=None,
 ) -> float:
+    if delete_input_on_detection and (
+        type(input_identity) is not tuple
+        or len(input_identity) != 2
+        or any(type(value) is not int for value in input_identity)
+    ):
+        raise SourceDeleteError()
+
     enabled_names = enabled_class_names()
     try:
         session = create_session(model_path)
@@ -59,6 +69,10 @@ def process_image(
     except Exception:
         raise InferenceError() from None
 
+    enabled_detection = any(
+        detection.class_id in enabled_ids for detection in detections
+    )
+
     write_outputs(
         source_image,
         detections,
@@ -77,4 +91,7 @@ def process_image(
             annotated_output_path,
             privacy_output_path,
         )
+    if delete_input_on_detection and enabled_detection:
+        # Every requested durable product has committed before source mutation.
+        delete_source(input_path, input_identity)
     return elapsed
