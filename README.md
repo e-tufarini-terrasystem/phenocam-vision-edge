@@ -50,6 +50,8 @@ application. The versioned command below never invokes `sudo`, `apt`, or another
 system package manager. Run it from the directory that should contain the
 installation:
 
+### Versioned installation (v0.1.0)
+
 ```sh
 [ ! -e phenocam-vision-edge-0.1.0 ] && \
 curl --fail --fail-early --location --silent --show-error \
