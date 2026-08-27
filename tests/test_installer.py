@@ -62,7 +62,10 @@ exit "${TEST_PIP_STATUS:-0}"
             """#!/bin/sh
 if [ "$1" = "-c" ]; then
     case "$2" in
-        *version_info*) exit "${TEST_VERSION_STATUS:-0}" ;;
+        *version_info*)
+            [ "$2" = 'import sys; raise SystemExit(sys.version_info[:2] != (3, 13))' ] || exit 1
+            exit "${TEST_VERSION_STATUS:-0}"
+            ;;
         *'import venv'*) exit "${TEST_VENV_IMPORT_STATUS:-0}" ;;
     esac
 fi
@@ -186,11 +189,11 @@ exit 1
         )
         self.assertFalse((self.package / ".venv").exists())
 
-    def test_missing_or_old_python_fails_before_creating_environment(self):
+    def test_missing_or_unsupported_python_fails_before_creating_environment(self):
         (self.commands / "python3").unlink()
-        self.assert_failure("error: Python 3.11 or newer is required")
+        self.assert_failure("error: Python 3.13 is required")
         self._write_executable(self.commands / "python3", "#!/bin/sh\nexit 1\n")
-        self.assert_failure("error: Python 3.11 or newer is required")
+        self.assert_failure("error: Python 3.13 is required")
         self.assertFalse((self.package / ".venv").exists())
 
     def test_missing_venv_module_fails_before_creating_environment(self):

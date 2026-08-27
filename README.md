@@ -26,7 +26,7 @@ configuration.
 ## Runtime requirements
 
 - Raspberry Pi OS 64-bit (`aarch64`)
-- Python 3.11 or newer and `python3-venv`
+- Python 3.13 and `python3-venv`
 - `curl`, `tar`, and `sha256sum`
 
 ## Raspberry Pi installation
@@ -66,6 +66,8 @@ The installation command above deliberately downloads the published `v0.1.0`
 release, a frozen snapshot of the software associated with the annotated
 `v0.1.0` tag. It does not download the current contents of `main`. The `main`
 branch contains ongoing development and may advance freely beyond this release.
+The current `main` runtime requires Python 3.13. The frozen `v0.1.0` archive
+retains its original Python 3.11-or-newer installer contract.
 
 ## Documentation
 

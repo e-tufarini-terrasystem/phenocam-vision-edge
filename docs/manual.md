@@ -20,9 +20,8 @@ python3 -m venv .venv
 .venv/bin/python -m pip install --no-cache-dir -r requirements/runtime.txt
 ```
 
-The Python 3.13 dependency set in `requirements/runtime.txt` was installed and
-tested with Python 3.13.5 on a four-core Cortex-A53 Raspberry Pi. Python 3.11
-uses its compatible NumPy pin.
+The runtime requires Python 3.13. Its dependency set was installed and tested
+with Python 3.13.5 on a four-core Cortex-A53 Raspberry Pi.
 
 ### 8 GB microSD deployment
 
@@ -93,7 +92,7 @@ package and any partial `.venv` for inspection. The installer reports one of
 these terminal errors without additional host details:
 
 - `error: Raspberry Pi aarch64 is required`
-- `error: Python 3.11 or newer is required`
+- `error: Python 3.13 is required`
 - `error: python3-venv is required`
 - `error: virtual environment already exists`
 - `error: runtime requirements do not exist`
