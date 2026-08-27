@@ -59,10 +59,17 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(self.source.read_bytes(), b"image")
 
     def test_replaced_regular_file_is_preserved(self):
-        self.source.unlink()
-        self.source.write_bytes(b"replacement")
+        # Keeping the unlinked file open prevents immediate inode reuse on Linux.
+        with self.source.open("rb") as original:
+            self.source.unlink()
+            self.source.write_bytes(b"replacement")
+            replacement = self.source.stat()
+            self.assertNotEqual(
+                (replacement.st_dev, replacement.st_ino), self.identity
+            )
 
-        self.assert_delete_error(self.source)
+            self.assert_delete_error(self.source)
+            self.assertEqual(original.read(), b"image")
 
         self.assertEqual(self.source.read_bytes(), b"replacement")
 

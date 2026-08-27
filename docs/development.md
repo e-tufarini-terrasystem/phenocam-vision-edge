@@ -36,6 +36,10 @@ environment:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
+GitHub Actions runs this deterministic suite with Python 3.13 on Ubuntu x86-64
+for pull requests and pushes to `main`, then syntax-checks both runtime shell
+scripts. This CI does not qualify Raspberry Pi hardware.
+
 The six real-image integration cases and their inventory check are skipped when
 the named, untracked reference images are absent from `input/`. When available,
 they verify valid annotated outputs and the final suppression-domain overlap

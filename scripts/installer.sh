@@ -16,8 +16,8 @@ if [ "$(uname -m 2>/dev/null)" != "aarch64" ]; then
 fi
 
 if ! command -v python3 >/dev/null 2>&1 ||
-   ! python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
-    echo "error: Python 3.11 or newer is required" >&2
+   ! python3 -c 'import sys; raise SystemExit(sys.version_info[:2] != (3, 13))' >/dev/null 2>&1; then
+    echo "error: Python 3.13 is required" >&2
     exit 1
 fi
 

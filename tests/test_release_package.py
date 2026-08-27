@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGER = ROOT / ".skills/github-release/scripts/package.py"
+PACKAGER = ROOT / "scripts/package.py"
 
 
 class ReleasePackageTests(unittest.TestCase):
