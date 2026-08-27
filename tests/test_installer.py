@@ -79,14 +79,9 @@ fi
 exit 1
 """,
         )
-        commands = (
-            ("curl", "/usr/bin/curl"),
-            ("dirname", "/usr/bin/dirname"),
-            ("mkdir", "/bin/mkdir"),
-            ("sha256sum", "/sbin/sha256sum"),
-            ("tar", "/usr/bin/tar"),
-        )
-        for name, source in commands:
+        for name in ("curl", "dirname", "mkdir", "sha256sum", "tar"):
+            source = shutil.which(name)
+            self.assertIsNotNone(source)
             (self.commands / name).symlink_to(source)
 
     def tearDown(self):
