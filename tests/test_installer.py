@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGER = ROOT / ".skills/github-release/scripts/package.py"
+PACKAGER = ROOT / "scripts/package.py"
 ARCHIVE_NAME = "phenocam-vision-edge-0.1.0.tar.gz"
 CHECKSUM_NAME = f"{ARCHIVE_NAME}.sha256"
 ARCHIVE_URL = (

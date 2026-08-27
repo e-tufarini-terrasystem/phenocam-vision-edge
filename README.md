@@ -60,6 +60,13 @@ and `output/`. The archive and checksum remain in the current directory. The
 checksum detects corruption or a mismatched download; it is not a publisher
 signature.
 
+## Stable release and main
+
+The installation command above deliberately downloads the published `v0.1.0`
+release, a frozen snapshot of the software associated with the annotated
+`v0.1.0` tag. It does not download the current contents of `main`. The `main`
+branch contains ongoing development and may advance freely beyond this release.
+
 ## Documentation
 
 - [Software operation instructions and CLI reference](docs/cli.md)
