@@ -79,7 +79,7 @@ fi
 exit 1
 """,
         )
-        for name in ("curl", "dirname", "mkdir", "sha256sum", "tar"):
+        for name in ("curl", "dirname", "gzip", "mkdir", "sha256sum", "tar"):
             source = shutil.which(name)
             self.assertIsNotNone(source)
             (self.commands / name).symlink_to(source)
