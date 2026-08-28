@@ -98,7 +98,9 @@ def _materialize_preview(row, destination):
 
 def _categories(config):
     return [
-        {"id": class_id, "name": name, "supercategory": "target"}
+        # COCO category IDs are kept positive for CVAT compatibility; the
+        # reviewed import maps names back to the builder's zero-based IDs.
+        {"id": class_id + 1, "name": name, "supercategory": "target"}
         for name, class_id in sorted(
             config["compiled_class_ids"].items(), key=lambda item: item[1]
         )
@@ -123,7 +125,7 @@ def _openimages_annotations(row):
         box_height = (float(source["ymax"]) - float(source["ymin"])) * height
         annotations.append(
             {
-                "category_id": int(source["class_id"]),
+                "category_id": int(source["class_id"]) + 1,
                 "bbox": [left, top, box_width, box_height],
                 "area": box_width * box_height,
                 "iscrowd": 0,
@@ -140,7 +142,7 @@ def _phenocam_annotations(row):
         box_height = float(source["y2"]) - float(source["y1"])
         annotations.append(
             {
-                "category_id": int(source["class_id"]),
+                "category_id": int(source["class_id"]) + 1,
                 "bbox": [float(source["x1"]), float(source["y1"]), box_width, box_height],
                 "area": box_width * box_height,
                 "iscrowd": 0,

@@ -18,7 +18,10 @@ from dataset.builder.baseline import BASELINE_FIELDS, _load_checkpoint
 from dataset.builder.annotation import (
     MAPPING_FIELDS,
     NEGATIVE_EXPORT_FIELDS,
+    _categories,
     _negative_document,
+    _openimages_annotations,
+    _phenocam_annotations,
     import_negative_reviews,
     import_positive_coco,
 )
@@ -639,6 +642,30 @@ class DatasetBuilderTests(unittest.TestCase):
         self.assertIn(r'/[",\n\r]/', document)
         self.assertIn(r"lines.join('\n')+'\n'", document)
         self.assertNotIn("lines.join('\n')+'\n'", document)
+
+    def test_cvat_coco_categories_are_positive_and_preserve_internal_ids(self):
+        self.assertEqual(
+            [category["id"] for category in _categories(self.config)],
+            [1, 2, 3, 4, 6, 8],
+        )
+        openimages = _openimages_annotations(
+            {
+                "width": "640",
+                "height": "480",
+                "annotations_json": json.dumps(
+                    [{"class_id": 0, "xmin": 0.1, "ymin": 0.2, "xmax": 0.3, "ymax": 0.4}]
+                ),
+            }
+        )
+        phenocam = _phenocam_annotations(
+            {
+                "baseline_detections_json": json.dumps(
+                    [{"class_id": 5, "x1": 10, "y1": 20, "x2": 30, "y2": 40, "confidence": 0.2}]
+                )
+            }
+        )
+        self.assertEqual(openimages[0]["category_id"], 1)
+        self.assertEqual(phenocam[0]["category_id"], 6)
 
     def test_positive_coco_import_maps_names_and_rejects_empty_frames(self):
         bundle = self.root / "bundle"

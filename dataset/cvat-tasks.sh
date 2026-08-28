@@ -25,6 +25,19 @@ require_cli() {
 create_task() {
     name=$1
     bundle=$2
+    existing_id=$("$cli" --profile "$profile" task ls --json | \
+        "$repository_root/dataset/.venv/bin/python" -c '
+import json, sys
+name = sys.argv[1]
+matches = [str(task["id"]) for task in json.load(sys.stdin) if task["name"] == name]
+if len(matches) > 1:
+    raise SystemExit("error: duplicate CVAT task names")
+print(matches[0] if matches else "")
+' "$name")
+    if [ -n "$existing_id" ]; then
+        printf '%s\n' "task already exists: $existing_id"
+        return
+    fi
     set -- "$bundle/images/default"/*.jpg
     [ -f "$1" ] || { printf '%s\n' "error: no bundle images in $bundle" >&2; exit 1; }
     "$cli" --profile "$profile" task create "$name" \
@@ -52,7 +65,7 @@ case "$command_name" in
         ;;
     list)
         require_cli
-        "$cli" --profile "$profile" task ls
+        "$cli" --profile "$profile" task ls --json
         ;;
     upload-openimages)
         require_cli

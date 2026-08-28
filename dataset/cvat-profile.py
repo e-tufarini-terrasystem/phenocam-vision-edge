@@ -3,6 +3,7 @@
 
 from datetime import datetime, timezone
 from getpass import getpass
+import os
 
 from cvat_sdk.core.auth import AuthStore, ProfileEntry, get_auth_store_path
 
@@ -12,7 +13,9 @@ SERVER = "http://localhost:8080"
 
 
 def main():
-    token = getpass("CVAT personal access token (input hidden): ").strip()
+    token = os.environ.get("CVAT_ACCESS_TOKEN", "").strip()
+    if not token:
+        token = getpass("CVAT personal access token (input hidden): ").strip()
     if not token:
         raise SystemExit("error: the token cannot be empty")
     store = AuthStore()
