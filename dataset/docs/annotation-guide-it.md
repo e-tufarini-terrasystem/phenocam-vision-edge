@@ -61,16 +61,19 @@ gli eventuali problemi prima di marcarlo completato.
 
 ## 3. Negativi
 
-Apri direttamente in Chrome con:
+Le code finali riutilizzano le 335 immagini già confermate vuote in CVAT. Apri
+direttamente in Chrome con:
 
 ```sh
-dataset/negative-reviews.sh open-openimages
-dataset/negative-reviews.sh open-phenocam-a
-dataset/negative-reviews.sh open-phenocam-b
+dataset/finalize.sh open-openimages
+dataset/finalize.sh open-phenocam-a
+dataset/finalize.sh open-phenocam-b
 ```
 
-Il round B PhenoCam deve essere completato da una persona diversa senza vedere
-l’export del round A. Scegli `Negativo confermato` soltanto quando non è visibile
+Open Images contiene 50 frame; PhenoCam A contiene 371 frame e può essere svolto
+da Emanuele. Il round B contiene tutti i 706 frame e deve essere completato da
+una persona diversa, senza vedere l’export del round A. Scegli `Negativo
+confermato` soltanto quando non è visibile
 alcun target vivo delle sei classi. `Target presente` e `Incerto` causano revisione
 o sostituzione; non sono errori da forzare ad accettazione.
 
@@ -96,7 +99,7 @@ dataset/cvat-tasks.sh finish ID openimages-supplement NOME_ANNOTATORE NOME_REVIS
 Gli export CSV delle tre pagine dei negativi vengono uniti e controllati con:
 
 ```sh
-dataset/negative-reviews.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
+dataset/finalize.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
 ```
 
 Ogni task produce sia il COCO revisionato sia un backup completo. Non modificare

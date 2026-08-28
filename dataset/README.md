@@ -81,7 +81,7 @@ dataset/cvat-tasks.sh upload-openimages-supplement
 ```
 
 Positive export, audit, and import are combined in the `finish` command. The
-negative pages and their import are managed by `dataset/negative-reviews.sh`.
+final negative pages and their import are managed by `dataset/finalize.sh`.
 The complete human procedure is documented in
 [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md).
 
@@ -116,6 +116,9 @@ The public build uses these gates in order:
    the unchanged class floors with 379 additional positives. Baseline screening
    sends only conflicts plus a deterministic 10% box sample to the supplemental
    CVAT task.
+9. `dataset/finalize.sh prepare` locks every reviewed positive, performs the
+   smallest deterministic floor-repair swap, reuses 335 CVAT-confirmed empty
+   PhenoCam frames, and produces reduced blind negative-review queues.
 
 The final joint selection and YOLO materialization may run only after PhenoCam
 annotation, independent negative verification, duplicate review, and SSCD

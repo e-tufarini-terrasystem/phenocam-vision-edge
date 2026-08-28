@@ -11,18 +11,19 @@ correzione delle classi e disegno completo dei box.
 
 ## Sequenza
 
-1. **Audit supplementare CVAT.** Controlla il task 4: 38 immagini e 126 box,
-   correggendo classi, estensione e completezza del frame; non usare track.
-2. **Import e audit automatici.** Valida identità, decisioni, revisori, box,
-   classi, completezza, quote e minimi di istanza. Produce una coda deterministica
-   di sostituzioni per i frame respinti.
-3. **Revisione negativi.** Verifica i negativi Open Images e PhenoCam; i
-   negativi PhenoCam accettati richiedono due revisori indipendenti.
-4. **Deduplicazione congiunta finale.** Rigenera embedding e gruppi sui 2.000
+1. **Revisione negativi Open Images.** Verifica i 50 frame della pagina
+   `openimages-a.html` e scarica il CSV.
+2. **Prima verifica PhenoCam.** Emanuele verifica i 371 nuovi negativi nella
+   pagina `phenocam-a.html`; le altre 335 prime verifiche provengono già da CVAT.
+3. **Seconda verifica PhenoCam.** Una persona diversa verifica in cieco tutti i
+   706 frame della pagina `phenocam-b.html` e scarica il CSV.
+4. **Import automatico.** Controlla identità, completezza, decisioni e revisori
+   distinti con `dataset/finalize.sh import`.
+5. **Deduplicazione congiunta finale.** Rigenera embedding e gruppi sui 2.000
    frame accettati e blocca duplicati o leakage.
-5. **Materializzazione YOLO.** Produce full frame, crop approvati, label,
+6. **Materializzazione YOLO.** Produce full frame, crop approvati, label,
    `data.yaml`, manifest, licenze, statistiche e checksum.
-6. **Acceptance audit.** Dichiara il dataset completo soltanto quando tutti i
+7. **Acceptance audit.** Dichiara il dataset completo soltanto quando tutti i
    gate della specifica passano. La validation operativa interna resta separata
    e può rimanere `pending`.
 
@@ -36,17 +37,23 @@ dataset/workflow.sh test
 dataset/workflow.sh prepare-openimages-review
 dataset/workflow.sh prepare-openimages-supplement
 dataset/workflow.sh annotation-bundles
+dataset/finalize.sh prepare
 ```
 
 `status` non modifica dati. `prepare-openimages-review` è idempotente rispetto a
 uno screening completo e riprende un checkpoint compatibile. Se trova decisioni
 umane nel pacchetto esistente, si ferma invece di sovrascriverle.
 
+Terminati i tre export CSV:
+
+```sh
+dataset/finalize.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
+```
+
 ## Confine corrente
 
-L’import dispone già di controlli su identità, completezza, classi, box,
-revisori e checksum. I passi finali richiedono invece i risultati
-effettivi delle revisioni: la logica finale di sostituzione, deduplicazione,
-materializzazione e acceptance audit verrà completata e verificata su quegli
-output prima di iniziare il training. Non è sostituibile con conteggi o
-predizioni del modello corrente.
+La riconciliazione positiva è completa: un solo frame non revisionato è stato
+sostituito dopo il task 4 e tutte le soglie sono nuovamente soddisfatte. La
+deduplicazione finale, la materializzazione e l’acceptance audit dipendono ora
+soltanto dagli export effettivi delle tre revisioni negative. Non sono
+sostituibili con conteggi o predizioni del modello corrente.

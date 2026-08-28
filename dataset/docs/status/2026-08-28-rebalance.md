@@ -41,3 +41,24 @@ Lo screening baseline non ha trovato conflitti. La politica di audit conserva
 le annotazioni umane Open Images come sorgente e invia a CVAT un campione
 deterministico che copre almeno il 10% dei box: 38 immagini e 126 box nel task 4.
 Il modello serve solo a stabilire priorità e non è ground truth.
+
+## Esito del task supplementare e riconciliazione
+
+Il task 4 è stato completato con 38 immagini, 162 box finali e zero track. Le
+correzioni hanno portato temporaneamente `bicycle` a 199. La riconciliazione ha
+bloccato tutti i frame revisionati e ha sostituito un solo frame non revisionato:
+
+- ingresso: `open_images:test:9104bcc6457fe170`, una bicicletta;
+- uscita: `open_images:test:e2483da930cb51ed`;
+- screening del nuovo frame: completato, nessun rifiuto.
+
+I conteggi congiunti risultanti sono person 3.051, car 772, truck 270, bicycle
+200, motorcycle 204 e bus 180. Il massimo per gruppo di provenienza resta cinque.
+
+## Code negative finali
+
+Il contratto richiede 50 negativi Open Images e 706 PhenoCam. Dei 706 PhenoCam,
+335 riutilizzano la prima verifica già svolta in CVAT; 371 richiedono una nuova
+prima verifica. Tutti i 706 richiedono una seconda verifica cieca da parte di
+una persona diversa. La selezione dei 371 usa gli embedding SSCD fissati per
+massimizzare la diversità rispetto ai 335 già confermati.
