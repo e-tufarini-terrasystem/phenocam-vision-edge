@@ -53,6 +53,16 @@ export_task() {
     export_name=$2
     export_dir="$annotation_root/exports"
     mkdir -p "$export_dir"
+    history_dir="$export_dir/history/$(date -u '+%Y%m%dT%H%M%SZ')-$$"
+    for previous in \
+        "$export_dir/$export_name-reviewed.coco.zip" \
+        "$export_dir/$export_name-task-backup.zip"
+    do
+        if [ -f "$previous" ]; then
+            mkdir -p "$history_dir"
+            mv "$previous" "$history_dir/"
+        fi
+    done
     "$cli" --profile "$profile" task export-dataset --format "COCO 1.0" "$task_id" "$export_dir/$export_name-reviewed.coco.zip"
     "$cli" --profile "$profile" task backup "$task_id" "$export_dir/$export_name-task-backup.zip"
 }
