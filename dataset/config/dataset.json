@@ -5,23 +5,23 @@
   "output_name": "mixed-dataset",
   "source_frames": {
     "total": 2000,
-    "positive": 1200,
-    "negative": 800,
+    "positive": 1244,
+    "negative": 756,
     "phenocam_v3": {
-      "positive": 350,
-      "negative": 750
+      "positive": 15,
+      "negative": 706
     },
     "open_images_v7": {
-      "positive": 850,
+      "positive": 1229,
       "negative": 50
     }
   },
   "semantic_strata": {
-    "ordinary_fixed_camera_negative": 500,
+    "ordinary_fixed_camera_negative": 456,
     "hard_negative": 300,
     "common_positive": 500,
     "difficult_positive": 500,
-    "rare_environment_positive": 200
+    "rare_environment_positive": 244
   },
   "instance_floors": {
     "person": 900,
@@ -95,6 +95,14 @@
       "occluded_or_truncated_frames": 170,
       "multiple_target_frames": 85,
       "maximum_easy_frames": 425
+    },
+    "supplemental_selection": {
+      "positive_frames": 379,
+      "maximum_frames_per_provenance_group": 5,
+      "review_policy": {
+        "require_all_rare_frames": false,
+        "reviewed_box_fraction": 0.1
+      }
     }
   },
   "phenocam": {
@@ -104,6 +112,10 @@
     "guide_url": "https://daac.ornl.gov/VEGETATION/guides/Phenocam_Images_V3.html",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "site_limit": 12,
+    "initial_selection": {
+      "positive_candidates": 350,
+      "negative_candidates": 750
+    },
     "minimum_sites": 100,
     "candidate_sites": 160,
     "candidate_frames_per_site": 36,

@@ -32,14 +32,28 @@ def _validate(config):
     frames = config.get("source_frames", {})
     phenocam = frames.get("phenocam_v3", {})
     open_images = frames.get("open_images_v7", {})
-    if phenocam.get("positive") != 350 or phenocam.get("negative") != 750:
-        raise ConfigurationError("PhenoCam composition must be 350 positive / 750 negative")
-    if open_images.get("positive") != 850 or open_images.get("negative") != 50:
-        raise ConfigurationError("Open Images composition must be 850 positive / 50 negative")
+    if phenocam.get("positive") != 15 or phenocam.get("negative") != 706:
+        raise ConfigurationError("PhenoCam composition must be 15 positive / 706 negative")
+    if open_images.get("positive") != 1229 or open_images.get("negative") != 50:
+        raise ConfigurationError("Open Images composition must be 1229 positive / 50 negative")
     positive = phenocam["positive"] + open_images["positive"]
     negative = phenocam["negative"] + open_images["negative"]
-    if (positive, negative, positive + negative) != (1200, 800, 2000):
-        raise ConfigurationError("public source-frame totals must be 1200 / 800 / 2000")
+    if (positive, negative, positive + negative) != (1244, 756, 2000):
+        raise ConfigurationError("public source-frame totals must be 1244 / 756 / 2000")
+
+    openimages_config = config.get("open_images", {})
+    base = openimages_config.get("provisional_selection", {})
+    supplement = openimages_config.get("supplemental_selection", {})
+    if base.get("positive_frames") != 850 or base.get("negative_frames") != 50:
+        raise ConfigurationError("the completed Open Images base selection must remain 850 / 50")
+    if supplement.get("positive_frames") != 379:
+        raise ConfigurationError("the approved Open Images supplement must contain 379 positives")
+    if base["positive_frames"] + supplement["positive_frames"] != open_images["positive"]:
+        raise ConfigurationError("Open Images base and supplement do not match the final contract")
+
+    initial = config.get("phenocam", {}).get("initial_selection", {})
+    if initial != {"positive_candidates": 350, "negative_candidates": 750}:
+        raise ConfigurationError("the completed PhenoCam candidate selection must remain 350 / 750")
 
     expected_ids = {
         "person": 0,

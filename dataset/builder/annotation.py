@@ -375,6 +375,41 @@ def build_annotation_bundles(dataset_root, output_root, config):
             openimages_negative, phenocam_negative, output_root, config
         ),
     }
+    supplemental_screened = dataset_root / "work/openimages/supplemental-baseline-screened.csv"
+    supplemental_review_path = dataset_root / "work/review/openimages-supplement/review.csv"
+    if supplemental_screened.is_file() and supplemental_review_path.is_file():
+        supplemental_rows = _read_csv(
+            supplemental_screened,
+            ("source_dataset", "source_subset", "source_id", "annotations_json", "local_path"),
+        )
+        supplemental_review = _read_csv(
+            supplemental_review_path,
+            ("source_identity", "manual_review_required", "review_scope", "triage_reason"),
+        )
+        supplemental_by_identity = {
+            _openimages_identity(row): row for row in supplemental_rows
+        }
+        supplemental_positive = []
+        for review in supplemental_review:
+            if review["manual_review_required"] != "true":
+                continue
+            row = dict(supplemental_by_identity[review["source_identity"]])
+            row.update(
+                {
+                    "review_scope": review["review_scope"],
+                    "triage_reason": review["triage_reason"],
+                }
+            )
+            supplemental_positive.append(row)
+        supplemental_positive.sort(key=_openimages_identity)
+        result["openimages_supplement_positive"] = _build_coco_bundle(
+            "openimages-supplement-positive",
+            supplemental_positive,
+            _openimages_identity,
+            _openimages_annotations,
+            output_root,
+            config,
+        )
     with atomic_text(output_root / "statistics.json") as output:
         json.dump(result, output, indent=2, sort_keys=True)
         output.write("\n")

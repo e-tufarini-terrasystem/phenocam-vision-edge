@@ -8,11 +8,12 @@ profile=phenocam-local
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/cvat-tasks.sh profile|list|upload-openimages|upload-phenocam|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
+        "usage: dataset/cvat-tasks.sh profile|list|upload-openimages|upload-openimages-supplement|upload-phenocam|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
         "" \
         "profile            save a local personal-access-token profile interactively" \
         "list               list CVAT tasks" \
         "upload-openimages  create the 202-image Open Images task" \
+        "upload-openimages-supplement create the reduced supplemental review task" \
         "upload-phenocam    create the 350-image PhenoCam task" \
         "export ID NAME     export COCO and a full backup for a completed task" \
         "finish ID NAME A R export, audit, and import openimages or phenocam"
@@ -81,6 +82,10 @@ case "$command_name" in
         require_cli
         create_task "Public dataset — Open Images positive review" "$annotation_root/cvat/openimages-positive"
         ;;
+    upload-openimages-supplement)
+        require_cli
+        create_task "Public dataset — Open Images supplemental review" "$annotation_root/cvat/openimages-supplement-positive"
+        ;;
     upload-phenocam)
         require_cli
         create_task "Public dataset — PhenoCam positive annotation" "$annotation_root/cvat/phenocam-positive"
@@ -101,8 +106,9 @@ case "$command_name" in
         [ -n "$task_id" ] && [ -n "$export_name" ] && [ -n "$annotator" ] && [ -n "$reviewer" ] || { usage >&2; exit 2; }
         case "$export_name" in
             openimages) bundle_name=openimages-positive ;;
+            openimages-supplement) bundle_name=openimages-supplement-positive ;;
             phenocam) bundle_name=phenocam-positive ;;
-            *) printf '%s\n' "error: NAME must be openimages or phenocam" >&2; exit 2 ;;
+            *) printf '%s\n' "error: NAME must be openimages, openimages-supplement, or phenocam" >&2; exit 2 ;;
         esac
         export_task "$task_id" "$export_name"
         import_dir="$annotation_root/imported"

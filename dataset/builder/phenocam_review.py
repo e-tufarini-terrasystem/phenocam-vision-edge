@@ -101,10 +101,10 @@ def select_phenocam(screened_path, duplicate_pairs_path, output_path, statistics
         for root, values in members.items()
     }
 
-    source_targets = config["source_frames"]["phenocam_v3"]
+    initial = config["phenocam"]["initial_selection"]
     role_targets = {
-        "positive": int(source_targets["positive"]),
-        "negative": int(source_targets["negative"]),
+        "positive": int(initial["positive_candidates"]),
+        "negative": int(initial["negative_candidates"]),
     }
     seasons = ("winter", "spring", "summer", "autumn")
     bucket_targets = {

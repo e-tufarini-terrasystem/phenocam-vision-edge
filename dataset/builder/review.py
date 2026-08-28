@@ -48,7 +48,7 @@ def _triage(row, required):
     return "2", "required_source_review"
 
 
-def create_openimages_review_packet(selection_path, output_dir, config):
+def create_openimages_review_packet(selection_path, output_dir, config, policy=None):
     with Path(selection_path).open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         require_columns(reader, SELECTION_FIELDS, selection_path)
@@ -61,7 +61,13 @@ def create_openimages_review_packet(selection_path, output_dir, config):
         for row in positives
         if row["primary_stratum"] == "rare_environment_positive"
     }
-    required = set(rare) | {_identity(row) for row in negatives}
+    policy = policy or {
+        "require_all_rare_frames": True,
+        "reviewed_box_fraction": 0.10,
+    }
+    required = {_identity(row) for row in negatives}
+    if policy["require_all_rare_frames"]:
+        required.update(rare)
     model_conflicts = {
         _identity(row)
         for row in rows
@@ -79,7 +85,8 @@ def create_openimages_review_packet(selection_path, output_dir, config):
     }
     required.update(model_conflicts)
     reviewed_box_target = math.ceil(
-        0.10 * sum(len(json.loads(row["annotations_json"])) for row in positives)
+        float(policy["reviewed_box_fraction"])
+        * sum(len(json.loads(row["annotations_json"])) for row in positives)
     )
     reviewed_boxes = sum(
         len(json.loads(row["annotations_json"]))
@@ -106,7 +113,7 @@ def create_openimages_review_packet(selection_path, output_dir, config):
         scopes = []
         if row["candidate_kind"] == "negative_review":
             scopes.append("independent_negative_verification")
-        if identity in rare:
+        if identity in rare and policy["require_all_rare_frames"]:
             scopes.append("rare_class_and_box_review")
         elif is_required:
             scopes.append("sampled_class_and_box_review")
@@ -228,6 +235,7 @@ Duplicate-pair and SSCD-calibration reviews are separate mandatory queues.
         "manual_review_frames": len(required),
         "negative_review_frames": len(negatives),
         "rare_review_frames": len(rare),
+        "require_all_rare_frames": bool(policy["require_all_rare_frames"]),
         "model_conflict_review_frames": len(model_conflicts),
         "reviewed_box_target": reviewed_box_target,
         "boxes_in_required_frames": reviewed_boxes,

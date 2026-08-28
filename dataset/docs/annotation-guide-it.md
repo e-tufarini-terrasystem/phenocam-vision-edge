@@ -20,6 +20,7 @@ CVAT Community `v2.71.0` è disponibile soltanto in locale su
 ```sh
 dataset/cvat-tasks.sh upload-openimages
 dataset/cvat-tasks.sh upload-phenocam
+dataset/cvat-tasks.sh upload-openimages-supplement
 dataset/cvat-tasks.sh list
 ```
 
@@ -47,6 +48,14 @@ Per ciascuna delle 350 immagini:
 - usa esclusivamente `person`, `bicycle`, `car`, `motorcycle`, `bus`, `truck`;
 - lascia senza box le immagini senza target reale o ambigue.
 
+### Supplemento Open Images
+
+Il task `Public dataset — Open Images supplemental review` contiene 38 immagini
+campionate in modo deterministico dalle 379 aggiunte. Per ogni immagine controlla
+tutti i box, correggi classe e bordo visibile, aggiungi i target mancanti ed
+elimina i box errati. Usa forme `Rectangle`, non `Track`: un track collega lo
+stesso oggetto tra frame diversi e qui non è appropriato.
+
 Al termine assegna il job al revisore, portalo allo stage di validazione e risolvi
 gli eventuali problemi prima di marcarlo completato.
 
@@ -73,6 +82,7 @@ Dopo aver completato e revisionato un task, recupera il suo ID con
 ```sh
 dataset/cvat-tasks.sh export ID openimages
 dataset/cvat-tasks.sh export ID phenocam
+dataset/cvat-tasks.sh export ID openimages-supplement
 ```
 
 Per esportare, fare il backup, validare e importare in un solo passaggio usa:
@@ -80,6 +90,7 @@ Per esportare, fare il backup, validare e importare in un solo passaggio usa:
 ```sh
 dataset/cvat-tasks.sh finish ID openimages NOME_ANNOTATORE NOME_REVISORE
 dataset/cvat-tasks.sh finish ID phenocam NOME_ANNOTATORE NOME_REVISORE
+dataset/cvat-tasks.sh finish ID openimages-supplement NOME_ANNOTATORE NOME_REVISORE
 ```
 
 Gli export CSV delle tre pagine dei negativi vengono uniti e controllati con:

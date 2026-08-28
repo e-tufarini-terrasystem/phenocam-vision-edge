@@ -160,36 +160,36 @@ materialization. Crops never count as new source frames.
 
 | Source | Positive | Negative | Total | Share |
 |---|---:|---:|---:|---:|
-| PhenoCam Network v3 | 350 | 750 | 1,100 | 55% |
-| Verified Open Images V7 | 850 | 50 | 900 | 45% |
-| **Total** | **1,200** | **800** | **2,000** | **100%** |
+| PhenoCam Network v3 | 15 | 706 | 721 | 36.05% |
+| Verified Open Images V7 | 1,229 | 50 | 1,279 | 63.95% |
+| **Total** | **1,244** | **756** | **2,000** | **100%** |
 
-This makes the source-frame dataset 60% positive and 40% negative. A positive
+This makes the source-frame dataset 62.2% positive and 37.8% negative. A positive
 contains at least one completely annotated target object. A negative has no live
 target objects and has been independently verified as such.
 
-If PhenoCam cannot provide 350 qualified positive frames, stop for review. Do
-not transfer the missing count to Open Images because that would weaken the
-fixed-camera domain bridge this mixture is designed to test.
+This composition supersedes the provisional 350/750 PhenoCam and 850/50 Open
+Images contract after exhaustive human annotation found only 15 genuine
+PhenoCam positives among the 350 positive candidates. The remaining qualified
+PhenoCam material is retained as the fixed-camera negative domain bridge. The
+379-frame Open Images supplement is selected deterministically from the already
+licensed, downloaded, and globally deduplicated pool.
 
 ### 5.2 Build checkpoints
 
 | Checkpoint | PhenoCam | Open Images | Minimum target instances | Use |
 |---|---:|---:|---:|---|
-| Minimum | 660 | 540 | 1,500 | pipeline and early learning-curve check |
-| Recommended | 1,100 | 900 | 2,500 | first complete experiment |
-| Optional | 1,650 | 1,350 | composition-dependent | only after measured benefit |
+| Recommended | 721 | 1,279 | 2,500 | first complete experiment |
 
 Expand from 2,000 to 3,000 frames only if the 1,200-to-2,000 learning curve
 improves image-level recall by at least one percentage point at a fixed false
 alarm rate of at most 5% on operational validation. If operational validation is
 still pending, do not authorize the optional expansion on training metrics alone.
 
-The class-instance floors apply to the combined 1,200 positive frames. The
-provisional Open Images selection reports, but does not independently enforce,
-those global floors before the 350 PhenoCam positives have complete human
-annotations. Enforce the floors as a final joint gate after both sources are
-annotated; do not increase the 850-frame Open Images quota to satisfy them early.
+The class-instance floors apply to the combined 1,244 positive frames. The
+supplemental selector enforces those floors against the audited Open Images base
+and the 15 confirmed PhenoCam positives. It also preserves the global limit of
+five frames per Open Images provenance group.
 
 ## 6. Semantic composition
 
@@ -197,14 +197,14 @@ Assign each source frame exactly one primary sampling stratum:
 
 | Primary stratum | Frames | Share | Definition |
 |---|---:|---:|---|
-| Ordinary fixed-camera negatives | 500 | 25% | target-free deployment-like scenes |
+| Ordinary fixed-camera negatives | 456 | 22.8% | target-free deployment-like scenes |
 | Hard negatives/confusers | 300 | 15% | target-free scenes likely to trigger the detector |
 | Common/easier positives | 500 | 25% | clear person/car-family examples |
 | Difficult positives | 500 | 25% | small, distant, occluded, or border-truncated targets |
-| Rare/environment positives | 200 | 10% | bicycles, motorcycles, buses, machinery, unusual conditions |
+| Rare/environment positives | 244 | 12.2% | bicycles, motorcycles, buses, machinery, unusual conditions |
 | **Total** | **2,000** | **100%** | |
 
-Secondary tags may overlap. Across the 1,200 positive frames, require:
+Secondary tags may overlap. Across the 1,244 positive frames, require:
 
 - at least 30% containing a small or very small target in its best production view;
 - at least 20% containing an occluded or border-truncated target;

@@ -63,26 +63,28 @@ Composizione raccomandata, calcolata su frame sorgente unici prima dei crop:
 
 | Fonte | Positivi | Negativi | Totale | Quota |
 |---|---:|---:|---:|---:|
-| PhenoCam v3 | 350 | 750 | 1.100 | 55% |
-| Open Images V7 verificato | 850 | 50 | 900 | 45% |
-| **Totale** | **1.200** | **800** | **2.000** | **100%** |
+| PhenoCam v3 | 15 | 706 | 721 | 36,05% |
+| Open Images V7 verificato | 1.229 | 50 | 1.279 | 63,95% |
+| **Totale** | **1.244** | **756** | **2.000** | **100%** |
 
-Se non si trovano 350 positivi PhenoCam idonei, il processo si ferma per
-revisione: la quota mancante non viene sostituita in silenzio con Open Images.
+Questa composizione sostituisce il contratto provvisorio dopo la revisione umana
+completa: fra i 350 candidati positivi PhenoCam solo 15 contenevano target. I 379
+positivi mancanti sono selezionati in modo deterministico dal pool Open Images
+già licenziato, scaricato e deduplicato; PhenoCam conserva il ruolo di ponte di
+dominio fixed-camera soprattutto tramite negativi reali.
 
-Strati primari mutuamente esclusivi: 25% negativi ordinari fixed-camera, 15%
-hard negative/confusori, 25% positivi comuni, 25% positivi difficili e 10%
+Strati primari mutuamente esclusivi: 22,8% negativi ordinari fixed-camera, 15%
+hard negative/confusori, 25% positivi comuni, 25% positivi difficili e 12,2%
 positivi rari/ambientali. Fra i positivi servono almeno 30% con target piccoli,
 20% occlusi o tagliati dal bordo, 10% multipli/sovrapposti e non più di 50% facili.
 
 Minimi di istanze: 900 persone, 750 famiglia car, 270 famiglia truck, 200
 biciclette, 200 moto e 180 bus; almeno 2.500 istanze totali.
 
-Questi minimi si applicano congiuntamente ai 1.200 frame positivi. La selezione
-provvisoria Open Images li riporta, ma non li impone da sola prima che i 350
-positivi PhenoCam siano stati annotati manualmente. Il controllo bloccante viene
-eseguito sulle due fonti insieme; non si aumenta la quota Open Images di 850
-frame per soddisfarli in anticipo.
+Questi minimi si applicano congiuntamente ai 1.244 frame positivi. La selezione
+supplementare li impone usando i conteggi revisionati della base Open Images e
+dei 15 positivi PhenoCam confermati, mantenendo al massimo cinque frame per
+gruppo di provenienza Open Images.
 
 ## Campionamento e deduplicazione
 

@@ -33,7 +33,8 @@ from dataset.builder.phenocam import GRANULE_FIELDS, index_granules, plan_archiv
 from dataset.builder.phenocam import FRAME_FIELDS
 from dataset.builder.phenocam_review import select_phenocam
 from dataset.builder.review import create_openimages_review_packet
-from dataset.builder.selection import SELECTION_FIELDS
+from dataset.builder.selection import SELECTION_FIELDS, supplemental_selection
+from dataset.builder.dedup import DEDUP_FIELDS
 from dataset.builder.workflow import _completed_review
 from dataset.builder.selection import _FarthestSelector
 
@@ -317,7 +318,10 @@ class DatasetBuilderTests(unittest.TestCase):
 
     def test_phenocam_selection_balances_small_fixture_and_preserves_site_limit(self):
         config = copy.deepcopy(self.config)
-        config["source_frames"]["phenocam_v3"] = {"positive": 4, "negative": 4}
+        config["phenocam"]["initial_selection"] = {
+            "positive_candidates": 4,
+            "negative_candidates": 4,
+        }
         config["phenocam"].update({"minimum_sites": 4, "site_limit": 2})
         baseline_fields = (
             "baseline_detections_json",
@@ -605,6 +609,118 @@ class DatasetBuilderTests(unittest.TestCase):
         summary = _completed_review(path, 2)
         self.assertEqual(summary["complete"], 1)
         self.assertFalse(summary["valid"])
+
+    def test_supplemental_selection_is_exact_reproducible_and_floor_constrained(self):
+        config = copy.deepcopy(self.config)
+        config["open_images"]["provisional_selection"].update(
+            {"positive_frames": 1, "negative_frames": 0}
+        )
+        config["open_images"]["supplemental_selection"].update(
+            {"positive_frames": 2, "maximum_frames_per_provenance_group": 1}
+        )
+        config["source_frames"]["phenocam_v3"]["positive"] = 1
+        config["instance_floors"] = {
+            "person": 1,
+            "car": 1,
+            "truck": 1,
+            "bicycle": 0,
+            "motorcycle": 0,
+            "bus": 1,
+        }
+
+        class_ids = config["compiled_class_ids"]
+
+        def annotation(name):
+            return {
+                "compiled_class": name,
+                "class_id": class_ids[name],
+                "source_class": name.title(),
+                "source_label_id": f"/{name}",
+                "xmin": 0.1,
+                "ymin": 0.1,
+                "xmax": 0.4,
+                "ymax": 0.5,
+                "occlusion": False,
+                "truncation": False,
+            }
+
+        def candidate(source_id, class_name, group):
+            row = {field: "" for field in DEDUP_FIELDS}
+            row.update(
+                {
+                    "source_dataset": "open_images",
+                    "source_version": "V7",
+                    "source_subset": "validation",
+                    "source_id": source_id,
+                    "provenance_group_id": group,
+                    "candidate_kind": "positive_review",
+                    "compiled_classes": class_name,
+                    "annotations_json": json.dumps([annotation(class_name)]),
+                    "confuser": "false",
+                    "width": "640",
+                    "height": "480",
+                }
+            )
+            return row
+
+        base = candidate("base", "car", "base-group")
+        downloads = [
+            base,
+            candidate("truck", "truck", "truck-group"),
+            candidate("bus", "bus", "bus-group"),
+            candidate("person-extra", "person", "person-group"),
+        ]
+        downloads_path = self.root / "deduplicated.csv"
+        base_path = self.root / "base.csv"
+        openimages_import = self.root / "openimages-import.csv"
+        phenocam_import = self.root / "phenocam-import.csv"
+        self.write_csv(downloads_path, DEDUP_FIELDS, downloads)
+        self.write_csv(base_path, DEDUP_FIELDS, [base])
+        import_fields = ("source_identity", "review_status", "annotations_json")
+        self.write_csv(
+            openimages_import,
+            import_fields,
+            [{
+                "source_identity": "open_images:validation:base",
+                "review_status": "complete",
+                "annotations_json": json.dumps([{"class_name": "car"}]),
+            }],
+        )
+        self.write_csv(
+            phenocam_import,
+            import_fields,
+            [{
+                "source_identity": "phenocam::positive",
+                "review_status": "complete",
+                "annotations_json": json.dumps([{"class_name": "person"}]),
+            }],
+        )
+        first = self.root / "first.csv"
+        second = self.root / "second.csv"
+        first_stats = self.root / "first.json"
+        second_stats = self.root / "second.json"
+        result = supplemental_selection(
+            downloads_path,
+            base_path,
+            openimages_import,
+            phenocam_import,
+            first,
+            first_stats,
+            config,
+        )
+        supplemental_selection(
+            downloads_path,
+            base_path,
+            openimages_import,
+            phenocam_import,
+            second,
+            second_stats,
+            config,
+        )
+        self.assertEqual(first.read_bytes(), second.read_bytes())
+        self.assertEqual(result["selected_positive_frames"], 2)
+        self.assertEqual(result["instance_shortfalls"], {name: 0 for name in config["instance_floors"]})
+        self.assertEqual(result["maximum_provenance_group_size"], 1)
 
     def test_negative_review_import_requires_independent_matching_rounds(self):
         expected = self.root / "expected"

@@ -20,6 +20,7 @@ After preflight passes, the next automated stage is:
 
 ```sh
 dataset/workflow.sh prepare-openimages-review
+dataset/workflow.sh prepare-openimages-supplement
 ```
 
 This screens the 900-image Open Images selection, checkpoints progress every 25
@@ -70,12 +71,13 @@ dataset/cvat.sh open
 ```
 
 After creating a personal access token in the local CVAT UI, configure the CLI
-without placing credentials in the repository and create the two positive tasks:
+without placing credentials in the repository and create the positive tasks:
 
 ```sh
 dataset/cvat-tasks.sh profile
 dataset/cvat-tasks.sh upload-openimages
 dataset/cvat-tasks.sh upload-phenocam
+dataset/cvat-tasks.sh upload-openimages-supplement
 ```
 
 Positive export, audit, and import are combined in the `finish` command. The
@@ -110,6 +112,10 @@ The public build uses these gates in order:
 7. `sscd-calibration-packet`, `phenocam-review-packet`, and
    `openimages-review-packet` create the local HTML, COCO, and CSV human-review
    artifacts. Human decisions must be imported before final materialization.
+8. After the completed PhenoCam audit, `openimages-supplement-select` enforces
+   the unchanged class floors with 379 additional positives. Baseline screening
+   sends only conflicts plus a deterministic 10% box sample to the supplemental
+   CVAT task.
 
 The final joint selection and YOLO materialization may run only after PhenoCam
 annotation, independent negative verification, duplicate review, and SSCD

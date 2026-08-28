@@ -24,8 +24,13 @@ from .phenocam import (
 )
 from .phenocam_review import create_phenocam_review_packet, select_phenocam
 from .review import create_openimages_review_packet, create_sscd_calibration_packet
-from .selection import provisional_selection
-from .workflow import preflight, prepare_openimages_review, workflow_status
+from .selection import provisional_selection, supplemental_selection
+from .workflow import (
+    preflight,
+    prepare_openimages_review,
+    prepare_openimages_supplement,
+    workflow_status,
+)
 
 
 def _parser():
@@ -151,6 +156,17 @@ def _parser():
     select.add_argument("--output", type=Path, required=True)
     select.add_argument("--statistics", type=Path, required=True)
 
+    supplement = commands.add_parser(
+        "openimages-supplement-select",
+        help="select the approved 379-frame positive supplement with global floors",
+    )
+    supplement.add_argument("--downloads", type=Path, required=True)
+    supplement.add_argument("--existing-selection", type=Path, required=True)
+    supplement.add_argument("--openimages-import", type=Path, required=True)
+    supplement.add_argument("--phenocam-import", type=Path, required=True)
+    supplement.add_argument("--output", type=Path, required=True)
+    supplement.add_argument("--statistics", type=Path, required=True)
+
     review = commands.add_parser(
         "openimages-review-packet", help="create mandatory human-review artifacts"
     )
@@ -184,6 +200,11 @@ def _parser():
         help="resumably screen the selection and regenerate its untouched review packet",
     )
     prepare_review.add_argument("--checkpoint-every", type=int, default=25)
+    prepare_supplement = commands.add_parser(
+        "prepare-openimages-supplement",
+        help="select, screen, and package the approved Open Images supplement",
+    )
+    prepare_supplement.add_argument("--checkpoint-every", type=int, default=25)
 
     annotation_bundles = commands.add_parser(
         "annotation-bundles",
@@ -316,6 +337,16 @@ def main(argv=None):
             arguments.statistics,
             config,
         )
+    elif arguments.command == "openimages-supplement-select":
+        result = supplemental_selection(
+            arguments.downloads,
+            arguments.existing_selection,
+            arguments.openimages_import,
+            arguments.phenocam_import,
+            arguments.output,
+            arguments.statistics,
+            config,
+        )
     elif arguments.command == "openimages-review-packet":
         result = create_openimages_review_packet(
             arguments.selection, arguments.output_dir, config
@@ -340,6 +371,10 @@ def main(argv=None):
         result = preflight(config)
     elif arguments.command == "prepare-openimages-review":
         result = prepare_openimages_review(
+            config, checkpoint_every=arguments.checkpoint_every
+        )
+    elif arguments.command == "prepare-openimages-supplement":
+        result = prepare_openimages_supplement(
             config, checkpoint_every=arguments.checkpoint_every
         )
     elif arguments.command == "annotation-bundles":

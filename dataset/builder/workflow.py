@@ -7,6 +7,7 @@ from pathlib import Path
 from .baseline import BASELINE_FIELDS, screen_manifest
 from .common import DatasetError, require_columns
 from .review import create_openimages_review_packet
+from .selection import supplemental_selection
 
 
 DATASET_ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,16 @@ def _paths(dataset_root=DATASET_ROOT):
         "openimages_rejections": work / "openimages" / "baseline-rejections.csv",
         "openimages_review": work / "review" / "openimages" / "review.csv",
         "openimages_review_dir": work / "review" / "openimages",
+        "openimages_deduplicated": work / "openimages" / "deduplicated.csv",
+        "openimages_supplement": work / "openimages" / "supplemental-selection.csv",
+        "openimages_supplement_statistics": work / "openimages" / "supplemental-selection-stats.json",
+        "openimages_supplement_screened": work / "openimages" / "supplemental-baseline-screened.csv",
+        "openimages_supplement_rejections": work / "openimages" / "supplemental-baseline-rejections.csv",
+        "openimages_supplement_review_dir": work / "review" / "openimages-supplement",
+        "openimages_supplement_review": work / "review" / "openimages-supplement" / "review.csv",
+        "openimages_import": work / "annotation" / "imported" / "openimages-positive.csv",
+        "phenocam_import": work / "annotation" / "imported" / "phenocam-positive.csv",
+        "negative_import": work / "annotation" / "imported" / "negative-reviews.csv",
         "phenocam_selection": work / "phenocam" / "provisional-selection.csv",
         "phenocam_review": work / "review" / "phenocam" / "review.csv",
         "sscd_review": work
@@ -107,6 +118,27 @@ def _completed_review(path, expected):
     }
 
 
+def _positive_import_summary(path, expected):
+    fields, rows = _read_csv(
+        path,
+        ("source_identity", "review_status", "annotation_count", "source_export_sha256"),
+    )
+    identities = [row["source_identity"] for row in rows]
+    return {
+        "exists": bool(fields),
+        "rows": len(rows),
+        "expected_rows": expected,
+        "accepted_with_targets": sum(int(row["annotation_count"]) > 0 for row in rows),
+        "rejected_no_targets": sum(int(row["annotation_count"]) == 0 for row in rows),
+        "valid": (
+            bool(fields)
+            and len(rows) == expected
+            and len(set(identities)) == expected
+            and all(row["source_export_sha256"] for row in rows)
+        ),
+    }
+
+
 def _screening_summary(screened_path, rejection_path, expected):
     fields, rows = _read_csv(screened_path)
     _, rejections = _read_csv(rejection_path)
@@ -130,8 +162,11 @@ def _screening_summary(screened_path, rejection_path, expected):
 
 def workflow_status(config, dataset_root=DATASET_ROOT):
     paths = _paths(dataset_root)
-    expected_openimages = sum(config["source_frames"]["open_images_v7"].values())
-    expected_phenocam = sum(config["source_frames"]["phenocam_v3"].values())
+    expected_openimages = sum(
+        config["open_images"]["provisional_selection"][key]
+        for key in ("positive_frames", "negative_frames")
+    )
+    expected_phenocam = sum(config["phenocam"]["initial_selection"].values())
     openimages_selection = _selection_summary(
         paths["openimages_selection"], expected_openimages
     )
@@ -145,6 +180,24 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
     )
     openimages_review = _review_summary(paths["openimages_review"])
     phenocam_review = _review_summary(paths["phenocam_review"])
+    expected_supplement = int(
+        config["open_images"]["supplemental_selection"]["positive_frames"]
+    )
+    supplement_selection = _selection_summary(
+        paths["openimages_supplement"], expected_supplement
+    )
+    supplement_screening = _screening_summary(
+        paths["openimages_supplement_screened"],
+        paths["openimages_supplement_rejections"],
+        expected_supplement,
+    )
+    supplement_review = _review_summary(paths["openimages_supplement_review"])
+    openimages_import = _positive_import_summary(paths["openimages_import"], 202)
+    phenocam_import = _positive_import_summary(paths["phenocam_import"], 350)
+    supplement_import = _positive_import_summary(
+        paths["dataset_root"] / "work/annotation/imported/openimages-supplement-positive.csv",
+        supplement_review["required"],
+    )
     calibration = _completed_review(
         paths["sscd_review"], config["deduplication"]["calibration_pairs_minimum"]
     )
@@ -169,9 +222,22 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
     elif not screening["complete"]:
         state = "ready_for_openimages_screening"
         next_action = "dataset/workflow.sh prepare-openimages-review"
-    elif openimages_review["pending"] or phenocam_review["pending"]:
+    elif not openimages_import["valid"] or not phenocam_import["valid"]:
         state = "human_review_pending"
-        next_action = "complete the Open Images and PhenoCam review packets"
+        next_action = "complete and import the base Open Images and PhenoCam CVAT tasks"
+    elif (
+        not supplement_selection["valid"]
+        or not supplement_screening["complete"]
+        or not supplement_review["exists"]
+    ):
+        state = "ready_for_openimages_supplement"
+        next_action = "dataset/workflow.sh prepare-openimages-supplement"
+    elif supplement_review["pending"] and not supplement_import["valid"]:
+        state = "supplemental_review_pending"
+        next_action = "complete CVAT task 4 (38-image Open Images supplemental audit)"
+    elif not paths["negative_import"].is_file():
+        state = "negative_review_pending"
+        next_action = "prepare and complete the final negative review"
     else:
         state = "ready_for_finalization"
         next_action = "run joint acceptance, replacement, deduplication, and YOLO materialization"
@@ -193,10 +259,18 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
             "selection": openimages_selection,
             "screening": screening,
             "review": openimages_review,
+            "reviewed_import": openimages_import,
+            "supplement": {
+                "selection": supplement_selection,
+                "screening": supplement_screening,
+                "review": supplement_review,
+                "reviewed_import": supplement_import,
+            },
         },
         "phenocam": {
             "selection": phenocam_selection,
             "review": phenocam_review,
+            "reviewed_import": phenocam_import,
         },
         "deduplication": {
             "calibration": calibration,
@@ -267,6 +341,69 @@ def prepare_openimages_review(
             paths["openimages_screened"],
             paths["openimages_rejections"],
             screening["expected"],
+        ),
+        "review_packet": packet,
+        "model_is_ground_truth": False,
+    }
+
+
+def prepare_openimages_supplement(
+    config,
+    dataset_root=DATASET_ROOT,
+    *,
+    checkpoint_every=25,
+):
+    """Select, baseline-screen, and package the approved Open Images supplement."""
+    paths = _paths(dataset_root)
+    required_inputs = (
+        paths["openimages_deduplicated"],
+        paths["openimages_selection"],
+        paths["openimages_import"],
+        paths["phenocam_import"],
+        paths["model"],
+    )
+    missing = [str(path) for path in required_inputs if not path.is_file()]
+    if missing:
+        raise DatasetError("missing supplemental inputs: " + ", ".join(missing))
+    if _review_has_human_progress(paths["openimages_supplement_review"]):
+        raise DatasetError(
+            "Open Images supplement review contains human work; refusing to overwrite it"
+        )
+    selection = supplemental_selection(
+        paths["openimages_deduplicated"],
+        paths["openimages_selection"],
+        paths["openimages_import"],
+        paths["phenocam_import"],
+        paths["openimages_supplement"],
+        paths["openimages_supplement_statistics"],
+        config,
+    )
+    screening = screen_manifest(
+        paths["openimages_supplement"],
+        paths["openimages_supplement_screened"],
+        paths["openimages_supplement_rejections"],
+        paths["model"],
+        config,
+        resume=True,
+        checkpoint_every=checkpoint_every,
+    )
+    expected = int(config["open_images"]["supplemental_selection"]["positive_frames"])
+    if screening["screened"] != expected or screening["rejected"]:
+        raise DatasetError(
+            "supplemental screening is incomplete; inspect rejections and rerun"
+        )
+    packet = create_openimages_review_packet(
+        paths["openimages_supplement_screened"],
+        paths["openimages_supplement_review_dir"],
+        config,
+        policy=config["open_images"]["supplemental_selection"]["review_policy"],
+    )
+    return {
+        "selection": selection,
+        "screening": _screening_summary(
+            paths["openimages_supplement_screened"],
+            paths["openimages_supplement_rejections"],
+            expected,
         ),
         "review_packet": packet,
         "model_is_ground_truth": False,
