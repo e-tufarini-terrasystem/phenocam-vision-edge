@@ -11,13 +11,13 @@ def identity(row):
     return f"{row['source_dataset']}::{row['source_id']}"
 
 
-def _diverse(candidates, initial, embeddings_path, count, seed):
+def diverse(candidates, initial, embeddings_path, count, seed, identity_function=identity):
     with np.load(embeddings_path, allow_pickle=False) as archive:
         identities = archive["identities"].astype(str)
         embeddings = archive["embeddings"].astype(np.float32)
     indexes = {value: index for index, value in enumerate(identities)}
-    candidate_ids = [identity(row) for row in candidates]
-    initial_ids = [identity(row) for row in initial]
+    candidate_ids = [identity_function(row) for row in candidates]
+    initial_ids = [identity_function(row) for row in initial]
     if any(value not in indexes for value in (*candidate_ids, *initial_ids)):
         raise DatasetError("global embeddings do not cover final PhenoCam negatives")
     candidate_embeddings = embeddings[[indexes[value] for value in candidate_ids]]
@@ -43,7 +43,7 @@ def select(rows, imported, embeddings_path, target, seed):
     prior_receipts = [row for row in imported if int(row["annotation_count"]) == 0]
     prior = [by_identity[row["source_identity"]] for row in prior_receipts]
     candidates = [row for row in rows if row["provisional_role"] == "negative"]
-    selected_new = _diverse(
+    selected_new = diverse(
         candidates, prior, Path(embeddings_path), target - len(prior), seed
     )
     final = sorted((*prior, *selected_new), key=identity)

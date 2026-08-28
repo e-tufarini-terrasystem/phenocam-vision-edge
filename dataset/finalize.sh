@@ -6,7 +6,7 @@ python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/finalize.sh prepare|open-openimages|open-phenocam-a|open-phenocam-b|import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv"
+        "usage: dataset/finalize.sh prepare|open-openimages|open-phenocam-a|open-phenocam-b|resolve OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv|second-round OPENIMAGES_REPAIR.csv PHENOCAM_REPAIR.csv|import-final PHENOCAM_B.csv"
 }
 
 command_name=${1:-}
@@ -32,6 +32,27 @@ case "$command_name" in
             --openimages "$2" \
             --phenocam-first "$3" \
             --phenocam-second "$4"
+        ;;
+    resolve)
+        [ "$#" -eq 4 ] || { usage >&2; exit 2; }
+        cd "$repository_root"
+        "$python" -m dataset.builder.finalization resolve \
+            --openimages "$2" \
+            --phenocam-first "$3" \
+            --phenocam-second "$4"
+        ;;
+    second-round)
+        [ "$#" -eq 3 ] || { usage >&2; exit 2; }
+        cd "$repository_root"
+        "$python" -m dataset.builder.finalization second-round \
+            --openimages "$2" \
+            --phenocam "$3"
+        ;;
+    import-final)
+        [ "$#" -eq 2 ] || { usage >&2; exit 2; }
+        cd "$repository_root"
+        "$python" -m dataset.builder.finalization import-final \
+            --phenocam-second "$2"
         ;;
     *)
         usage >&2

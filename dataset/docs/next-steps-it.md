@@ -11,12 +11,13 @@ correzione delle classi e disegno completo dei box.
 
 ## Sequenza
 
-1. **Revisione negativi Open Images.** Verifica i 50 frame della pagina
-   `openimages-a.html` e scarica il CSV.
-2. **Prima verifica PhenoCam.** Emanuele verifica i 371 nuovi negativi nella
-   pagina `phenocam-a.html`; le altre 335 prime verifiche provengono già da CVAT.
-3. **Seconda verifica PhenoCam.** Una persona diversa verifica in cieco tutti i
-   706 frame della pagina `phenocam-b.html` e scarica il CSV.
+1. **Sostituzioni Open Images.** Emanuele verifica i 17 rimpiazzi nella pagina
+   `resolution/openimages-a.html`.
+2. **Sostituzioni PhenoCam.** Emanuele verifica i 5 rimpiazzi nella pagina
+   `resolution/phenocam-a.html`.
+3. **Seconda verifica PhenoCam definitiva.** Dopo l’import dei rimpiazzi, una
+   persona diversa verifica in cieco tutti i 706 frame della nuova pagina
+   `resolution/phenocam-b.html`.
 4. **Import automatico.** Controlla identità, completezza, decisioni e revisori
    distinti con `dataset/finalize.sh import`.
 5. **Deduplicazione congiunta finale.** Rigenera embedding e gruppi sui 2.000
@@ -44,10 +45,15 @@ dataset/finalize.sh prepare
 uno screening completo e riprende un checkpoint compatibile. Se trova decisioni
 umane nel pacchetto esistente, si ferma invece di sovrascriverle.
 
-Terminati i tre export CSV:
+Il primo tentativo ha trovato 17 target Open Images e 5 PhenoCam; il round B era
+stato firmato dallo stesso revisore e non può valere come verifica indipendente.
+Le decisioni sono state conservate per eliminare i falsi negativi. Terminati i
+due export di sostituzione, il builder genera il round B definitivo.
+
+Al termine del round definitivo l’import viene eseguito con:
 
 ```sh
-dataset/finalize.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
+dataset/finalize.sh import-final PHENOCAM_B_DEFINITIVO.csv
 ```
 
 ## Confine corrente

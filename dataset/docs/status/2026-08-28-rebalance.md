@@ -62,3 +62,10 @@ Il contratto richiede 50 negativi Open Images e 706 PhenoCam. Dei 706 PhenoCam,
 prima verifica. Tutti i 706 richiedono una seconda verifica cieca da parte di
 una persona diversa. La selezione dei 371 usa gli embedding SSCD fissati per
 massimizzare la diversità rispetto ai 335 già confermati.
+
+Il primo ciclo manuale ha classificato 17 dei 50 Open Images e 5 dei 706
+PhenoCam come `target_present`. Inoltre entrambi i round PhenoCam risultavano
+firmati da Emanuele, quindi non erano indipendenti. Le 22 immagini sono state
+escluse e sostituite deterministicamente. Le pagine brevi di risoluzione
+contengono 17 Open Images e 5 PhenoCam; soltanto dopo la loro conferma viene
+generato il round B definitivo per il secondo revisore.
