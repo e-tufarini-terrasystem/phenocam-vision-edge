@@ -1,9 +1,10 @@
 """Iteratively replace Open Images negatives rejected by human review."""
 
+import json
 from pathlib import Path
 
 from ..baseline import screen_manifest
-from ..common import DatasetError, stable_rank, write_csv
+from ..common import DatasetError, atomic_text, stable_rank, write_csv
 from ..dedup import DEDUP_FIELDS
 from ..selection import SELECTION_FIELDS
 from .negative_pool import diverse
@@ -54,6 +55,9 @@ def _generate(dataset_root, config, combined, attempted, needed):
         )
     )
     replacements = screened[:needed]
+    review_round = "openimages-resolution-retry-" + stable_rank(
+        config["seed"], *(_openimages_identity(row) for row in replacements)
+    )[:8]
     write_csv(
         root / "expected-openimages-retry.csv",
         ("source_identity",),
@@ -61,6 +65,9 @@ def _generate(dataset_root, config, combined, attempted, needed):
     )
     attempted.update(_openimages_identity(row) for row in replacements)
     write_csv(root / "attempted-openimages.csv", ("source_identity",), ({"source_identity": identity} for identity in sorted(attempted)))
+    with atomic_text(root / "openimages-retry-metadata.json") as output:
+        json.dump({"review_round": review_round}, output, sort_keys=True)
+        output.write("\n")
     return {
         "status": "openimages_retry_required",
         "retry_frames": needed,
@@ -73,7 +80,7 @@ def _generate(dataset_root, config, combined, attempted, needed):
             root,
             "openimages-retry-a",
             _openimages_identity,
-            "openimages-resolution-retry-a",
+            review_round,
             "Open Images — ultima sostituzione negativa",
             config["seed"],
         ),

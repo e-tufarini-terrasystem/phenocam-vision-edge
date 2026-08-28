@@ -1,5 +1,6 @@
 """Assemble the definitive independent negative review and import it."""
 
+import json
 from pathlib import Path
 
 from ..annotation import NEGATIVE_EXPORT_FIELDS, _negative_document
@@ -70,10 +71,11 @@ def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
 
 def complete_retry(dataset_root, config, openimages_path):
     root = Path(dataset_root) / "work" / "annotation" / "final-negative-review" / "resolution"
+    metadata = json.loads((root / "openimages-retry-metadata.json").read_text(encoding="utf-8"))
     retry = _review_export(
         openimages_path,
         root / "expected-openimages-retry.csv",
-        "openimages-resolution-retry-a",
+        metadata["review_round"],
     )
     if any(row["decision"] != "confirmed_negative" for row in retry.values()):
         return retry_openimages_again(dataset_root, config, retry)
