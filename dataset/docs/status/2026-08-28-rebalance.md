@@ -69,3 +69,8 @@ firmati da Emanuele, quindi non erano indipendenti. Le 22 immagini sono state
 escluse e sostituite deterministicamente. Le pagine brevi di risoluzione
 contengono 17 Open Images e 5 PhenoCam; soltanto dopo la loro conferma viene
 generato il round B definitivo per il secondo revisore.
+
+Nella prima coda di sostituzione, tutti i 5 PhenoCam sono stati confermati
+negativi; 16 dei 17 Open Images sono stati confermati e uno conteneva ancora un
+target. Il builder ha quindi prodotto una sola ultima sostituzione Open Images,
+da confermare prima di creare il round B definitivo.

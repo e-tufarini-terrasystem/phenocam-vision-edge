@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..baseline import screen_manifest
 from ..config import load_config
-from .acceptance import import_final, prepare_second_round
+from .acceptance import complete_retry, import_final, prepare_second_round
 from .review_queue import import_negative_reviews, prepare_negative_reviews
 from .reconcile import reconcile_positive_floors
 from .resolution import prepare_replacements
@@ -28,6 +28,8 @@ def _parser():
     second_round.add_argument("--phenocam", type=Path, required=True)
     final_import = commands.add_parser("import-final")
     final_import.add_argument("--phenocam-second", type=Path, required=True)
+    retry = commands.add_parser("complete-retry")
+    retry.add_argument("--openimages", type=Path, required=True)
     importer = commands.add_parser("import-negatives")
     importer.add_argument("--openimages", type=Path, required=True)
     importer.add_argument("--phenocam-first", type=Path, required=True)
@@ -77,6 +79,8 @@ def main(argv=None):
             arguments.phenocam_second,
             DATASET_ROOT / "work" / "annotation" / "imported" / "negative-reviews.csv",
         )
+    elif arguments.command == "complete-retry":
+        result = complete_retry(DATASET_ROOT, config, arguments.openimages)
     else:
         result = import_negative_reviews(
             DATASET_ROOT / "work" / "annotation" / "final-negative-review",

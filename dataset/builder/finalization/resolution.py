@@ -125,3 +125,59 @@ def prepare_replacements(dataset_root, config, openimages_path, first_path, seco
         json.dump(result, output, indent=2, sort_keys=True)
         output.write("\n")
     return result
+
+
+def prepare_openimages_retry(dataset_root, config, reviewed, phenocam_reviewed):
+    """Replace only resolution candidates that still contain a target."""
+    work = Path(dataset_root) / "work"
+    root = work / "annotation" / "final-negative-review" / "resolution"
+    retained = _read(root / "retained-openimages.csv", FIRST_FIELDS)
+    accepted = [row for row in reviewed.values() if row["decision"] == "confirmed_negative"]
+    combined = sorted((*retained, *accepted), key=lambda row: row["source_identity"])
+    rejected_count = len(reviewed) - len(accepted)
+    write_csv(root / "retained-openimages-retry.csv", FIRST_FIELDS, combined)
+    prior_phenocam = _read(root / "retained-phenocam.csv", FIRST_FIELDS)
+    final_phenocam = sorted(
+        (*prior_phenocam, *phenocam_reviewed.values()),
+        key=lambda row: row["source_identity"],
+    )
+    write_csv(root / "final-phenocam-first.csv", FIRST_FIELDS, final_phenocam)
+
+    rows = _read(work / "openimages" / "deduplicated.csv", DEDUP_FIELDS)
+    by_identity = {_openimages_identity(row): row for row in rows}
+    retained_rows = [by_identity[row["source_identity"]] for row in combined]
+    excluded = {
+        row["source_identity"]
+        for path in (root.parent / "expected-openimages.csv", root / "expected-openimages.csv")
+        for row in _read(path, ("source_identity",))
+    }
+    candidates = [
+        row
+        for row in rows
+        if row["candidate_kind"] == "negative_review" and _openimages_identity(row) not in excluded
+    ]
+    replacements = diverse(
+        candidates,
+        retained_rows,
+        work / "global" / "embeddings.npz",
+        rejected_count,
+        config["seed"],
+        _openimages_identity,
+    )
+    write_csv(root / "openimages-retry-selection.csv", SELECTION_FIELDS, (_selected_row(row) for row in replacements))
+    screening = screen_manifest(
+        root / "openimages-retry-selection.csv",
+        root / "openimages-retry-screened.csv",
+        root / "openimages-retry-rejections.csv",
+        Path(dataset_root).parent / "models" / "yolo26n.onnx",
+        config,
+    )
+    if screening["screened"] != rejected_count or screening["rejected"]:
+        raise DatasetError("Open Images retry screening failed")
+    screened = _read(root / "openimages-retry-screened.csv", SELECTION_FIELDS)
+    write_csv(root / "expected-openimages-retry.csv", ("source_identity",), ({"source_identity": _openimages_identity(row)} for row in replacements))
+    return {
+        "status": "openimages_retry_required",
+        "retry_frames": rejected_count,
+        "page": _page(screened, root, "openimages-retry-a", _openimages_identity, "openimages-resolution-retry-a", "Open Images — ultima sostituzione negativa", config["seed"]),
+    }

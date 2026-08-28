@@ -6,6 +6,7 @@ from ..annotation import NEGATIVE_EXPORT_FIELDS, _negative_document
 from ..common import DatasetError, atomic_text, write_csv
 from .negative_pool import identity as phenocam_identity
 from .review_queue import _browser_rows, _read, _review_export
+from .resolution import prepare_openimages_retry
 
 
 COMBINED_FIELDS = NEGATIVE_EXPORT_FIELDS + (
@@ -24,8 +25,10 @@ def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
     phenocam = _review_export(
         phenocam_path, root / "expected-phenocam.csv", "phenocam-resolution-a"
     )
-    if any(row["decision"] != "confirmed_negative" for row in (*openimages.values(), *phenocam.values())):
-        raise DatasetError("a replacement was not confirmed negative; another repair is required")
+    if any(row["decision"] != "confirmed_negative" for row in phenocam.values()):
+        raise DatasetError("a PhenoCam replacement still contains a target")
+    if any(row["decision"] != "confirmed_negative" for row in openimages.values()):
+        return prepare_openimages_retry(dataset_root, config, openimages, phenocam)
     retained_openimages = _read(root / "retained-openimages.csv", NEGATIVE_EXPORT_FIELDS)
     retained_phenocam = _read(root / "retained-phenocam.csv", NEGATIVE_EXPORT_FIELDS)
     final_openimages = sorted((*retained_openimages, *openimages.values()), key=lambda row: row["source_identity"])
@@ -62,6 +65,35 @@ def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
         "phenocam_negatives": len(final_phenocam),
         "second_review_page": page.resolve().as_uri(),
     }
+
+
+def complete_retry(dataset_root, config, openimages_path):
+    root = Path(dataset_root) / "work" / "annotation" / "final-negative-review" / "resolution"
+    retry = _review_export(
+        openimages_path,
+        root / "expected-openimages-retry.csv",
+        "openimages-resolution-retry-a",
+    )
+    if any(row["decision"] != "confirmed_negative" for row in retry.values()):
+        raise DatasetError("the final Open Images replacement still contains a target")
+    retained = _read(root / "retained-openimages-retry.csv", NEGATIVE_EXPORT_FIELDS)
+    final_openimages = sorted((*retained, *retry.values()), key=lambda row: row["source_identity"])
+    final_phenocam = _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
+    if len(final_openimages) != 50 or len(final_phenocam) != 706:
+        raise DatasetError("resolved negative composition is invalid")
+    write_csv(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS, final_openimages)
+    source_rows = _read(
+        Path(dataset_root) / "work" / "review" / "phenocam" / "review.csv",
+        ("source_dataset", "source_id", "local_path"),
+    )
+    by_identity = {phenocam_identity(row): row for row in source_rows}
+    queue = [by_identity[row["source_identity"]] for row in final_phenocam]
+    browser = _browser_rows(queue, root, "phenocam-b", phenocam_identity)
+    page = root / "phenocam-b.html"
+    with atomic_text(page) as output:
+        output.write(_negative_document(browser, "phenocam-final-b", config["seed"], "PhenoCam — seconda verifica indipendente definitiva"))
+    write_csv(root / "expected-phenocam-b.csv", ("source_identity",), ({"source_identity": row["source_identity"]} for row in final_phenocam))
+    return {"openimages_negatives": 50, "phenocam_negatives": 706, "second_review_page": page.resolve().as_uri()}
 
 
 def import_final(review_root, second_path, output_path):
