@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "seed": 20260826,
+  "operational_validation": "pending",
+  "output_name": "mixed-dataset",
+  "source_frames": {
+    "total": 2000,
+    "positive": 1200,
+    "negative": 800,
+    "phenocam_v3": {
+      "positive": 350,
+      "negative": 750
+    },
+    "open_images_v7": {
+      "positive": 850,
+      "negative": 50
+    }
+  },
+  "semantic_strata": {
+    "ordinary_fixed_camera_negative": 500,
+    "hard_negative": 300,
+    "common_positive": 500,
+    "difficult_positive": 500,
+    "rare_environment_positive": 200
+  },
+  "instance_floors": {
+    "person": 900,
+    "car": 750,
+    "truck": 270,
+    "bicycle": 200,
+    "motorcycle": 200,
+    "bus": 180
+  },
+  "compiled_class_ids": {
+    "person": 0,
+    "bicycle": 1,
+    "car": 2,
+    "motorcycle": 3,
+    "bus": 5,
+    "truck": 7
+  },
+  "open_images": {
+    "version": "V7",
+    "landing_url": "https://storage.googleapis.com/openimages/web/download_v7.html",
+    "image_mirror_template": "https://open-images-dataset.s3.amazonaws.com/{subset}/{source_id}.jpg",
+    "annotation_license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "metadata_urls": {
+      "classes": "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv",
+      "validation_boxes": "https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv",
+      "validation_image_labels": "https://storage.googleapis.com/openimages/v7/oidv7-val-annotations-human-imagelabels.csv",
+      "validation_images": "https://storage.googleapis.com/openimages/2018_04/validation/validation-images-with-rotation.csv",
+      "test_boxes": "https://storage.googleapis.com/openimages/v5/test-annotations-bbox.csv",
+      "test_image_labels": "https://storage.googleapis.com/openimages/v7/oidv7-test-annotations-human-imagelabels.csv",
+      "test_images": "https://storage.googleapis.com/openimages/2018_04/test/test-images-with-rotation.csv"
+    },
+    "accepted_image_license_urls": [
+      "https://creativecommons.org/licenses/by/2.0/",
+      "http://creativecommons.org/licenses/by/2.0/"
+    ],
+    "automatic_class_map": {
+      "Person": "person",
+      "Bicycle": "bicycle",
+      "Car": "car",
+      "Van": "car",
+      "Motorcycle": "motorcycle",
+      "Bus": "bus",
+      "Truck": "truck"
+    },
+    "ambiguous_classes": [
+      "Vehicle"
+    ],
+    "candidate_pool": {
+      "positive_frames": 3000,
+      "negative_frames": 250,
+      "small_target_supplement_frames": 500,
+      "small_target_normalized_side_max": 0.03,
+      "instance_targets": {
+        "person": 1125,
+        "car": 938,
+        "truck": 338,
+        "bicycle": 250,
+        "motorcycle": 250,
+        "bus": 225
+      }
+    },
+    "provisional_selection": {
+      "positive_frames": 850,
+      "negative_frames": 50,
+      "primary_strata": {
+        "common_positive": 300,
+        "difficult_positive": 350,
+        "rare_environment_positive": 200
+      },
+      "small_target_frames": 255,
+      "occluded_or_truncated_frames": 170,
+      "multiple_target_frames": 85,
+      "maximum_easy_frames": 425
+    }
+  },
+  "phenocam": {
+    "version": "3",
+    "collection_concept_id": "C3446198161-ORNL_CLOUD",
+    "landing_url": "https://doi.org/10.3334/ORNLDAAC/2364",
+    "guide_url": "https://daac.ornl.gov/VEGETATION/guides/Phenocam_Images_V3.html",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "site_limit": 12,
+    "minimum_sites": 100,
+    "candidate_sites": 160,
+    "candidate_frames_per_site": 36,
+    "archive_download_budget_bytes": 16106127360,
+    "maximum_archive_uncompressed_bytes": 10737418240,
+    "maximum_archive_members": 100000
+  },
+  "image_eligibility": {
+    "minimum_width": 640,
+    "minimum_height": 480,
+    "minimum_aspect_ratio": 0.5,
+    "maximum_aspect_ratio": 2.0,
+    "maximum_source_bytes": 52428800,
+    "maximum_pixels": 80000000
+  },
+  "crop": {
+    "maximum_positive_per_frame": 2,
+    "maximum_hard_negative_per_frame": 1,
+    "baseline_confidence": 0.05,
+    "geometry_version": "adaptive-grid-v1"
+  },
+  "deduplication": {
+    "embedding_model": {
+      "identifier": "sscd_disc_mixup.torchscript.pt",
+      "url": "https://dl.fbaipublicfiles.com/sscd-copy-detection/sscd_disc_mixup.torchscript.pt",
+      "sha256": "9f26bd4c848cc19b73d2ae92eea6e04886f61a7b764ceb7a13aeee62e6a6db56",
+      "input_width": 320,
+      "input_height": 320,
+      "resize": "direct_bilinear",
+      "channel_order": "RGB",
+      "mean": [0.485, 0.456, 0.406],
+      "standard_deviation": [0.229, 0.224, 0.225]
+    },
+    "phash_hamming_max": 6,
+    "embedding_auto_cosine_min": 0.98,
+    "embedding_review_cosine_min": 0.95,
+    "calibration_pairs_minimum": 200,
+    "false_merge_rate_maximum": 0.01
+  }
+}

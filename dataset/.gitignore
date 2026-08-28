@@ -1,0 +1,11 @@
+# Local credentials and workstation environment.
+/.env
+/.venv/
+
+# Generated dataset state and materialized outputs.
+/work/
+/artifacts/
+
+# Local interpreter and filesystem artifacts.
+__pycache__/
+.DS_Store
