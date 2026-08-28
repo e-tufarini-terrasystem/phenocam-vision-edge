@@ -6,7 +6,7 @@ python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/finalize.sh prepare|resolve FILES|second-round FILES|complete-retry OPENIMAGES_RETRY.csv|import-final PHENOCAM_B.csv"
+        "usage: dataset/finalize.sh prepare|resolve FILES|second-round FILES|complete-retry OPENIMAGES_RETRY.csv|import-final PHENOCAM_B.csv|accept-single-review|build"
 }
 
 command_name=${1:-}
@@ -59,6 +59,16 @@ case "$command_name" in
         cd "$repository_root"
         "$python" -m dataset.builder.finalization complete-retry \
             --openimages "$2"
+        ;;
+    accept-single-review)
+        [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+        cd "$repository_root"
+        "$python" -m dataset.builder.finalization accept-single-review
+        ;;
+    build)
+        [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+        cd "$repository_root"
+        "$python" -m dataset.builder.finalization build
         ;;
     *)
         usage >&2

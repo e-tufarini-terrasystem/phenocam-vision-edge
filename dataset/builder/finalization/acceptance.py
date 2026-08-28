@@ -18,6 +18,12 @@ COMBINED_FIELDS = NEGATIVE_EXPORT_FIELDS + (
 )
 
 
+def _write_audit(output_path, audit):
+    with atomic_text(Path(output_path).with_name("negative-reviews-audit.json")) as receipt:
+        json.dump(audit, receipt, indent=2, sort_keys=True)
+        receipt.write("\n")
+
+
 def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
     work = Path(dataset_root) / "work"
     root = work / "annotation" / "final-negative-review" / "resolution"
@@ -135,8 +141,61 @@ def import_final(review_root, second_path, output_path):
             }
         )
     write_csv(output_path, COMBINED_FIELDS, output)
+    _write_audit(
+        output_path,
+        {
+            "accepted_negatives": sum(row["result"] == "accepted_negative" for row in output),
+            "independent_phenocam_review": True,
+            "limitation": "",
+            "openimages_negatives": len(openimages),
+            "phenocam_negatives": len(first),
+            "reviewers": sorted({row["reviewer"] for row in output} | {row["second_reviewer"] for row in output if row["second_reviewer"]}),
+            "review_protocol": "independent_two_reviewer",
+        },
+    )
     return {
         "rows": len(output),
         "accepted_negatives": sum(row["result"] == "accepted_negative" for row in output),
         "requires_resolution": sum(row["result"] != "accepted_negative" for row in output),
     }
+
+
+def accept_single_review(review_root, output_path):
+    """Accept the resolved first pass while recording the independent-review waiver."""
+    root = Path(review_root)
+    openimages = _read(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS)
+    phenocam = _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
+    if len(openimages) != 50 or len(phenocam) != 706:
+        raise DatasetError("resolved negative composition is invalid")
+    rows = [*openimages, *phenocam]
+    identities = [row["source_identity"] for row in rows]
+    if len(set(identities)) != len(identities):
+        raise DatasetError("resolved negative composition contains duplicate images")
+    if any(
+        row["decision"] != "confirmed_negative"
+        or not row["reviewer"]
+        or not row["reviewed_at"]
+        for row in rows
+    ):
+        raise DatasetError("single-review acceptance requires completed negative decisions")
+    output = [
+        {
+            **row,
+            "second_reviewer": "",
+            "second_decision": "",
+            "result": "accepted_negative",
+        }
+        for row in sorted(rows, key=lambda item: item["source_identity"])
+    ]
+    write_csv(output_path, COMBINED_FIELDS, output)
+    audit = {
+        "accepted_negatives": len(output),
+        "independent_phenocam_review": False,
+        "limitation": "second reviewer unavailable; owner approved single-review acceptance",
+        "openimages_negatives": len(openimages),
+        "phenocam_negatives": len(phenocam),
+        "reviewers": sorted({row["reviewer"] for row in rows}),
+        "review_protocol": "single_reviewer_waiver",
+    }
+    _write_audit(output_path, audit)
+    return {**audit, "rows": len(output), "requires_resolution": 0}

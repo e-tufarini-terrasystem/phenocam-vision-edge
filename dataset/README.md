@@ -120,10 +120,23 @@ The public build uses these gates in order:
    smallest deterministic floor-repair swap, reuses 335 CVAT-confirmed empty
    PhenoCam frames, and produces reduced blind negative-review queues.
 
-The final joint selection and YOLO materialization may run only after PhenoCam
-annotation, independent negative verification, duplicate review, and SSCD
-calibration are complete. The final validator must still prove every acceptance
-gate; provisional command output is never a completed dataset.
+If a second PhenoCam reviewer is unavailable, the dataset owner may explicitly
+run `dataset/finalize.sh accept-single-review` after resolving every rejected
+negative. This weaker protocol accepts the completed first pass and writes
+`negative-reviews-audit.json` with `single_reviewer_waiver`; it must not be
+reported as independent negative verification.
+
+After either review protocol has produced `negative-reviews.csv`, run
+`dataset/finalize.sh build`. The command assembles the fixed 2,000-frame
+composition, reruns exact and SSCD duplicate checks, validates every source and
+box, and atomically writes the YOLO artifact, manifests, licenses, statistics,
+checksums, and acceptance receipt under `dataset/artifacts/mixed-dataset/`.
+
+The standard final contract requires PhenoCam annotation, independent negative
+verification, duplicate review, and SSCD calibration. An owner-approved
+single-review build is materialized with a visible waiver status instead of
+being reported as a full independent-verification pass. Provisional command
+output is never a completed dataset.
 
 Internal imagery is intentionally absent from every command in this package.
 Its future validation/test workflow remains a separately approved iteration,

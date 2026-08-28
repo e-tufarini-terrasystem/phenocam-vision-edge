@@ -13,6 +13,7 @@ from dataset.builder.annotation import NEGATIVE_EXPORT_FIELDS
 from dataset.builder.config import load_config
 from dataset.builder.dedup import DEDUP_FIELDS
 from dataset.builder.finalization.negative_pool import select
+from dataset.builder.finalization.acceptance import accept_single_review
 from dataset.builder.finalization.reconcile import reconcile_positive_floors
 from dataset.builder.finalization.review_queue import import_negative_reviews
 from dataset.builder.selection import SELECTION_FIELDS
@@ -164,6 +165,36 @@ class FinalizationTests(unittest.TestCase):
         )
         result = import_negative_reviews(review_root, openimages, first, second, self.root / "combined.csv")
         self.assertEqual(result, {"rows": 3, "accepted_negatives": 3, "requires_resolution": 0})
+
+    def test_single_review_waiver_is_explicitly_audited(self):
+        review_root = self.root / "review"
+
+        def reviewed(identity):
+            return {
+                "source_identity": identity,
+                "decision": "confirmed_negative",
+                "reviewer": "owner",
+                "reviewed_at": "2026-08-28T12:00:00Z",
+                "review_round": "first",
+                "note": "",
+            }
+
+        self.write_csv(
+            review_root / "final-openimages-first.csv",
+            NEGATIVE_EXPORT_FIELDS,
+            (reviewed(f"oi:{index}") for index in range(50)),
+        )
+        self.write_csv(
+            review_root / "final-phenocam-first.csv",
+            NEGATIVE_EXPORT_FIELDS,
+            (reviewed(f"ph:{index}") for index in range(706)),
+        )
+        output = self.root / "imported" / "negative-reviews.csv"
+        result = accept_single_review(review_root, output)
+        self.assertEqual(result["accepted_negatives"], 756)
+        self.assertFalse(result["independent_phenocam_review"])
+        audit = json.loads(output.with_name("negative-reviews-audit.json").read_text())
+        self.assertEqual(audit["review_protocol"], "single_reviewer_waiver")
 
 
 if __name__ == "__main__":

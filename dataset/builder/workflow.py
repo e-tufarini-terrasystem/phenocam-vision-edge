@@ -1,6 +1,7 @@
 """Inspect and resume the canonical public-dataset workflow safely."""
 
 import csv
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -47,6 +48,7 @@ def _paths(dataset_root=DATASET_ROOT):
         / "openimages-duplicates"
         / "duplicate-review-reviewed.csv",
         "artifact_root": dataset_root / "artifacts" / "mixed-dataset",
+        "final_acceptance": dataset_root / "artifacts" / "mixed-dataset" / "manifests" / "acceptance.json",
     }
 
 
@@ -216,7 +218,17 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
     if not duplicate_review["valid"]:
         blockers.append("Open Images duplicate review is incomplete")
 
-    if blockers:
+    final_acceptance = {}
+    if paths["final_acceptance"].is_file():
+        try:
+            final_acceptance = json.loads(paths["final_acceptance"].read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            final_acceptance = {}
+    if final_acceptance.get("status") in {"complete", "completed_with_single_reviewer_waiver"}:
+        waived = final_acceptance["status"] != "complete"
+        state = "public_dataset_complete_with_waiver" if waived else "public_dataset_complete"
+        next_action = "train only after acknowledging the single-review negative-verification limitation" if waived else "public training may begin"
+    elif blockers:
         state = "blocked_preflight"
         next_action = "resolve the reported blockers"
     elif not screening["complete"]:
@@ -277,6 +289,7 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
             "openimages_duplicate_review": duplicate_review,
         },
         "final_artifact_files": artifact_files,
+        "final_acceptance": final_acceptance,
         "operational_validation": config["operational_validation"],
     }
 

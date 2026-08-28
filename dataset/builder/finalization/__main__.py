@@ -6,10 +6,16 @@ from pathlib import Path
 
 from ..baseline import screen_manifest
 from ..config import load_config
-from .acceptance import complete_retry, import_final, prepare_second_round
+from .acceptance import (
+    accept_single_review,
+    complete_retry,
+    import_final,
+    prepare_second_round,
+)
 from .review_queue import import_negative_reviews, prepare_negative_reviews
 from .reconcile import reconcile_positive_floors
 from .resolution import prepare_replacements
+from .materialize import materialize
 
 
 DATASET_ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +34,8 @@ def _parser():
     second_round.add_argument("--phenocam", type=Path, required=True)
     final_import = commands.add_parser("import-final")
     final_import.add_argument("--phenocam-second", type=Path, required=True)
+    commands.add_parser("accept-single-review")
+    commands.add_parser("build")
     retry = commands.add_parser("complete-retry")
     retry.add_argument("--openimages", type=Path, required=True)
     importer = commands.add_parser("import-negatives")
@@ -81,6 +89,13 @@ def main(argv=None):
         )
     elif arguments.command == "complete-retry":
         result = complete_retry(DATASET_ROOT, config, arguments.openimages)
+    elif arguments.command == "accept-single-review":
+        result = accept_single_review(
+            DATASET_ROOT / "work" / "annotation" / "final-negative-review" / "resolution",
+            DATASET_ROOT / "work" / "annotation" / "imported" / "negative-reviews.csv",
+        )
+    elif arguments.command == "build":
+        result = materialize(DATASET_ROOT, config)
     else:
         result = import_negative_reviews(
             DATASET_ROOT / "work" / "annotation" / "final-negative-review",

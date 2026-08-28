@@ -9,24 +9,35 @@ deduplicazione, conteggi, sostituzioni e materializzazione. Le decisioni che
 stabiliscono il ground truth restano umane: presenza o assenza di target,
 correzione delle classi e disegno completo dei box.
 
-## Sequenza
+## Esito corrente
+
+La revisione manuale è conclusa. Non essendo disponibile un secondo revisore,
+il proprietario ha approvato esplicitamente l'uso del singolo passaggio di
+Emanuele. La deroga è registrata come `single_reviewer_waiver` e il dataset non
+deve essere descritto come verificato indipendentemente.
+
+La composizione finale è stata importata e materializzata con
+`dataset/finalize.sh build` in `dataset/artifacts/mixed-dataset/`. L'audit ha
+stato `completed_with_single_reviewer_waiver`; la validation operativa interna
+rimane separata e `pending`.
+
+## Sequenza eseguita
 
 1. **Sostituzioni Open Images.** Emanuele verifica i 17 rimpiazzi nella pagina
    `resolution/openimages-a.html`.
 2. **Sostituzioni PhenoCam.** Emanuele verifica i 5 rimpiazzi nella pagina
    `resolution/phenocam-a.html`.
-3. **Seconda verifica PhenoCam definitiva.** Dopo l’import dei rimpiazzi, una
-   persona diversa verifica in cieco tutti i 706 frame della nuova pagina
-   `resolution/phenocam-b.html`.
-4. **Import automatico.** Controlla identità, completezza, decisioni e revisori
-   distinti con `dataset/finalize.sh import`.
+3. **Seconda verifica PhenoCam definitiva.** Non eseguita; sostituita dalla
+   deroga esplicita `single_reviewer_waiver`.
+4. **Import automatico.** Ha controllato identità, completezza e decisioni con
+   `dataset/finalize.sh accept-single-review`.
 5. **Deduplicazione congiunta finale.** Rigenera embedding e gruppi sui 2.000
    frame accettati e blocca duplicati o leakage.
 6. **Materializzazione YOLO.** Produce full frame, crop approvati, label,
    `data.yaml`, manifest, licenze, statistiche e checksum.
-7. **Acceptance audit.** Dichiara il dataset completo soltanto quando tutti i
-   gate della specifica passano. La validation operativa interna resta separata
-   e può rimanere `pending`.
+7. **Acceptance audit.** Completato con tutti i gate automatici superati e la
+   limitazione della singola revisione visibile. La validation operativa interna
+   resta separata e `pending`.
 
 ## Comandi correnti
 
@@ -39,6 +50,8 @@ dataset/workflow.sh prepare-openimages-review
 dataset/workflow.sh prepare-openimages-supplement
 dataset/workflow.sh annotation-bundles
 dataset/finalize.sh prepare
+dataset/finalize.sh accept-single-review
+dataset/finalize.sh build
 ```
 
 `status` non modifica dati. `prepare-openimages-review` è idempotente rispetto a
@@ -50,7 +63,7 @@ stato firmato dallo stesso revisore e non può valere come verifica indipendente
 Le decisioni sono state conservate per eliminare i falsi negativi. Terminati i
 due export di sostituzione, il builder genera il round B definitivo.
 
-Al termine del round definitivo l’import viene eseguito con:
+Con un secondo revisore, il percorso standard alternativo resta:
 
 ```sh
 dataset/finalize.sh import-final PHENOCAM_B_DEFINITIVO.csv
@@ -58,8 +71,7 @@ dataset/finalize.sh import-final PHENOCAM_B_DEFINITIVO.csv
 
 ## Confine corrente
 
-La riconciliazione positiva è completa: un solo frame non revisionato è stato
-sostituito dopo il task 4 e tutte le soglie sono nuovamente soddisfatte. La
-deduplicazione finale, la materializzazione e l’acceptance audit dipendono ora
-soltanto dagli export effettivi delle tre revisioni negative. Non sono
-sostituibili con conteggi o predizioni del modello corrente.
+Il dataset pubblico di training è materializzato e riproducibile. Non costituisce
+una validazione del modello sul dominio operativo interno; quella fase resta
+`pending`. La deroga sulla seconda revisione impedisce inoltre di descrivere i
+negativi come verificati indipendentemente.
