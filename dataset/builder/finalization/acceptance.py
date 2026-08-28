@@ -6,7 +6,8 @@ from ..annotation import NEGATIVE_EXPORT_FIELDS, _negative_document
 from ..common import DatasetError, atomic_text, write_csv
 from .negative_pool import identity as phenocam_identity
 from .review_queue import _browser_rows, _read, _review_export
-from .resolution import prepare_openimages_retry
+from .openimages_retry import again as retry_openimages_again
+from .openimages_retry import prepare as prepare_openimages_retry
 
 
 COMBINED_FIELDS = NEGATIVE_EXPORT_FIELDS + (
@@ -75,7 +76,7 @@ def complete_retry(dataset_root, config, openimages_path):
         "openimages-resolution-retry-a",
     )
     if any(row["decision"] != "confirmed_negative" for row in retry.values()):
-        raise DatasetError("the final Open Images replacement still contains a target")
+        return retry_openimages_again(dataset_root, config, retry)
     retained = _read(root / "retained-openimages-retry.csv", NEGATIVE_EXPORT_FIELDS)
     final_openimages = sorted((*retained, *retry.values()), key=lambda row: row["source_identity"])
     final_phenocam = _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
