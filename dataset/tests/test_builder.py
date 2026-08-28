@@ -50,8 +50,9 @@ class DatasetBuilderTests(unittest.TestCase):
 
     def test_workspace_paths_stay_inside_dataset_boundary(self):
         dataset_root = Path(__file__).resolve().parents[1]
-        self.assertEqual(DEFAULT_CONFIG_PATH, dataset_root / "config" / "dataset.json")
+        self.assertEqual(DEFAULT_CONFIG_PATH, dataset_root / "config" / "dataset-contract.json")
         self.assertEqual(_DATASET_ENV, dataset_root / ".env")
+        self.assertEqual(self.config["output_name"], "training-dataset")
 
     def write_csv(self, path, fieldnames, rows):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -724,7 +725,7 @@ class DatasetBuilderTests(unittest.TestCase):
 
     def test_negative_review_import_requires_independent_matching_rounds(self):
         expected = self.root / "expected"
-        self.write_csv(expected / "expected-openimages.csv", ("source_identity",), [{"source_identity": "open:1"}])
+        self.write_csv(expected / "expected-open-images.csv", ("source_identity",), [{"source_identity": "open:1"}])
         self.write_csv(expected / "expected-phenocam.csv", ("source_identity",), [{"source_identity": "phenocam::1"}])
 
         def review(path, identity, review_round, reviewer):
@@ -744,7 +745,7 @@ class DatasetBuilderTests(unittest.TestCase):
         openimages = self.root / "openimages.csv"
         first = self.root / "first.csv"
         second = self.root / "second.csv"
-        review(openimages, "open:1", "openimages-a", "reviewer-a")
+        review(openimages, "open:1", "open-images-a", "reviewer-a")
         review(first, "phenocam::1", "phenocam-a", "reviewer-a")
         review(second, "phenocam::1", "phenocam-b", "reviewer-b")
         result = import_negative_reviews(

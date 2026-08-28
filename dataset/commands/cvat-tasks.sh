@@ -1,26 +1,26 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cli="$repository_root/dataset/.venv/bin/cvat-cli"
-annotation_root="$repository_root/dataset/work/annotation"
+annotation_root="$repository_root/dataset/workspace/annotation"
 profile=phenocam-local
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/cvat-tasks.sh profile|list|upload-openimages|upload-openimages-supplement|upload-phenocam|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
+        "usage: dataset/commands/cvat-tasks.sh profile|list|upload-open-images|upload-open-images-supplement|upload-phenocam|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
         "" \
         "profile            save a local personal-access-token profile interactively" \
         "list               list CVAT tasks" \
-        "upload-openimages  create the 202-image Open Images task" \
-        "upload-openimages-supplement create the reduced supplemental review task" \
+        "upload-open-images  create the 202-image Open Images task" \
+        "upload-open-images-supplement create the reduced supplemental review task" \
         "upload-phenocam    create the 350-image PhenoCam task" \
         "export ID NAME     export COCO and a full backup for a completed task" \
-        "finish ID NAME A R export, audit, and import openimages or phenocam"
+        "finish ID NAME A R export, audit, and import open-images or phenocam"
 }
 
 require_cli() {
-    [ -x "$cli" ] || { printf '%s\n' "error: run 'dataset/cvat.sh cli-setup' first" >&2; exit 1; }
+    [ -x "$cli" ] || { printf '%s\n' "error: run 'dataset/commands/cvat-server.sh cli-setup' first" >&2; exit 1; }
 }
 
 create_task() {
@@ -72,19 +72,19 @@ command_name=${1:-}
 case "$command_name" in
     profile)
         require_cli
-        "$repository_root/dataset/.venv/bin/python" "$repository_root/dataset/cvat-profile.py"
+        "$repository_root/dataset/.venv/bin/python" "$repository_root/dataset/commands/cvat-profile.py"
         ;;
     list)
         require_cli
         "$cli" --profile "$profile" task ls --json
         ;;
-    upload-openimages)
+    upload-open-images)
         require_cli
-        create_task "Public dataset — Open Images positive review" "$annotation_root/cvat/openimages-positive"
+        create_task "Public dataset — Open Images positive review" "$annotation_root/cvat/open-images-positive"
         ;;
-    upload-openimages-supplement)
+    upload-open-images-supplement)
         require_cli
-        create_task "Public dataset — Open Images supplemental review" "$annotation_root/cvat/openimages-supplement-positive"
+        create_task "Public dataset — Open Images supplemental review" "$annotation_root/cvat/open-images-supplement-positive"
         ;;
     upload-phenocam)
         require_cli
@@ -105,10 +105,10 @@ case "$command_name" in
         reviewer=${5:-}
         [ -n "$task_id" ] && [ -n "$export_name" ] && [ -n "$annotator" ] && [ -n "$reviewer" ] || { usage >&2; exit 2; }
         case "$export_name" in
-            openimages) bundle_name=openimages-positive ;;
-            openimages-supplement) bundle_name=openimages-supplement-positive ;;
+            open-images) bundle_name=open-images-positive ;;
+            open-images-supplement) bundle_name=open-images-supplement-positive ;;
             phenocam) bundle_name=phenocam-positive ;;
-            *) printf '%s\n' "error: NAME must be openimages, openimages-supplement, or phenocam" >&2; exit 2 ;;
+            *) printf '%s\n' "error: NAME must be open-images, open-images-supplement, or phenocam" >&2; exit 2 ;;
         esac
         export_task "$task_id" "$export_name"
         import_dir="$annotation_root/imported"
@@ -117,7 +117,7 @@ case "$command_name" in
         "$repository_root/dataset/.venv/bin/python" -m dataset.builder import-positive-coco \
             --bundle-dir "$annotation_root/cvat/$bundle_name" \
             --export "$annotation_root/exports/$export_name-reviewed.coco.zip" \
-            --output "$import_dir/$export_name-positive.csv" \
+            --output "$import_dir/$bundle_name.csv" \
             --annotator "$annotator" \
             --reviewer "$reviewer"
         ;;

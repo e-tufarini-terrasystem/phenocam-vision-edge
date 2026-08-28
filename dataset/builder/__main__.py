@@ -1,4 +1,4 @@
-"""Command-line entry point for public mixed-dataset construction."""
+"""Command-line entry point for public training-dataset construction."""
 
 import argparse
 import json
@@ -211,7 +211,7 @@ def _parser():
         help="build normalized CVAT and blind negative-review packets",
     )
     annotation_bundles.add_argument(
-        "--output-dir", type=Path, default=Path("dataset/work/annotation")
+        "--output-dir", type=Path, default=Path("dataset/workspace/annotation")
     )
     negative_import = commands.add_parser(
         "import-negative-reviews",
@@ -224,7 +224,7 @@ def _parser():
     negative_import.add_argument(
         "--expected-dir",
         type=Path,
-        default=Path("dataset/work/annotation/negative-review"),
+        default=Path("dataset/workspace/annotation/negative-review"),
     )
     positive_import = commands.add_parser(
         "import-positive-coco",

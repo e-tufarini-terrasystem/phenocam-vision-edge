@@ -1,8 +1,8 @@
 """Materialize the reviewed source composition as a YOLO training artifact."""
 
-import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from collections import Counter
@@ -59,6 +59,21 @@ def _label_lines(record):
     return lines
 
 
+def _artifact_name(record):
+    """Return a readable, filesystem-safe name tied to the source identity."""
+    row = record["row"]
+    if row["source_dataset"] == "open_images":
+        raw = f"open-images-{row['source_subset']}-{row['source_id']}"
+    elif row["source_dataset"] == "phenocam":
+        raw = f"phenocam-{row['source_id']}"
+    else:
+        raise DatasetError(f"unsupported source dataset: {row['source_dataset']}")
+    name = re.sub(r"[^a-z0-9._-]+", "-", raw.lower()).strip("-.")
+    if not name or len(name) > 120:
+        raise DatasetError("source identity does not produce a safe artifact name")
+    return name
+
+
 def _review_fields(record):
     review = record["review"]
     return {
@@ -89,14 +104,14 @@ def _manifest_row(record, image_id, compiled_sha, model):
 
 
 def _rejections(dataset_root, accepted):
-    root = Path(dataset_root) / "work/annotation/final-negative-review"
+    root = Path(dataset_root) / "workspace/annotation/final-negative-review"
     resolution = root / "resolution"
     rejected = set()
-    for expected, retained in ((root / "expected-openimages.csv", resolution / "retained-openimages.csv"), (root / "expected-phenocam-b.csv", resolution / "retained-phenocam.csv")):
+    for expected, retained in ((root / "expected-open-images.csv", resolution / "retained-open-images.csv"), (root / "expected-phenocam-b.csv", resolution / "retained-phenocam.csv")):
         expected_ids = {row["source_identity"] for row in _csv(expected)}
         retained_ids = {row["source_identity"] for row in _csv(retained)}
         rejected.update(expected_ids - retained_ids - accepted)
-    attempted = resolution / "attempted-openimages.csv"
+    attempted = resolution / "attempted-open-images.csv"
     if attempted.is_file():
         rejected.update(row["source_identity"] for row in _csv(attempted) if row["source_identity"] not in accepted)
     return [{"source_identity": identity, "stage": "negative_human_review", "reason_code": "target_present_or_uncertain", "note": "", "replacement_identity": ""} for identity in sorted(rejected)]
@@ -134,30 +149,32 @@ def _write_metadata(root, records, manifests, dedup, config, review_audit):
         "review_protocol": review_audit["review_protocol"],
         "status": "complete" if independent else "completed_with_single_reviewer_waiver",
     }
-    (root / "manifests/statistics.json").write_text(json.dumps(statistics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (root / "manifests/deduplication.json").write_text(json.dumps(dedup, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (root / "manifests/acceptance.json").write_text(json.dumps(acceptance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (root / "metadata/dataset-statistics.json").write_text(json.dumps(statistics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (root / "metadata/deduplication-audit.json").write_text(json.dumps(dedup, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (root / "metadata/acceptance-audit.json").write_text(json.dumps(acceptance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return statistics, acceptance
 
 
 def materialize(dataset_root, config):
     dataset_root = Path(dataset_root)
-    destination = dataset_root / "artifacts" / config["output_name"]
+    destination = dataset_root / config["output_name"]
     if destination.exists():
         raise DatasetError(f"final artifact already exists: {destination}")
     records = assemble(dataset_root, config)
     dedup = dedup_audit(records, dataset_root, config)
-    waiver_path = dataset_root / "work/annotation/imported/negative-reviews-audit.json"
+    waiver_path = dataset_root / "workspace/annotation/imported/negative-reviews-audit.json"
     review_audit = json.loads(waiver_path.read_text(encoding="utf-8"))
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix=f".{destination.name}.", dir=destination.parent))
     try:
-        for relative in ("images/train", "labels/train", "source-annotations", "manifests"):
+        for relative in ("images/train", "labels/train", "metadata"):
             (temporary / relative).mkdir(parents=True, exist_ok=True)
         manifests = []
-        with (temporary / "source-annotations/annotations.jsonl").open("w", encoding="utf-8") as annotations_file:
-            for record in records:
-                image_id = hashlib.sha256(record["source_identity"].encode()).hexdigest()[:20]
+        artifact_names = [_artifact_name(record) for record in records]
+        if len(set(artifact_names)) != len(artifact_names):
+            raise DatasetError("source identities produce duplicate artifact names")
+        with (temporary / "metadata/source-annotations.jsonl").open("w", encoding="utf-8") as annotations_file:
+            for record, image_id in zip(records, artifact_names):
                 image_path = temporary / f"images/train/{image_id}.jpg"
                 compiled_sha = _write_image(record, dataset_root, image_path)
                 label_path = temporary / f"labels/train/{image_id}.txt"
@@ -165,19 +182,20 @@ def materialize(dataset_root, config):
                     label_path.write_text("".join(_label_lines(record)), encoding="utf-8")
                 manifests.append(_manifest_row(record, image_id, compiled_sha, dedup["embedding_model"]))
                 annotations_file.write(json.dumps({"source_identity": record["source_identity"], "source_annotations": json.loads(record["row"].get("annotations_json", "[]") or "[]"), "compiled_annotations": record["annotations"], "review": record["review"]}, sort_keys=True) + "\n")
-        write_csv(temporary / "manifests/sources.csv", SOURCE_FIELDS, manifests)
-        write_csv(temporary / "manifests/licenses.csv", ("source_identity", "license_url", "attribution", "landing_url", "license_verification_date"), ({"source_identity": row["source_identity"], "license_url": row["license_url"], "attribution": row["attribution"], "landing_url": row["landing_url"], "license_verification_date": "2026-08-28"} for row in manifests))
-        write_csv(temporary / "manifests/groups.csv", ("source_identity", "group_id", "split"), ({"source_identity": row["source_identity"], "group_id": row["group_id"], "split": "train"} for row in manifests))
-        write_csv(temporary / "manifests/rejections.csv", ("source_identity", "stage", "reason_code", "note", "replacement_identity"), _rejections(dataset_root, {record["source_identity"] for record in records}))
-        (temporary / "manifests/train.txt").write_text("".join(f"../images/train/{row['image_id']}.jpg\n" for row in manifests), encoding="utf-8")
+        write_csv(temporary / "metadata/source-images.csv", SOURCE_FIELDS, manifests)
+        write_csv(temporary / "metadata/source-licenses.csv", ("source_identity", "license_url", "attribution", "landing_url", "license_verification_date"), ({"source_identity": row["source_identity"], "license_url": row["license_url"], "attribution": row["attribution"], "landing_url": row["landing_url"], "license_verification_date": "2026-08-28"} for row in manifests))
+        write_csv(temporary / "metadata/duplicate-groups.csv", ("source_identity", "group_id", "split"), ({"source_identity": row["source_identity"], "group_id": row["group_id"], "split": "train"} for row in manifests))
+        write_csv(temporary / "metadata/rejected-candidates.csv", ("source_identity", "stage", "reason_code", "note", "replacement_identity"), _rejections(dataset_root, {record["source_identity"] for record in records}))
+        (temporary / "metadata/training-images.txt").write_text("".join(f"../images/train/{row['image_id']}.jpg\n" for row in manifests), encoding="utf-8")
         names = {value: name for name, value in config["compiled_class_ids"].items()}
         names.update({4: "__unused_class_4", 6: "__unused_class_6"})
         yaml_names = ", ".join(f"{class_id}: {names[class_id]}" for class_id in range(8))
-        (temporary / "data.yaml").write_text(f"train: images/train\nnames: {{{yaml_names}}}\n", encoding="utf-8")
+        (temporary / "yolo-dataset.yaml").write_text(f"train: images/train\nnames: {{{yaml_names}}}\n", encoding="utf-8")
+        shutil.copyfile(dataset_root / "DATASET.md", temporary / "README.md")
         statistics, acceptance = _write_metadata(temporary, records, manifests, dedup, config, review_audit)
         checksum_paths = sorted(path for path in temporary.rglob("*") if path.is_file())
         checksums = [(sha256_file(path), path.relative_to(temporary)) for path in checksum_paths]
-        (temporary / "manifests/checksums.sha256").write_text("".join(f"{digest}  {path}\n" for digest, path in checksums), encoding="utf-8")
+        (temporary / "metadata/checksums.sha256").write_text("".join(f"{digest}  {path}\n" for digest, path in checksums), encoding="utf-8")
         if any(sha256_file(temporary / path) != digest for digest, path in checksums):
             raise DatasetError("compiled artifact checksum verification failed")
         os.replace(temporary, destination)

@@ -71,9 +71,9 @@ def _annotations(row, imported, class_ids):
 
 def _screening(work):
     paths = (
-        work / "openimages/baseline-screened.csv",
-        work / "annotation/final-negative-review/resolution/openimages-screened.csv",
-        work / "annotation/final-negative-review/resolution/openimages-retry-screened.csv",
+        work / "sources/open-images/baseline-screened.csv",
+        work / "annotation/final-negative-review/resolution/open-images-screened.csv",
+        work / "annotation/final-negative-review/resolution/open-images-retry-screened.csv",
     )
     output = {}
     for path in paths:
@@ -104,8 +104,8 @@ def _assign_strata(records, config):
 
 
 def assemble(dataset_root, config):
-    work = Path(dataset_root) / "work"
-    import_names = ("openimages-positive.csv", "openimages-supplement-positive.csv", "phenocam-positive.csv")
+    work = Path(dataset_root) / "workspace"
+    import_names = ("open-images-positive.csv", "open-images-supplement-positive.csv", "phenocam-positive.csv")
     import_groups = [_read(work / "annotation/imported" / name) for name in import_names]
     if [len(rows) for rows in import_groups] != [202, 38, 350]:
         raise DatasetError("positive human-review imports are incomplete")
@@ -113,12 +113,12 @@ def assemble(dataset_root, config):
         raise DatasetError("positive human-review import is unattributed")
     imported_rows = [row for rows in import_groups for row in rows]
     imported = {row["source_identity"]: row for row in imported_rows if int(row["annotation_count"]) > 0}
-    openimages = _read(work / "openimages/deduplicated.csv")
+    openimages = _read(work / "sources/open-images/deduplicated.csv")
     openimages_by_id = {identity(row): row for row in openimages}
-    phenocam = _read(work / "review/phenocam/review.csv")
+    phenocam = _read(work / "reviews/phenocam/review.csv")
     phenocam_by_id = {identity(row): row for row in phenocam}
-    positives = [row for row in _read(work / "openimages/provisional-selection.csv") if row["candidate_kind"] == "positive_review"]
-    positives += _read(work / "openimages/supplemental-final-selection.csv")
+    positives = [row for row in _read(work / "sources/open-images/provisional-selection.csv") if row["candidate_kind"] == "positive_review"]
+    positives += _read(work / "sources/open-images/supplemental-final-selection.csv")
     positives += [phenocam_by_id[key] for key in imported if key.startswith("phenocam::")]
     negative_reviews = _read(work / "annotation/imported/negative-reviews.csv", ("source_identity", "result"))
     if any(row["result"] != "accepted_negative" for row in negative_reviews):

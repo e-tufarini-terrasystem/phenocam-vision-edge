@@ -16,9 +16,9 @@ def audit(records, dataset_root, config):
     selected = {record["source_identity"] for record in records}
     embeddings = {}
     identities_by_file = (
-        "work/global/embeddings.npz",
-        "work/openimages/embeddings-small-supplement.npz",
-        "work/openimages/embeddings.npz",
+        "workspace/deduplication/embeddings.npz",
+        "workspace/history/open-images-small-supplement/embeddings.npz",
+        "workspace/sources/open-images/embeddings.npz",
     )
     model_identities = set()
     for relative in identities_by_file:

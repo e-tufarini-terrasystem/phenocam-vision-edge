@@ -52,7 +52,7 @@ def main(argv=None):
         repair = reconcile_positive_floors(DATASET_ROOT, config)
         repair_count = repair["replacement_count"]
         if repair_count:
-            root = DATASET_ROOT / "work" / "openimages"
+            root = DATASET_ROOT / "workspace" / "sources" / "open-images"
             screening = screen_manifest(
                 root / "floor-repair-selection.csv",
                 root / "floor-repair-baseline-screened.csv",
@@ -83,26 +83,26 @@ def main(argv=None):
         )
     elif arguments.command == "import-final":
         result = import_final(
-            DATASET_ROOT / "work" / "annotation" / "final-negative-review" / "resolution",
+            DATASET_ROOT / "workspace" / "annotation" / "final-negative-review" / "resolution",
             arguments.phenocam_second,
-            DATASET_ROOT / "work" / "annotation" / "imported" / "negative-reviews.csv",
+            DATASET_ROOT / "workspace" / "annotation" / "imported" / "negative-reviews.csv",
         )
     elif arguments.command == "complete-retry":
         result = complete_retry(DATASET_ROOT, config, arguments.openimages)
     elif arguments.command == "accept-single-review":
         result = accept_single_review(
-            DATASET_ROOT / "work" / "annotation" / "final-negative-review" / "resolution",
-            DATASET_ROOT / "work" / "annotation" / "imported" / "negative-reviews.csv",
+            DATASET_ROOT / "workspace" / "annotation" / "final-negative-review" / "resolution",
+            DATASET_ROOT / "workspace" / "annotation" / "imported" / "negative-reviews.csv",
         )
     elif arguments.command == "build":
         result = materialize(DATASET_ROOT, config)
     else:
         result = import_negative_reviews(
-            DATASET_ROOT / "work" / "annotation" / "final-negative-review",
+            DATASET_ROOT / "workspace" / "annotation" / "final-negative-review",
             arguments.openimages,
             arguments.phenocam_first,
             arguments.phenocam_second,
-            DATASET_ROOT / "work" / "annotation" / "imported" / "negative-reviews.csv",
+            DATASET_ROOT / "workspace" / "annotation" / "imported" / "negative-reviews.csv",
         )
     print(json.dumps(result, indent=2, sort_keys=True))
 

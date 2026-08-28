@@ -2,7 +2,7 @@
   "schema_version": 1,
   "seed": 20260826,
   "operational_validation": "pending",
-  "output_name": "mixed-dataset",
+  "output_name": "training-dataset",
   "source_frames": {
     "total": 2000,
     "positive": 1244,

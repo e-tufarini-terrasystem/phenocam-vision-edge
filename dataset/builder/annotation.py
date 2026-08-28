@@ -286,7 +286,7 @@ def _build_negative_packets(openimages_rows, phenocam_rows, output_root, config)
     preview_root = Path(output_root) / "negative-review" / "images"
     packets = []
     for source_name, rows, identity_function in (
-        ("openimages", openimages_rows, _openimages_identity),
+        ("open-images", openimages_rows, _openimages_identity),
         ("phenocam", phenocam_rows, _phenocam_identity),
     ):
         browser_rows = []
@@ -304,7 +304,7 @@ def _build_negative_packets(openimages_rows, phenocam_rows, output_root, config)
                     ),
                 }
             )
-        rounds = ("a",) if source_name == "openimages" else ("a", "b")
+        rounds = ("a",) if source_name == "open-images" else ("a", "b")
         for review_round in rounds:
             path = Path(output_root) / "negative-review" / f"{source_name}-round-{review_round}.html"
             with atomic_text(path) as output:
@@ -318,7 +318,7 @@ def _build_negative_packets(openimages_rows, phenocam_rows, output_root, config)
                 )
             packets.append(path.as_posix())
     write_csv(
-        Path(output_root) / "negative-review" / "expected-openimages.csv",
+        Path(output_root) / "negative-review" / "expected-open-images.csv",
         ("source_identity",),
         ({"source_identity": _openimages_identity(row)} for row in openimages_rows),
     )
@@ -333,11 +333,11 @@ def _build_negative_packets(openimages_rows, phenocam_rows, output_root, config)
 def build_annotation_bundles(dataset_root, output_root, config):
     dataset_root, output_root = Path(dataset_root), Path(output_root)
     openimages_selection = _read_csv(
-        dataset_root / "work/openimages/baseline-screened.csv",
+        dataset_root / "workspace/sources/open-images/baseline-screened.csv",
         ("source_dataset", "source_subset", "source_id", "annotations_json", "local_path"),
     )
     openimages_review = _read_csv(
-        dataset_root / "work/review/openimages/review.csv",
+        dataset_root / "workspace/reviews/open-images/review.csv",
         ("source_identity", "manual_review_required", "candidate_kind"),
     )
     required = {row["source_identity"]: row for row in openimages_review if row["manual_review_required"] == "true"}
@@ -352,7 +352,7 @@ def build_annotation_bundles(dataset_root, output_root, config):
     openimages_negative.sort(key=_openimages_identity)
 
     phenocam = _read_csv(
-        dataset_root / "work/review/phenocam/review.csv",
+        dataset_root / "workspace/reviews/phenocam/review.csv",
         ("source_dataset", "source_id", "provisional_role", "baseline_detections_json", "local_path"),
     )
     phenocam_positive = sorted(
@@ -366,7 +366,7 @@ def build_annotation_bundles(dataset_root, output_root, config):
     output_root.mkdir(parents=True, exist_ok=True)
     result = {
         "openimages_positive": _build_coco_bundle(
-            "openimages-positive", openimages_positive, _openimages_identity, _openimages_annotations, output_root, config
+            "open-images-positive", openimages_positive, _openimages_identity, _openimages_annotations, output_root, config
         ),
         "phenocam_positive": _build_coco_bundle(
             "phenocam-positive", phenocam_positive, _phenocam_identity, _phenocam_annotations, output_root, config
@@ -375,8 +375,8 @@ def build_annotation_bundles(dataset_root, output_root, config):
             openimages_negative, phenocam_negative, output_root, config
         ),
     }
-    supplemental_screened = dataset_root / "work/openimages/supplemental-baseline-screened.csv"
-    supplemental_review_path = dataset_root / "work/review/openimages-supplement/review.csv"
+    supplemental_screened = dataset_root / "workspace/sources/open-images/supplemental-baseline-screened.csv"
+    supplemental_review_path = dataset_root / "workspace/reviews/open-images-supplement/review.csv"
     if supplemental_screened.is_file() and supplemental_review_path.is_file():
         supplemental_rows = _read_csv(
             supplemental_screened,
@@ -403,7 +403,7 @@ def build_annotation_bundles(dataset_root, output_root, config):
             supplemental_positive.append(row)
         supplemental_positive.sort(key=_openimages_identity)
         result["openimages_supplement_positive"] = _build_coco_bundle(
-            "openimages-supplement-positive",
+            "open-images-supplement-positive",
             supplemental_positive,
             _openimages_identity,
             _openimages_annotations,
@@ -436,14 +436,14 @@ def import_negative_reviews(
             by_identity[row["source_identity"]] = row
         return by_identity
 
-    openimages = read(openimages_path, "openimages-a")
+    openimages = read(openimages_path, "open-images-a")
     first = read(phenocam_first_path, "phenocam-a")
     second = read(phenocam_second_path, "phenocam-b")
     if expected_dir is not None:
         expected_dir = Path(expected_dir)
         expected_openimages = {
             row["source_identity"]
-            for row in _read_csv(expected_dir / "expected-openimages.csv", ("source_identity",))
+            for row in _read_csv(expected_dir / "expected-open-images.csv", ("source_identity",))
         }
         expected_phenocam = {
             row["source_identity"]

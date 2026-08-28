@@ -6,22 +6,22 @@ CVAT Community `v2.71.0` è disponibile soltanto in locale su
 `http://localhost:8080`. I dati non vengono caricati su un servizio cloud.
 
 1. Avvia Docker Desktop.
-2. Esegui `dataset/cvat.sh start`.
-3. La prima volta esegui `dataset/cvat.sh create-superuser` e scegli localmente
+2. Esegui `dataset/commands/cvat-server.sh start`.
+3. La prima volta esegui `dataset/commands/cvat-server.sh create-superuser` e scegli localmente
    username, email e password.
-4. Esegui `dataset/cvat.sh open` e accedi.
+4. Esegui `dataset/commands/cvat-server.sh open` e accedi.
 5. Nelle impostazioni utente crea un Personal Access Token.
-6. Esegui `dataset/cvat-tasks.sh profile`: incolla il token quando richiesto. Il
+6. Esegui `dataset/commands/cvat-tasks.sh profile`: incolla il token quando richiesto. Il
    profilo viene salvato dal client CVAT con permessi locali restrittivi e non
    entra nel repository.
 
 ## 2. Creazione dei task
 
 ```sh
-dataset/cvat-tasks.sh upload-openimages
-dataset/cvat-tasks.sh upload-phenocam
-dataset/cvat-tasks.sh upload-openimages-supplement
-dataset/cvat-tasks.sh list
+dataset/commands/cvat-tasks.sh upload-open-images
+dataset/commands/cvat-tasks.sh upload-phenocam
+dataset/commands/cvat-tasks.sh upload-open-images-supplement
+dataset/commands/cvat-tasks.sh list
 ```
 
 Ogni task viene diviso in job da 50 immagini e parte con annotazioni provvisorie.
@@ -65,9 +65,9 @@ Le code finali riutilizzano le 335 immagini già confermate vuote in CVAT. Apri
 direttamente in Chrome con:
 
 ```sh
-dataset/finalize.sh open-openimages
-dataset/finalize.sh open-phenocam-a
-dataset/finalize.sh open-phenocam-b
+dataset/commands/dataset-finalization.sh open-open-images
+dataset/commands/dataset-finalization.sh open-phenocam-a
+dataset/commands/dataset-finalization.sh open-phenocam-b
 ```
 
 Open Images contiene 50 frame; PhenoCam A contiene 371 frame e può essere svolto
@@ -80,26 +80,26 @@ o sostituzione; non sono errori da forzare ad accettazione.
 ## 4. Export e backup
 
 Dopo aver completato e revisionato un task, recupera il suo ID con
-`dataset/cvat-tasks.sh list`, quindi:
+`dataset/commands/cvat-tasks.sh list`, quindi:
 
 ```sh
-dataset/cvat-tasks.sh export ID openimages
-dataset/cvat-tasks.sh export ID phenocam
-dataset/cvat-tasks.sh export ID openimages-supplement
+dataset/commands/cvat-tasks.sh export ID open-images
+dataset/commands/cvat-tasks.sh export ID phenocam
+dataset/commands/cvat-tasks.sh export ID open-images-supplement
 ```
 
 Per esportare, fare il backup, validare e importare in un solo passaggio usa:
 
 ```sh
-dataset/cvat-tasks.sh finish ID openimages NOME_ANNOTATORE NOME_REVISORE
-dataset/cvat-tasks.sh finish ID phenocam NOME_ANNOTATORE NOME_REVISORE
-dataset/cvat-tasks.sh finish ID openimages-supplement NOME_ANNOTATORE NOME_REVISORE
+dataset/commands/cvat-tasks.sh finish ID open-images NOME_ANNOTATORE NOME_REVISORE
+dataset/commands/cvat-tasks.sh finish ID phenocam NOME_ANNOTATORE NOME_REVISORE
+dataset/commands/cvat-tasks.sh finish ID open-images-supplement NOME_ANNOTATORE NOME_REVISORE
 ```
 
 Gli export CSV delle tre pagine dei negativi vengono uniti e controllati con:
 
 ```sh
-dataset/finalize.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
+dataset/commands/dataset-finalization.sh import OPENIMAGES.csv PHENOCAM_A.csv PHENOCAM_B.csv
 ```
 
 Ogni task produce sia il COCO revisionato sia un backup completo. Non modificare
@@ -108,5 +108,13 @@ timestamp durante l’importazione e rifiuta pacchetti incompleti o non canonici
 
 ## 5. Arresto sicuro
 
-`dataset/cvat.sh stop` ferma i container ma conserva database, utenti, task e
-annotazioni nei volumi Docker. `dataset/cvat.sh start` riprende lo stesso stato.
+`dataset/commands/cvat-server.sh stop` ferma i container ma conserva database, utenti, task e
+annotazioni nei volumi Docker. `dataset/commands/cvat-server.sh start` riprende lo stesso stato.
+
+## 6. Esito effettivamente adottato
+
+Il dataset materializzato non ha seguito la verifica indipendente descritta
+sopra: il secondo revisore non era disponibile e il proprietario ha approvato
+esplicitamente `single_reviewer_waiver`. La procedura standard resta documentata
+per la riproduzione, ma l'artefatto corrente non deve essere presentato come
+verificato indipendentemente.

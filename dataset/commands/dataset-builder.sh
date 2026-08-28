@@ -1,19 +1,19 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 environment_python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/workflow.sh setup|status|preflight|test|prepare-openimages-review|prepare-openimages-supplement|annotation-bundles" \
+        "usage: dataset/commands/dataset-builder.sh setup|status|preflight|test|prepare-open-images-review|prepare-open-images-supplement|annotation-bundles" \
         "" \
         "setup                      create the Python 3.13 environment" \
         "status                     report progress and the next safe action" \
         "preflight                  validate all inputs needed to resume" \
         "test                       run builder tests" \
-        "prepare-openimages-review  resume screening and build the review packet" \
-        "prepare-openimages-supplement select, screen, and package the approved supplement" \
+        "prepare-open-images-review  resume screening and build the review packet" \
+        "prepare-open-images-supplement select, screen, and package the approved supplement" \
         "annotation-bundles         create CVAT and negative-review packets"
 }
 
@@ -32,7 +32,7 @@ choose_bootstrap_python() {
 
 require_environment() {
     if [ ! -x "$environment_python" ]; then
-        printf '%s\n' "error: run 'dataset/workflow.sh setup' first" >&2
+        printf '%s\n' "error: run 'dataset/commands/dataset-builder.sh setup' first" >&2
         exit 1
     fi
 }
@@ -61,12 +61,12 @@ case "$command_name" in
         cd "$repository_root"
         "$environment_python" -m unittest discover -s dataset/tests -v
         ;;
-    prepare-openimages-review)
+    prepare-open-images-review)
         require_environment
         cd "$repository_root"
         "$environment_python" -m dataset.builder prepare-openimages-review
         ;;
-    prepare-openimages-supplement)
+    prepare-open-images-supplement)
         require_environment
         cd "$repository_root"
         "$environment_python" -m dataset.builder prepare-openimages-supplement

@@ -55,8 +55,9 @@ The compiled labels must remain compatible with the current repository:
 - current full-frame and adaptive-crop inference path;
 - current confidence and duplicate-suppression behavior.
 
-The dataset `data.yaml` must retain all 80 canonical COCO names in their
-canonical order. Annotation rows may use only these six IDs:
+The dataset `yolo-dataset.yaml` must retain the runtime-compatible IDs for these
+six classes, with IDs 4 and 6 explicitly unused. Annotation rows may use only
+these six IDs:
 
 | ID | Compiled class | Accepted source meaning |
 |---:|---|---|
@@ -456,27 +457,30 @@ invalid boxes, image/annotation mismatches, incomplete target annotations,
 unresolved ambiguity, duplicate leakage, unverified negatives, or source terms
 that do not permit the intended use.
 
-## 14. Manifests and output contract
+## 14. Metadata and output contract
 
 The builder must produce this logical output; physical storage may be external,
 but paths and schemas must remain equivalent:
 
 ```text
-mixed-dataset/
-├── data.yaml
+training-dataset/
+├── README.md
+├── yolo-dataset.yaml
 ├── images/
 │   └── train/
 ├── labels/
 │   └── train/
-├── source-annotations/
-└── manifests/
-    ├── train.txt
-    ├── sources.csv
-    ├── licenses.csv
-    ├── groups.csv
-    ├── rejections.csv
-    ├── statistics.json
-    └── checksums.sha256
+└── metadata/
+    ├── acceptance-audit.json
+    ├── checksums.sha256
+    ├── dataset-statistics.json
+    ├── deduplication-audit.json
+    ├── duplicate-groups.csv
+    ├── rejected-candidates.csv
+    ├── source-annotations.jsonl
+    ├── source-images.csv
+    ├── source-licenses.csv
+    └── training-images.txt
 ```
 
 The internal restricted dataset, when available, must use separate storage and
@@ -494,12 +498,13 @@ lighting, weather, confuser, primary_stratum, review_status, annotator, reviewer
 source_sha256, decoded_sha256, phash, embedding_model, split, rejection_reason
 ```
 
-`statistics.json` must report source, class, subtype, positive/negative, primary
-stratum, size, occlusion, truncation, site, season, lighting, weather, and review
-counts over both source frames and compiled derivatives.
+`dataset-statistics.json` must report source, class, subtype,
+positive/negative, primary stratum, size, occlusion, truncation, site, season,
+lighting, weather, and review counts over both source frames and compiled
+derivatives.
 
-`rejections.csv` must include candidate identity, stage, deterministic reason
-code, explanatory note, and replacement identity where applicable.
+`rejected-candidates.csv` must include candidate identity, stage, deterministic
+reason code, explanatory note, and replacement identity where applicable.
 
 ## 15. Acceptance gates
 

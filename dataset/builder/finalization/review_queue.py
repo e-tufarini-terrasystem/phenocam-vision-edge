@@ -52,10 +52,10 @@ def _identity_csv(path, rows, identity_function):
 
 
 def prepare_negative_reviews(dataset_root, config):
-    root = Path(dataset_root) / "work"
+    root = Path(dataset_root) / "workspace"
     output_root = root / "annotation" / "final-negative-review"
     phenocam = _read(
-        root / "review" / "phenocam" / "review.csv",
+        root / "reviews" / "phenocam" / "review.csv",
         ("source_dataset", "source_id", "provisional_role", "local_path"),
     )
     imported = _read(
@@ -65,12 +65,12 @@ def prepare_negative_reviews(dataset_root, config):
     prior_receipts, prior, selected_new, final_phenocam = select(
         phenocam,
         imported,
-        root / "global" / "embeddings.npz",
+        root / "deduplication" / "embeddings.npz",
         int(config["source_frames"]["phenocam_v3"]["negative"]),
         config["seed"],
     )
     openimages_screened = _read(
-        root / "openimages" / "baseline-screened.csv",
+        root / "sources" / "open-images" / "baseline-screened.csv",
         ("source_dataset", "source_subset", "source_id", "candidate_kind"),
     )
     openimages = sorted(
@@ -81,7 +81,7 @@ def prepare_negative_reviews(dataset_root, config):
         raise DatasetError("final Open Images negative selection has an invalid size")
 
     queues = (
-        (openimages, "openimages", _openimages_identity, "openimages-a", "Open Images — verifica negativi"),
+        (openimages, "open-images", _openimages_identity, "open-images-a", "Open Images — verifica negativi"),
         (selected_new, "phenocam-a", phenocam_identity, "phenocam-a", "PhenoCam — prima verifica nuovi negativi"),
         (final_phenocam, "phenocam-b", phenocam_identity, "phenocam-b", "PhenoCam — seconda verifica indipendente"),
     )
@@ -93,7 +93,7 @@ def prepare_negative_reviews(dataset_root, config):
             output.write(_negative_document(browser, review_round, config["seed"], title))
         pages.append(page.resolve().as_uri())
 
-    _identity_csv(output_root / "expected-openimages.csv", openimages, _openimages_identity)
+    _identity_csv(output_root / "expected-open-images.csv", openimages, _openimages_identity)
     _identity_csv(output_root / "expected-phenocam-a.csv", selected_new, phenocam_identity)
     _identity_csv(output_root / "expected-phenocam-b.csv", final_phenocam, phenocam_identity)
     prior_by_identity = {row["source_identity"]: row for row in prior_receipts}
@@ -141,7 +141,7 @@ def _review_export(path, expected_path, expected_round):
 
 def import_negative_reviews(review_root, openimages_path, first_path, second_path, output_path):
     review_root = Path(review_root)
-    openimages = _review_export(openimages_path, review_root / "expected-openimages.csv", "openimages-a")
+    openimages = _review_export(openimages_path, review_root / "expected-open-images.csv", "open-images-a")
     first = _review_export(first_path, review_root / "expected-phenocam-a.csv", "phenocam-a")
     second = _review_export(second_path, review_root / "expected-phenocam-b.csv", "phenocam-b")
     prior = {

@@ -1,25 +1,25 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-review_root="$repository_root/dataset/work/annotation/negative-review"
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+review_root="$repository_root/dataset/workspace/annotation/negative-review"
 environment_python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/negative-reviews.sh open-openimages|open-phenocam-a|open-phenocam-b|import OPENIMAGES_CSV PHENOCAM_A_CSV PHENOCAM_B_CSV"
+        "usage: dataset/commands/negative-review.sh open-open-images|open-phenocam-a|open-phenocam-b|import OPEN_IMAGES_CSV PHENOCAM_A_CSV PHENOCAM_B_CSV"
 }
 
 open_review() {
     path=$1
-    [ -f "$path" ] || { printf '%s\n' "error: run 'dataset/workflow.sh annotation-bundles' first" >&2; exit 1; }
+    [ -f "$path" ] || { printf '%s\n' "error: run 'dataset/commands/dataset-builder.sh annotation-bundles' first" >&2; exit 1; }
     open -a "Google Chrome" "$path"
 }
 
 command_name=${1:-}
 case "$command_name" in
-    open-openimages)
-        open_review "$review_root/openimages-round-a.html"
+    open-open-images)
+        open_review "$review_root/open-images-round-a.html"
         ;;
     open-phenocam-a)
         open_review "$review_root/phenocam-round-a.html"
@@ -32,8 +32,8 @@ case "$command_name" in
         phenocam_a=${3:-}
         phenocam_b=${4:-}
         [ -n "$openimages" ] && [ -n "$phenocam_a" ] && [ -n "$phenocam_b" ] || { usage >&2; exit 2; }
-        [ -x "$environment_python" ] || { printf '%s\n' "error: run 'dataset/workflow.sh setup' first" >&2; exit 1; }
-        output_dir="$repository_root/dataset/work/annotation/imported"
+        [ -x "$environment_python" ] || { printf '%s\n' "error: run 'dataset/commands/dataset-builder.sh setup' first" >&2; exit 1; }
+        output_dir="$repository_root/dataset/workspace/annotation/imported"
         mkdir -p "$output_dir"
         cd "$repository_root"
         "$environment_python" -m dataset.builder import-negative-reviews \

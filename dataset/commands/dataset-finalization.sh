@@ -1,23 +1,24 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/finalize.sh prepare|resolve FILES|second-round FILES|complete-retry OPENIMAGES_RETRY.csv|import-final PHENOCAM_B.csv|accept-single-review|build"
+        "usage: dataset/commands/dataset-finalization.sh COMMAND [FILES]" \
+        "commands: prepare, open-open-images, open-phenocam-a, open-phenocam-b, import, resolve, second-round, complete-retry, import-final, accept-single-review, build"
 }
 
 command_name=${1:-}
-review_root="$repository_root/dataset/work/annotation/final-negative-review"
+review_root="$repository_root/dataset/workspace/annotation/final-negative-review"
 case "$command_name" in
     prepare)
         cd "$repository_root"
         "$python" -m dataset.builder.finalization prepare
         ;;
-    open-openimages)
-        open -a "Google Chrome" "$review_root/openimages-a.html"
+    open-open-images)
+        open -a "Google Chrome" "$review_root/open-images-a.html"
         ;;
     open-phenocam-a)
         open -a "Google Chrome" "$review_root/phenocam-a.html"

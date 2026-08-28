@@ -1,143 +1,133 @@
-# Public mixed-dataset builder
+# Phenocam Vision training data
 
-This workstation-only pipeline implements the approved public dataset contract
-in [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md). It never reads or writes
-internal imagery.
-The versioned configuration fixes `operational_validation` to `pending` until a
-separately approved second phase.
+This directory owns both the completed public training dataset and the local,
+reproducible construction pipeline. It never reads or writes internal
+operational imagery.
 
-The recommended entry point is the resumable workflow wrapper. Run commands
-from the repository root:
+The canonical training artifact is [`training-dataset/`](training-dataset/).
+Its versioned composition and limitations are documented in
+[`DATASET.md`](DATASET.md), which is copied to
+`training-dataset/README.md` during materialization.
 
-```sh
-dataset/workflow.sh setup
-dataset/workflow.sh status
-dataset/workflow.sh preflight
-dataset/workflow.sh test
-```
+## Current status
 
-After preflight passes, the next automated stage is:
+The 2,000-frame YOLO dataset is complete with status
+`completed_with_single_reviewer_waiver`:
 
-```sh
-dataset/workflow.sh prepare-openimages-review
-dataset/workflow.sh prepare-openimages-supplement
-```
+- 1,244 positive and 756 negative frames;
+- 1,279 Open Images V7 and 721 PhenoCam v3 frames;
+- all automatic acceptance gates passed;
+- independent negative verification is false because a second reviewer was
+  unavailable;
+- operational validation on internal imagery remains `pending`.
 
-This screens the 900-image Open Images selection, checkpoints progress every 25
-images, resumes a compatible checkpoint after interruption, and regenerates the
-review packet only when it contains no human decisions. It refuses to overwrite
-review work. The resulting `baseline_*` columns are prioritization hints, never
-ground truth.
+The waiver must remain visible in reports and training records. This dataset is
+not evidence of production accuracy on internal camera imagery.
 
-Generated metadata, downloads, and review packets live under ignored
-`dataset/work/` paths. Final materialized datasets live under ignored
-`dataset/artifacts/` paths. Builder source, configuration, documentation, and
-tests remain tracked inside this directory. A command completing successfully
-means only that its own stage passed; the dataset is complete only after the
-final acceptance audit.
+## Directory layout
 
-## Workspace layout
-
-- `builder/`: deterministic CLI and dataset-construction modules;
-- `config/`: versioned dataset contract and invariants;
-- `docs/`: normative specifications, progress reports, and historical plans;
+- `training-dataset/`: ignored, materialized YOLO dataset ready for training;
+- `DATASET.md`: versioned description copied into the materialized dataset;
+- `builder/`: deterministic dataset-construction package;
+- `commands/`: shell entry points for building, review, CVAT, and finalization;
+- `config/`: versioned dataset contract and fixed invariants;
+- `docs/`: normative specifications, operating guidance, and historical status;
 - `tests/`: builder-specific automated verification;
-- `work/`: ignored downloads, caches, manifests, and human-review packets;
-- `artifacts/`: ignored final materializations ready for downstream training.
+- `workspace/`: ignored downloads, source-specific state, reviews, and tools;
+- `.venv/` and `.env`: ignored local Python environment and credentials.
 
-Run the builder tests separately from the edge-runtime suite:
+The ignored workspace is arranged by responsibility:
+
+```text
+workspace/
+├── annotation/
+├── deduplication/
+├── history/
+├── models/
+├── quarantine/
+├── reviews/
+├── sources/
+│   ├── open-images/
+│   └── phenocam/
+└── tools/
+```
+
+Credentials stay outside the training artifact. In particular,
+`workspace/annotation/cvat/credentials.json`, `.env`, and CVAT state must never
+be copied into `training-dataset/` or committed.
+
+## Builder commands
+
+Run commands from the repository root:
+
+```sh
+dataset/commands/dataset-builder.sh setup
+dataset/commands/dataset-builder.sh status
+dataset/commands/dataset-builder.sh preflight
+dataset/commands/dataset-builder.sh test
+```
+
+The completed workflow can be reproduced with the staged builder commands and
+then materialized with:
+
+```sh
+dataset/commands/dataset-finalization.sh build
+```
+
+The builder refuses to overwrite an existing `training-dataset/`. Move or
+archive an existing artifact deliberately before rebuilding it.
+
+Run the tests directly with:
 
 ```sh
 dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 ```
 
-Human decisions remain authoritative. In particular, model output may prioritize
-review but cannot establish ground truth, approve an ambiguous class, or verify a
-negative image.
+## Annotation commands
 
-See [`docs/next-steps-it.md`](docs/next-steps-it.md) for the current automation
-boundary and the remaining staged plan.
-
-## Local annotation
-
-CVAT Community is pinned and managed separately from the builder:
+CVAT Community `v2.71.0` is pinned in the ignored workspace:
 
 ```sh
-dataset/cvat.sh setup
-dataset/cvat.sh start
-dataset/cvat.sh cli-setup
-dataset/cvat.sh create-superuser
-dataset/cvat.sh open
+dataset/commands/cvat-server.sh setup
+dataset/commands/cvat-server.sh start
+dataset/commands/cvat-server.sh cli-setup
+dataset/commands/cvat-server.sh create-superuser
+dataset/commands/cvat-server.sh open
 ```
 
-After creating a personal access token in the local CVAT UI, configure the CLI
-without placing credentials in the repository and create the positive tasks:
+The positive task wrapper is:
 
 ```sh
-dataset/cvat-tasks.sh profile
-dataset/cvat-tasks.sh upload-openimages
-dataset/cvat-tasks.sh upload-phenocam
-dataset/cvat-tasks.sh upload-openimages-supplement
+dataset/commands/cvat-tasks.sh profile
+dataset/commands/cvat-tasks.sh list
+dataset/commands/cvat-tasks.sh upload-open-images
+dataset/commands/cvat-tasks.sh upload-phenocam
+dataset/commands/cvat-tasks.sh upload-open-images-supplement
 ```
 
-Positive export, audit, and import are combined in the `finish` command. The
-final negative pages and their import are managed by `dataset/finalize.sh`.
-The complete human procedure is documented in
-[`docs/annotation-guide-it.md`](docs/annotation-guide-it.md).
+The complete historical annotation procedure remains in
+[`docs/annotation-guide-it.md`](docs/annotation-guide-it.md). Human decisions
+remain authoritative; baseline detections may prioritize review but cannot
+establish ground truth or verify a negative.
 
-## Staged workflow
+## Data sources and security boundary
 
-The public build uses these gates in order:
+NASA Earthdata credentials may be configured in ignored `dataset/.env` as
+`EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`, or in a mode-`0600` `.netrc`.
+Copy `.env.example` for a new workstation and keep `.env` at mode `0600`.
+Credentials, signed URLs, local paths, and stack traces are not written to the
+training artifact.
 
-1. `openimages-index`, `openimages-shortlist`, and `openimages-download` resolve
-   metadata, licenses, an oversized candidate pool, and official mirrored bytes.
-2. `phenocam-index`, `phenocam-fetch-sites`, `phenocam-plan`,
-   `phenocam-download`, and `phenocam-sample` retrieve a bounded seasonal pool.
-   NASA Earthdata credentials may be configured in the ignored `dataset/.env`
-   as `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`, or outside the repository
-   in a mode-`0600` `.netrc`. Copy `dataset/.env.example` when configuring a new
-   workstation and keep the resulting `.env` at mode `0600`; credentials and
-   signed URLs are never written to output.
-3. `baseline-screen` uses the unchanged model at confidence `0.05` only to order
-   human work.
-4. `embeddings` and `duplicate-pairs` compute the pinned SSCD descriptors and
-   produce the mandatory duplicate and 200-pair calibration queues.
-5. `openimages-select` creates a provisional 850-positive/50-negative selection
-   with class, difficulty, provenance-group, and diversity controls. Global
-   class-instance floors remain a reported joint gate until the PhenoCam
-   positives are annotated.
-6. `phenocam-select` creates a conservative provisional 350-positive/750-negative
-   selection with distinct duplicate groups, at least 100 sites, a 12-frame site
-   ceiling, independent negative day groups, and seasonal coverage.
-7. `sscd-calibration-packet`, `phenocam-review-packet`, and
-   `openimages-review-packet` create the local HTML, COCO, and CSV human-review
-   artifacts. Human decisions must be imported before final materialization.
-8. After the completed PhenoCam audit, `openimages-supplement-select` enforces
-   the unchanged class floors with 379 additional positives. Baseline screening
-   sends only conflicts plus a deterministic 10% box sample to the supplemental
-   CVAT task.
-9. `dataset/finalize.sh prepare` locks every reviewed positive, performs the
-   smallest deterministic floor-repair swap, reuses 335 CVAT-confirmed empty
-   PhenoCam frames, and produces reduced blind negative-review queues.
+External images, archives, metadata, CVAT exports, and review CSVs are treated
+as untrusted input. The builder validates size limits, archive membership,
+image decoding, dimensions, checksums, required columns, source identity, box
+geometry, licenses, and review completeness before accepting data.
 
-If a second PhenoCam reviewer is unavailable, the dataset owner may explicitly
-run `dataset/finalize.sh accept-single-review` after resolving every rejected
-negative. This weaker protocol accepts the completed first pass and writes
-`negative-reviews-audit.json` with `single_reviewer_waiver`; it must not be
-reported as independent negative verification.
+## Documentation
 
-After either review protocol has produced `negative-reviews.csv`, run
-`dataset/finalize.sh build`. The command assembles the fixed 2,000-frame
-composition, reruns exact and SSCD duplicate checks, validates every source and
-box, and atomically writes the YOLO artifact, manifests, licenses, statistics,
-checksums, and acceptance receipt under `dataset/artifacts/mixed-dataset/`.
-
-The standard final contract requires PhenoCam annotation, independent negative
-verification, duplicate review, and SSCD calibration. An owner-approved
-single-review build is materialized with a visible waiver status instead of
-being reported as a full independent-verification pass. Provisional command
-output is never a completed dataset.
-
-Internal imagery is intentionally absent from every command in this package.
-Its future validation/test workflow remains a separately approved iteration,
-with current status `operational_validation: pending`.
+- [`DATASET.md`](DATASET.md): final composition, files, licenses, and limits;
+- [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md): normative build contract;
+- [`docs/dataset-plan-it.md`](docs/dataset-plan-it.md): concise Italian plan;
+- [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
+- [`docs/next-steps-it.md`](docs/next-steps-it.md): completed state and boundary;
+- `docs/status/` and `docs/history/`: preserved development history.

@@ -10,10 +10,12 @@ from pathlib import Path
 import numpy as np
 
 from dataset.builder.annotation import NEGATIVE_EXPORT_FIELDS
+from dataset.builder.common import DatasetError
 from dataset.builder.config import load_config
 from dataset.builder.dedup import DEDUP_FIELDS
 from dataset.builder.finalization.negative_pool import select
 from dataset.builder.finalization.acceptance import accept_single_review
+from dataset.builder.finalization.materialize import _artifact_name
 from dataset.builder.finalization.reconcile import reconcile_positive_floors
 from dataset.builder.finalization.review_queue import import_negative_reviews
 from dataset.builder.selection import SELECTION_FIELDS
@@ -33,6 +35,28 @@ class FinalizationTests(unittest.TestCase):
             writer = csv.DictWriter(output, fieldnames=fields)
             writer.writeheader()
             writer.writerows(rows)
+
+    def test_artifact_names_expose_source_without_unsafe_characters(self):
+        open_images = {
+            "row": {
+                "source_dataset": "open_images",
+                "source_subset": "test",
+                "source_id": "ABC 123",
+            }
+        }
+        phenocam = {
+            "row": {
+                "source_dataset": "phenocam",
+                "source_id": "Site.Name_2026/08/28",
+            }
+        }
+        self.assertEqual(_artifact_name(open_images), "open-images-test-abc-123")
+        self.assertEqual(
+            _artifact_name(phenocam), "phenocam-site.name_2026-08-28"
+        )
+        phenocam["row"]["source_id"] = "x" * 121
+        with self.assertRaisesRegex(DatasetError, "safe artifact name"):
+            _artifact_name(phenocam)
 
     def test_negative_pool_reuses_confirmed_empty_before_new_candidates(self):
         rows = [
@@ -99,15 +123,15 @@ class FinalizationTests(unittest.TestCase):
             )
             return output
 
-        work = self.root / "work"
+        work = self.root / "workspace"
         base = row("base", "car", "g-base", DEDUP_FIELDS)
         locked = row("locked", "person", "g-locked", SELECTION_FIELDS)
         donor = row("donor", "motorcycle", "g-donor", SELECTION_FIELDS)
         incoming = row("incoming", "bicycle", "g-incoming", DEDUP_FIELDS)
-        self.write_csv(work / "openimages/provisional-selection.csv", DEDUP_FIELDS, [base])
-        self.write_csv(work / "openimages/supplemental-selection.csv", SELECTION_FIELDS, [locked, donor])
+        self.write_csv(work / "sources/open-images/provisional-selection.csv", DEDUP_FIELDS, [base])
+        self.write_csv(work / "sources/open-images/supplemental-selection.csv", SELECTION_FIELDS, [locked, donor])
         self.write_csv(
-            work / "openimages/deduplicated.csv",
+            work / "sources/open-images/deduplicated.csv",
             DEDUP_FIELDS,
             [
                 {field: source[field] for field in DEDUP_FIELDS}
@@ -116,12 +140,12 @@ class FinalizationTests(unittest.TestCase):
         )
         import_fields = ("source_identity", "annotations_json")
         self.write_csv(
-            work / "annotation/imported/openimages-positive.csv",
+            work / "annotation/imported/open-images-positive.csv",
             import_fields,
             [{"source_identity": "open_images:test:base", "annotations_json": json.dumps([{"class_name": "car"}])}],
         )
         self.write_csv(
-            work / "annotation/imported/openimages-supplement-positive.csv",
+            work / "annotation/imported/open-images-supplement-positive.csv",
             import_fields,
             [{"source_identity": "open_images:test:locked", "annotations_json": json.dumps([{"class_name": "person"}])}],
         )
@@ -130,13 +154,13 @@ class FinalizationTests(unittest.TestCase):
         self.assertEqual(result["replacement_count"], 1)
         self.assertEqual(result["replacements"][0]["incoming"], "open_images:test:incoming")
         self.assertEqual(result["combined_instances"].get("motorcycle", 0), 0)
-        with (work / "openimages/supplemental-final-selection.csv").open(newline="", encoding="utf-8") as source:
+        with (work / "sources/open-images/supplemental-final-selection.csv").open(newline="", encoding="utf-8") as source:
             identities = {row["source_id"] for row in csv.DictReader(source)}
         self.assertEqual(identities, {"locked", "incoming"})
 
     def test_negative_import_combines_prior_and_requires_distinct_reviewer(self):
-        review_root = self.root / "review"
-        self.write_csv(review_root / "expected-openimages.csv", ("source_identity",), [{"source_identity": "oi:1"}])
+        review_root = self.root / "reviews"
+        self.write_csv(review_root / "expected-open-images.csv", ("source_identity",), [{"source_identity": "oi:1"}])
         self.write_csv(review_root / "expected-phenocam-a.csv", ("source_identity",), [{"source_identity": "ph::new"}])
         self.write_csv(review_root / "expected-phenocam-b.csv", ("source_identity",), [{"source_identity": "ph::new"}, {"source_identity": "ph::prior"}])
         self.write_csv(
@@ -153,7 +177,7 @@ class FinalizationTests(unittest.TestCase):
             )
 
         openimages, first, second = self.root / "oi.csv", self.root / "a.csv", self.root / "b.csv"
-        export(openimages, "oi:1", "openimages-a", "first")
+        export(openimages, "oi:1", "open-images-a", "first")
         export(first, "ph::new", "phenocam-a", "first")
         self.write_csv(
             second,
@@ -167,7 +191,7 @@ class FinalizationTests(unittest.TestCase):
         self.assertEqual(result, {"rows": 3, "accepted_negatives": 3, "requires_resolution": 0})
 
     def test_single_review_waiver_is_explicitly_audited(self):
-        review_root = self.root / "review"
+        review_root = self.root / "reviews"
 
         def reviewed(identity):
             return {
@@ -180,7 +204,7 @@ class FinalizationTests(unittest.TestCase):
             }
 
         self.write_csv(
-            review_root / "final-openimages-first.csv",
+            review_root / "final-open-images-first.csv",
             NEGATIVE_EXPORT_FIELDS,
             (reviewed(f"oi:{index}") for index in range(50)),
         )

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "dataset.json"
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "dataset-contract.json"
 
 
 class ConfigurationError(ValueError):
@@ -28,6 +28,8 @@ def _validate(config):
         raise ConfigurationError("seed must be 20260826")
     if config.get("operational_validation") != "pending":
         raise ConfigurationError("internal operational validation must remain pending")
+    if config.get("output_name") != "training-dataset":
+        raise ConfigurationError("output_name must be training-dataset")
 
     frames = config.get("source_frames", {})
     phenocam = frames.get("phenocam_v3", {})

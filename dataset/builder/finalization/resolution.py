@@ -37,11 +37,11 @@ def _page(rows, root, name, identity_function, review_round, title, seed):
 
 
 def prepare_replacements(dataset_root, config, openimages_path, first_path, second_path):
-    work = Path(dataset_root) / "work"
+    work = Path(dataset_root) / "workspace"
     review_root = work / "annotation" / "final-negative-review"
     output_root = review_root / "resolution"
     openimages = _review_export(
-        openimages_path, review_root / "expected-openimages.csv", "openimages-a"
+        openimages_path, review_root / "expected-open-images.csv", "open-images-a"
     )
     first = _review_export(
         first_path, review_root / "expected-phenocam-a.csv", "phenocam-a"
@@ -60,7 +60,7 @@ def prepare_replacements(dataset_root, config, openimages_path, first_path, seco
     retained_openimages_ids = set(openimages) - openimages_rejected
     retained_phenocam_ids = set(second) - phenocam_rejected
 
-    all_openimages = _read(work / "openimages" / "deduplicated.csv", DEDUP_FIELDS)
+    all_openimages = _read(work / "sources" / "open-images" / "deduplicated.csv", DEDUP_FIELDS)
     openimages_by_identity = {_openimages_identity(row): row for row in all_openimages}
     retained_openimages = [openimages_by_identity[identity] for identity in retained_openimages_ids]
     candidates_openimages = [
@@ -71,26 +71,26 @@ def prepare_replacements(dataset_root, config, openimages_path, first_path, seco
     replacement_openimages = diverse(
         candidates_openimages,
         retained_openimages,
-        work / "global" / "embeddings.npz",
+        work / "deduplication" / "embeddings.npz",
         len(openimages_rejected),
         config["seed"],
         _openimages_identity,
     )
     selected_openimages = [_selected_row(row) for row in replacement_openimages]
-    write_csv(output_root / "openimages-selection.csv", SELECTION_FIELDS, selected_openimages)
+    write_csv(output_root / "open-images-selection.csv", SELECTION_FIELDS, selected_openimages)
     screening = screen_manifest(
-        output_root / "openimages-selection.csv",
-        output_root / "openimages-screened.csv",
-        output_root / "openimages-rejections.csv",
+        output_root / "open-images-selection.csv",
+        output_root / "open-images-screened.csv",
+        output_root / "open-images-rejections.csv",
         Path(dataset_root).parent / "models" / "yolo26n.onnx",
         config,
     )
     if screening["screened"] != len(replacement_openimages) or screening["rejected"]:
         raise DatasetError("Open Images negative-replacement screening failed")
-    screened_openimages = _read(output_root / "openimages-screened.csv", SELECTION_FIELDS)
+    screened_openimages = _read(output_root / "open-images-screened.csv", SELECTION_FIELDS)
 
     phenocam_rows = _read(
-        work / "review" / "phenocam" / "review.csv",
+        work / "reviews" / "phenocam" / "review.csv",
         ("source_dataset", "source_id", "provisional_role", "local_path"),
     )
     phenocam_by_identity = {phenocam_identity(row): row for row in phenocam_rows}
@@ -103,16 +103,16 @@ def prepare_replacements(dataset_root, config, openimages_path, first_path, seco
     replacement_phenocam = diverse(
         candidates_phenocam,
         retained_phenocam,
-        work / "global" / "embeddings.npz",
+        work / "deduplication" / "embeddings.npz",
         len(phenocam_rejected),
         config["seed"],
     )
-    write_csv(output_root / "retained-openimages.csv", FIRST_FIELDS, (openimages[i] for i in sorted(retained_openimages_ids)))
+    write_csv(output_root / "retained-open-images.csv", FIRST_FIELDS, (openimages[i] for i in sorted(retained_openimages_ids)))
     write_csv(output_root / "retained-phenocam.csv", FIRST_FIELDS, (second[i] for i in sorted(retained_phenocam_ids)))
-    write_csv(output_root / "expected-openimages.csv", ("source_identity",), ({"source_identity": _openimages_identity(row)} for row in replacement_openimages))
+    write_csv(output_root / "expected-open-images.csv", ("source_identity",), ({"source_identity": _openimages_identity(row)} for row in replacement_openimages))
     write_csv(output_root / "expected-phenocam.csv", ("source_identity",), ({"source_identity": phenocam_identity(row)} for row in replacement_phenocam))
     pages = {
-        "openimages": _page(screened_openimages, output_root, "openimages-a", _openimages_identity, "openimages-resolution-a", "Open Images — sostituzioni negative", config["seed"]),
+        "openimages": _page(screened_openimages, output_root, "open-images-a", _openimages_identity, "open-images-resolution-a", "Open Images — sostituzioni negative", config["seed"]),
         "phenocam": _page(replacement_phenocam, output_root, "phenocam-a", phenocam_identity, "phenocam-resolution-a", "PhenoCam — prima verifica sostituzioni", config["seed"]),
     }
     result = {

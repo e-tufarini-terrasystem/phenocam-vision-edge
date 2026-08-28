@@ -25,10 +25,10 @@ def _write_audit(output_path, audit):
 
 
 def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
-    work = Path(dataset_root) / "work"
+    work = Path(dataset_root) / "workspace"
     root = work / "annotation" / "final-negative-review" / "resolution"
     openimages = _review_export(
-        openimages_path, root / "expected-openimages.csv", "openimages-resolution-a"
+        openimages_path, root / "expected-open-images.csv", "open-images-resolution-a"
     )
     phenocam = _review_export(
         phenocam_path, root / "expected-phenocam.csv", "phenocam-resolution-a"
@@ -37,17 +37,17 @@ def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
         raise DatasetError("a PhenoCam replacement still contains a target")
     if any(row["decision"] != "confirmed_negative" for row in openimages.values()):
         return prepare_openimages_retry(dataset_root, config, openimages, phenocam)
-    retained_openimages = _read(root / "retained-openimages.csv", NEGATIVE_EXPORT_FIELDS)
+    retained_openimages = _read(root / "retained-open-images.csv", NEGATIVE_EXPORT_FIELDS)
     retained_phenocam = _read(root / "retained-phenocam.csv", NEGATIVE_EXPORT_FIELDS)
     final_openimages = sorted((*retained_openimages, *openimages.values()), key=lambda row: row["source_identity"])
     final_phenocam = sorted((*retained_phenocam, *phenocam.values()), key=lambda row: row["source_identity"])
     if len(final_openimages) != 50 or len(final_phenocam) != 706:
         raise DatasetError("resolved negative composition is invalid")
-    write_csv(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS, final_openimages)
+    write_csv(root / "final-open-images-first.csv", NEGATIVE_EXPORT_FIELDS, final_openimages)
     write_csv(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS, final_phenocam)
 
     source_rows = _read(
-        work / "review" / "phenocam" / "review.csv",
+        work / "reviews" / "phenocam" / "review.csv",
         ("source_dataset", "source_id", "local_path"),
     )
     by_identity = {phenocam_identity(row): row for row in source_rows}
@@ -76,23 +76,23 @@ def prepare_second_round(dataset_root, config, openimages_path, phenocam_path):
 
 
 def complete_retry(dataset_root, config, openimages_path):
-    root = Path(dataset_root) / "work" / "annotation" / "final-negative-review" / "resolution"
-    metadata = json.loads((root / "openimages-retry-metadata.json").read_text(encoding="utf-8"))
+    root = Path(dataset_root) / "workspace" / "annotation" / "final-negative-review" / "resolution"
+    metadata = json.loads((root / "open-images-retry-metadata.json").read_text(encoding="utf-8"))
     retry = _review_export(
         openimages_path,
-        root / "expected-openimages-retry.csv",
+        root / "expected-open-images-retry.csv",
         metadata["review_round"],
     )
     if any(row["decision"] != "confirmed_negative" for row in retry.values()):
         return retry_openimages_again(dataset_root, config, retry)
-    retained = _read(root / "retained-openimages-retry.csv", NEGATIVE_EXPORT_FIELDS)
+    retained = _read(root / "retained-open-images-retry.csv", NEGATIVE_EXPORT_FIELDS)
     final_openimages = sorted((*retained, *retry.values()), key=lambda row: row["source_identity"])
     final_phenocam = _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
     if len(final_openimages) != 50 or len(final_phenocam) != 706:
         raise DatasetError("resolved negative composition is invalid")
-    write_csv(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS, final_openimages)
+    write_csv(root / "final-open-images-first.csv", NEGATIVE_EXPORT_FIELDS, final_openimages)
     source_rows = _read(
-        Path(dataset_root) / "work" / "review" / "phenocam" / "review.csv",
+        Path(dataset_root) / "workspace" / "reviews" / "phenocam" / "review.csv",
         ("source_dataset", "source_id", "local_path"),
     )
     by_identity = {phenocam_identity(row): row for row in source_rows}
@@ -107,7 +107,7 @@ def complete_retry(dataset_root, config, openimages_path):
 
 def import_final(review_root, second_path, output_path):
     root = Path(review_root)
-    openimages = _read(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS)
+    openimages = _read(root / "final-open-images-first.csv", NEGATIVE_EXPORT_FIELDS)
     first = {
         row["source_identity"]: row
         for row in _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
@@ -163,7 +163,7 @@ def import_final(review_root, second_path, output_path):
 def accept_single_review(review_root, output_path):
     """Accept the resolved first pass while recording the independent-review waiver."""
     root = Path(review_root)
-    openimages = _read(root / "final-openimages-first.csv", NEGATIVE_EXPORT_FIELDS)
+    openimages = _read(root / "final-open-images-first.csv", NEGATIVE_EXPORT_FIELDS)
     phenocam = _read(root / "final-phenocam-first.csv", NEGATIVE_EXPORT_FIELDS)
     if len(openimages) != 50 or len(phenocam) != 706:
         raise DatasetError("resolved negative composition is invalid")

@@ -117,8 +117,8 @@ e licenza complete e box validi. Tutti i negativi sono verificati in modo
 indipendente; hard negative, classi rare, duplicati candidati e mapping ambigui
 ricevono revisione umana. Nessun gruppo correlato può attraversare i confini.
 
-L'output comprende `data.yaml`, immagini/label di training, annotazioni sorgente,
-manifest delle fonti, licenze, gruppi e rifiuti, statistiche e checksum. I dati
+L'output comprende `README.md`, `yolo-dataset.yaml`, immagini/label di training,
+metadati delle fonti, licenze, gruppi e rifiuti, audit, statistiche e checksum. I dati
 interni restano in storage e manifest separati e ad accesso ristretto.
 
 ## Dati interni e valutazione

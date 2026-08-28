@@ -113,6 +113,7 @@ Release claims and verification apply only to the exact tagged commit.
 - [Software operation instructions and CLI reference](docs/cli.md)
 - [Manual installation and configuration](docs/manual.md)
 - [Development, verification, and model export](docs/development.md)
+- [Training dataset composition and reproducible builder](dataset/README.md)
 
 ## Support and license
 

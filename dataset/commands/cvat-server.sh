@@ -1,13 +1,13 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-cvat_root="$repository_root/dataset/work/tools/cvat-v2.71.0"
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cvat_root="$repository_root/dataset/workspace/tools/cvat-v2.71.0"
 version=v2.71.0
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/cvat.sh setup|start|stop|status|create-superuser|open|cli-setup" \
+        "usage: dataset/commands/cvat-server.sh setup|start|stop|status|create-superuser|open|cli-setup" \
         "" \
         "setup             clone the pinned CVAT Community release" \
         "start             start the local Docker Compose services" \
@@ -20,7 +20,7 @@ usage() {
 
 require_checkout() {
     if [ ! -f "$cvat_root/docker-compose.yml" ]; then
-        printf '%s\n' "error: run 'dataset/cvat.sh setup' first" >&2
+        printf '%s\n' "error: run 'dataset/commands/cvat-server.sh setup' first" >&2
         exit 1
     fi
 }
@@ -55,7 +55,7 @@ case "$command_name" in
         open -a "Google Chrome" http://localhost:8080
         ;;
     cli-setup)
-        [ -x "$repository_root/dataset/.venv/bin/python" ] || { printf '%s\n' "error: run 'dataset/workflow.sh setup' first" >&2; exit 1; }
+        [ -x "$repository_root/dataset/.venv/bin/python" ] || { printf '%s\n' "error: run 'dataset/commands/dataset-builder.sh setup' first" >&2; exit 1; }
         "$repository_root/dataset/.venv/bin/python" -m pip install -r "$repository_root/dataset/requirements-cvat.txt"
         ;;
     *)

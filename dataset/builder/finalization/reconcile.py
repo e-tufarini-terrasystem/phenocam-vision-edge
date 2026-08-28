@@ -61,8 +61,8 @@ def _selected_row(row):
 
 def reconcile_positive_floors(dataset_root, config):
     """Make the smallest deterministic unreviewed-frame swaps needed by CVAT edits."""
-    root = Path(dataset_root) / "work"
-    openimages = root / "openimages"
+    root = Path(dataset_root) / "workspace"
+    openimages = root / "sources" / "open-images"
     imported = root / "annotation" / "imported"
     base = _read(openimages / "provisional-selection.csv", DEDUP_FIELDS)
     supplement = _read(openimages / "supplemental-selection.csv", SELECTION_FIELDS)
@@ -70,14 +70,14 @@ def reconcile_positive_floors(dataset_root, config):
     base_import = {
         row["source_identity"]: row
         for row in _read(
-            imported / "openimages-positive.csv",
+            imported / "open-images-positive.csv",
             ("source_identity", "annotations_json"),
         )
     }
     supplement_import = {
         row["source_identity"]: row
         for row in _read(
-            imported / "openimages-supplement-positive.csv",
+            imported / "open-images-supplement-positive.csv",
             ("source_identity", "annotations_json"),
         )
     }

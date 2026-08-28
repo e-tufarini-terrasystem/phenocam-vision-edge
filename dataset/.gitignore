@@ -3,8 +3,8 @@
 /.venv/
 
 # Generated dataset state and materialized outputs.
-/work/
-/artifacts/
+/workspace/
+/training-dataset/
 
 # Local interpreter and filesystem artifacts.
 __pycache__/

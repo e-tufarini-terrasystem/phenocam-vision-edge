@@ -17,38 +17,38 @@ REPOSITORY_ROOT = DATASET_ROOT.parent
 
 def _paths(dataset_root=DATASET_ROOT):
     dataset_root = Path(dataset_root)
-    work = dataset_root / "work"
+    work = dataset_root / "workspace"
     return {
         "dataset_root": dataset_root,
         "model": dataset_root.parent / "models" / "yolo26n.onnx",
         "sscd_model": work / "models" / "sscd_disc_mixup.torchscript.pt",
-        "openimages_selection": work / "openimages" / "provisional-selection.csv",
-        "openimages_screened": work / "openimages" / "baseline-screened.csv",
-        "openimages_rejections": work / "openimages" / "baseline-rejections.csv",
-        "openimages_review": work / "review" / "openimages" / "review.csv",
-        "openimages_review_dir": work / "review" / "openimages",
-        "openimages_deduplicated": work / "openimages" / "deduplicated.csv",
-        "openimages_supplement": work / "openimages" / "supplemental-selection.csv",
-        "openimages_supplement_statistics": work / "openimages" / "supplemental-selection-stats.json",
-        "openimages_supplement_screened": work / "openimages" / "supplemental-baseline-screened.csv",
-        "openimages_supplement_rejections": work / "openimages" / "supplemental-baseline-rejections.csv",
-        "openimages_supplement_review_dir": work / "review" / "openimages-supplement",
-        "openimages_supplement_review": work / "review" / "openimages-supplement" / "review.csv",
-        "openimages_import": work / "annotation" / "imported" / "openimages-positive.csv",
+        "openimages_selection": work / "sources" / "open-images" / "provisional-selection.csv",
+        "openimages_screened": work / "sources" / "open-images" / "baseline-screened.csv",
+        "openimages_rejections": work / "sources" / "open-images" / "baseline-rejections.csv",
+        "openimages_review": work / "reviews" / "open-images" / "review.csv",
+        "openimages_review_dir": work / "reviews" / "open-images",
+        "openimages_deduplicated": work / "sources" / "open-images" / "deduplicated.csv",
+        "openimages_supplement": work / "sources" / "open-images" / "supplemental-selection.csv",
+        "openimages_supplement_statistics": work / "sources" / "open-images" / "supplemental-selection-statistics.json",
+        "openimages_supplement_screened": work / "sources" / "open-images" / "supplemental-baseline-screened.csv",
+        "openimages_supplement_rejections": work / "sources" / "open-images" / "supplemental-baseline-rejections.csv",
+        "openimages_supplement_review_dir": work / "reviews" / "open-images-supplement",
+        "openimages_supplement_review": work / "reviews" / "open-images-supplement" / "review.csv",
+        "openimages_import": work / "annotation" / "imported" / "open-images-positive.csv",
         "phenocam_import": work / "annotation" / "imported" / "phenocam-positive.csv",
         "negative_import": work / "annotation" / "imported" / "negative-reviews.csv",
-        "phenocam_selection": work / "phenocam" / "provisional-selection.csv",
-        "phenocam_review": work / "review" / "phenocam" / "review.csv",
+        "phenocam_selection": work / "sources" / "phenocam" / "provisional-selection.csv",
+        "phenocam_review": work / "reviews" / "phenocam" / "review.csv",
         "sscd_review": work
-        / "review"
+        / "reviews"
         / "sscd-calibration"
         / "sscd-calibration-reviewed.csv",
         "duplicate_review": work
-        / "review"
-        / "openimages-duplicates"
+        / "reviews"
+        / "open-images-duplicates"
         / "duplicate-review-reviewed.csv",
-        "artifact_root": dataset_root / "artifacts" / "mixed-dataset",
-        "final_acceptance": dataset_root / "artifacts" / "mixed-dataset" / "manifests" / "acceptance.json",
+        "artifact_root": dataset_root / "training-dataset",
+        "final_acceptance": dataset_root / "training-dataset" / "metadata" / "acceptance-audit.json",
     }
 
 
@@ -197,7 +197,7 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
     openimages_import = _positive_import_summary(paths["openimages_import"], 202)
     phenocam_import = _positive_import_summary(paths["phenocam_import"], 350)
     supplement_import = _positive_import_summary(
-        paths["dataset_root"] / "work/annotation/imported/openimages-supplement-positive.csv",
+        paths["dataset_root"] / "workspace/annotation/imported/open-images-supplement-positive.csv",
         supplement_review["required"],
     )
     calibration = _completed_review(
@@ -233,7 +233,7 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
         next_action = "resolve the reported blockers"
     elif not screening["complete"]:
         state = "ready_for_openimages_screening"
-        next_action = "dataset/workflow.sh prepare-openimages-review"
+        next_action = "dataset/commands/dataset-builder.sh prepare-open-images-review"
     elif not openimages_import["valid"] or not phenocam_import["valid"]:
         state = "human_review_pending"
         next_action = "complete and import the base Open Images and PhenoCam CVAT tasks"
@@ -243,7 +243,7 @@ def workflow_status(config, dataset_root=DATASET_ROOT):
         or not supplement_review["exists"]
     ):
         state = "ready_for_openimages_supplement"
-        next_action = "dataset/workflow.sh prepare-openimages-supplement"
+        next_action = "dataset/commands/dataset-builder.sh prepare-open-images-supplement"
     elif supplement_review["pending"] and not supplement_import["valid"]:
         state = "supplemental_review_pending"
         next_action = "complete CVAT task 4 (38-image Open Images supplemental audit)"

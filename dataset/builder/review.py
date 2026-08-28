@@ -342,7 +342,7 @@ Open `index.html`, enter the reviewer name, and classify all 200 pairs.
 - `Distinto`: merely similar content, repeated fixed-camera background, or a different event.
 
 Export the completed CSV and place it at
-`dataset/work/review/sscd-calibration/sscd-calibration-reviewed.csv`.
+`dataset/workspace/reviews/sscd-calibration/sscd-calibration-reviewed.csv`.
 Do not edit identities, paths, cosine values, or similarity bands.
 """
     with atomic_text(output_dir / "README.md") as output:
