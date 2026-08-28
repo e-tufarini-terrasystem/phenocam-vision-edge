@@ -38,14 +38,18 @@ dataset/workflow.sh status
 dataset/workflow.sh preflight
 dataset/workflow.sh test
 dataset/workflow.sh prepare-openimages-review
+dataset/workflow.sh annotation-bundles
 ```
 
 `status` non modifica dati. `prepare-openimages-review` è idempotente rispetto a
 uno screening completo e riprende un checkpoint compatibile. Se trova decisioni
 umane nel pacchetto esistente, si ferma invece di sovrascriverle.
 
-## Confine ancora da implementare
+## Confine corrente
 
-I passi 5–8 richiedono i risultati delle annotazioni per fissare e testare il
-contratto di import. Vanno implementati prima di iniziare il training, non sono
-sostituibili con conteggi o predizioni del modello corrente.
+Il passo 5 dispone già di importatori con controlli su identità, completezza,
+classi, box, revisori e checksum. I passi 6–8 richiedono invece i risultati
+effettivi delle annotazioni: la logica finale di sostituzione, deduplicazione,
+materializzazione e acceptance audit verrà completata e verificata su quegli
+output prima di iniziare il training. Non è sostituibile con conteggi o
+predizioni del modello corrente.

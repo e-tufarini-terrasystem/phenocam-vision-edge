@@ -15,6 +15,13 @@ import numpy as np
 
 from dataset.builder.common import DatasetError, hamming64, inspect_image, phash64
 from dataset.builder.baseline import BASELINE_FIELDS, _load_checkpoint
+from dataset.builder.annotation import (
+    MAPPING_FIELDS,
+    NEGATIVE_EXPORT_FIELDS,
+    _negative_document,
+    import_negative_reviews,
+    import_positive_coco,
+)
 from dataset.builder.config import DEFAULT_CONFIG_PATH, ConfigurationError, load_config
 from dataset.builder.earthdata import _DATASET_ENV, _env_credentials, retrieve
 from dataset.builder.embeddings import DUPLICATE_PAIR_FIELDS, combine_manifests
@@ -595,6 +602,76 @@ class DatasetBuilderTests(unittest.TestCase):
         summary = _completed_review(path, 2)
         self.assertEqual(summary["complete"], 1)
         self.assertFalse(summary["valid"])
+
+    def test_negative_review_import_requires_independent_matching_rounds(self):
+        expected = self.root / "expected"
+        self.write_csv(expected / "expected-openimages.csv", ("source_identity",), [{"source_identity": "open:1"}])
+        self.write_csv(expected / "expected-phenocam.csv", ("source_identity",), [{"source_identity": "phenocam::1"}])
+
+        def review(path, identity, review_round, reviewer):
+            self.write_csv(
+                path,
+                NEGATIVE_EXPORT_FIELDS,
+                [{
+                    "source_identity": identity,
+                    "decision": "confirmed_negative",
+                    "reviewer": reviewer,
+                    "reviewed_at": "2026-08-28T10:00:00Z",
+                    "review_round": review_round,
+                    "note": "",
+                }],
+            )
+
+        openimages = self.root / "openimages.csv"
+        first = self.root / "first.csv"
+        second = self.root / "second.csv"
+        review(openimages, "open:1", "openimages-a", "reviewer-a")
+        review(first, "phenocam::1", "phenocam-a", "reviewer-a")
+        review(second, "phenocam::1", "phenocam-b", "reviewer-b")
+        result = import_negative_reviews(
+            openimages, first, second, self.root / "combined.csv", expected_dir=expected
+        )
+        self.assertEqual(result["accepted_negatives"], 2)
+        self.assertEqual(result["requires_resolution"], 0)
+
+    def test_negative_review_document_emits_valid_javascript_escapes(self):
+        document = _negative_document([], "phenocam-a", 17, "Review")
+        self.assertIn(r'/[",\n\r]/', document)
+        self.assertIn(r"lines.join('\n')+'\n'", document)
+        self.assertNotIn("lines.join('\n')+'\n'", document)
+
+    def test_positive_coco_import_maps_names_and_rejects_empty_frames(self):
+        bundle = self.root / "bundle"
+        self.write_csv(
+            bundle / "mapping.csv",
+            MAPPING_FIELDS,
+            [{
+                "source_identity": "open:1",
+                "bundle_file_name": "image.jpg",
+                "local_path": "/fixture/image.jpg",
+                "width": "640",
+                "height": "480",
+                "source_sha256": "1" * 64,
+                "review_scope": "box_review",
+                "annotation_source": "open_images",
+            }],
+        )
+        export = self.root / "export.json"
+        export.write_text(
+            json.dumps({
+                "categories": [
+                    {"id": index, "name": name}
+                    for index, name in enumerate(self.config["compiled_class_ids"], start=20)
+                ],
+                "images": [{"id": 7, "file_name": "images/default/image.jpg", "width": 640, "height": 480}],
+                "annotations": [{"id": 1, "image_id": 7, "category_id": 20, "bbox": [10, 20, 30, 40]}],
+            }),
+            encoding="utf-8",
+        )
+        result = import_positive_coco(
+            bundle, export, self.root / "import.csv", "annotator", "reviewer", self.config
+        )
+        self.assertEqual(result, {"images": 1, "accepted": 1, "rejected_no_targets": 0, "annotations": 1})
 
 
 if __name__ == "__main__":

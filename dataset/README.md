@@ -57,6 +57,32 @@ negative image.
 See [`docs/next-steps-it.md`](docs/next-steps-it.md) for the current automation
 boundary and the remaining staged plan.
 
+## Local annotation
+
+CVAT Community is pinned and managed separately from the builder:
+
+```sh
+dataset/cvat.sh setup
+dataset/cvat.sh start
+dataset/cvat.sh cli-setup
+dataset/cvat.sh create-superuser
+dataset/cvat.sh open
+```
+
+After creating a personal access token in the local CVAT UI, configure the CLI
+without placing credentials in the repository and create the two positive tasks:
+
+```sh
+dataset/cvat-tasks.sh profile
+dataset/cvat-tasks.sh upload-openimages
+dataset/cvat-tasks.sh upload-phenocam
+```
+
+Positive export, audit, and import are combined in the `finish` command. The
+negative pages and their import are managed by `dataset/negative-reviews.sh`.
+The complete human procedure is documented in
+[`docs/annotation-guide-it.md`](docs/annotation-guide-it.md).
+
 ## Staged workflow
 
 The public build uses these gates in order:

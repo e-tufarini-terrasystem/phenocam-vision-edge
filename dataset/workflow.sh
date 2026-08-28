@@ -6,13 +6,14 @@ environment_python="$repository_root/dataset/.venv/bin/python"
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/workflow.sh setup|status|preflight|test|prepare-openimages-review" \
+        "usage: dataset/workflow.sh setup|status|preflight|test|prepare-openimages-review|annotation-bundles" \
         "" \
         "setup                      create the Python 3.13 environment" \
         "status                     report progress and the next safe action" \
         "preflight                  validate all inputs needed to resume" \
         "test                       run builder tests" \
-        "prepare-openimages-review  resume screening and build the review packet"
+        "prepare-openimages-review  resume screening and build the review packet" \
+        "annotation-bundles         create CVAT and negative-review packets"
 }
 
 choose_bootstrap_python() {
@@ -63,6 +64,11 @@ case "$command_name" in
         require_environment
         cd "$repository_root"
         "$environment_python" -m dataset.builder prepare-openimages-review
+        ;;
+    annotation-bundles)
+        require_environment
+        cd "$repository_root"
+        "$environment_python" -m dataset.builder annotation-bundles
         ;;
     *)
         usage >&2

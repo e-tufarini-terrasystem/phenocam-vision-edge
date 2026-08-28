@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 
 from .baseline import screen_manifest
+from .annotation import (
+    build_annotation_bundles,
+    import_negative_reviews,
+    import_positive_coco,
+)
 from .config import DEFAULT_CONFIG_PATH, load_config
 from .dedup import apply_reviewed_deduplication
 from .download import download_candidates
@@ -179,6 +184,36 @@ def _parser():
         help="resumably screen the selection and regenerate its untouched review packet",
     )
     prepare_review.add_argument("--checkpoint-every", type=int, default=25)
+
+    annotation_bundles = commands.add_parser(
+        "annotation-bundles",
+        help="build normalized CVAT and blind negative-review packets",
+    )
+    annotation_bundles.add_argument(
+        "--output-dir", type=Path, default=Path("dataset/work/annotation")
+    )
+    negative_import = commands.add_parser(
+        "import-negative-reviews",
+        help="validate and combine independent negative-review exports",
+    )
+    negative_import.add_argument("--openimages", type=Path, required=True)
+    negative_import.add_argument("--phenocam-first", type=Path, required=True)
+    negative_import.add_argument("--phenocam-second", type=Path, required=True)
+    negative_import.add_argument("--output", type=Path, required=True)
+    negative_import.add_argument(
+        "--expected-dir",
+        type=Path,
+        default=Path("dataset/work/annotation/negative-review"),
+    )
+    positive_import = commands.add_parser(
+        "import-positive-coco",
+        help="validate a reviewed CVAT COCO export and preserve its audit receipt",
+    )
+    positive_import.add_argument("--bundle-dir", type=Path, required=True)
+    positive_import.add_argument("--export", type=Path, required=True)
+    positive_import.add_argument("--output", type=Path, required=True)
+    positive_import.add_argument("--annotator", required=True)
+    positive_import.add_argument("--reviewer", required=True)
     return parser
 
 
@@ -306,6 +341,27 @@ def main(argv=None):
     elif arguments.command == "prepare-openimages-review":
         result = prepare_openimages_review(
             config, checkpoint_every=arguments.checkpoint_every
+        )
+    elif arguments.command == "annotation-bundles":
+        result = build_annotation_bundles(
+            Path(__file__).resolve().parents[1], arguments.output_dir, config
+        )
+    elif arguments.command == "import-negative-reviews":
+        result = import_negative_reviews(
+            arguments.openimages,
+            arguments.phenocam_first,
+            arguments.phenocam_second,
+            arguments.output,
+            expected_dir=arguments.expected_dir,
+        )
+    elif arguments.command == "import-positive-coco":
+        result = import_positive_coco(
+            arguments.bundle_dir,
+            arguments.export,
+            arguments.output,
+            arguments.annotator,
+            arguments.reviewer,
+            config,
         )
     else:  # pragma: no cover - argparse enforces the command set.
         raise AssertionError(arguments.command)
