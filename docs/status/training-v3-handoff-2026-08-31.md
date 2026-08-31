@@ -21,9 +21,10 @@ task attivi e utili:
 
 Le box sono soltanto suggerimenti. Vanno eliminate quando palesemente errate e
 vanno aggiunti tutti i target reali mancanti. Usa box separate per oggetti
-chiaramente separabili; è ammessa una box unica e stretta per un gruppo compatto
-della stessa classe (`car` per automobili, `person` per persone), senza unire
-oggetti lontani o molto sfondo. Il gruppo è un target privacy valido.
+isolati o grandi. Se il frame contiene molte automobili o persone, usa una o
+poche box di gruppo (`car` o `person`) e dividile soltanto per evitare ampie
+zone vuote: non è necessario annotare singolarmente decine di piccoli oggetti.
+Il gruppo è un target privacy valido.
 
 ## Cosa è stato completato
 

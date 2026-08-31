@@ -25,12 +25,13 @@ semoventi sono `truck`, con il sottotipo corrispondente. Una bicicletta senza
 persona resta senza box; per un ciclista annota la persona. Foto, cartelli,
 display, statue, manichini, giocattoli e miniature non sono target reali.
 
-Disegna una box separata e stretta quando persone o veicoli sono chiaramente
-separabili. È ammessa una sola box di gruppo quando più oggetti della stessa
-classe formano un insieme compatto e dividerli sarebbe arbitrario: usa `car`
-per un gruppo di automobili e `person` per un gruppo di persone. La box deve
-racchiudere strettamente il gruppo, senza aggregare oggetti lontani o ampie aree
-di sfondo. Il gruppo è un target privacy valido e non richiede `ambiguous`.
+Disegna una box separata e stretta per gli oggetti isolati o grandi in primo
+piano. Quando un frame contiene molte automobili o persone e annotare ogni
+istanza sarebbe oneroso, usa una o poche box per coprire i gruppi: `car` per le
+automobili e `person` per le persone. Dividi un gruppo soltanto quando una box
+unica includerebbe molto spazio vuoto; non è necessario separare decine di
+piccoli oggetti vicini. Il gruppo è un target privacy valido e non richiede
+`ambiguous`.
 
 Imposta `occluded` e `truncated` quando evidenti. Usa il tag immagine
 `ambiguous` soltanto quando non puoi decidere in modo affidabile: il frame sarà
