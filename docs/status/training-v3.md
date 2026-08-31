@@ -124,7 +124,35 @@ La revisione live è iniziata subito dopo la creazione dei task; i conteggi dei
 box correnti sono quindi mutabili e non sostituiscono quelli iniziali attestati
 dai bundle. Nessun export, import nel dataset o training è stato avviato.
 
+## 2026-08-31 — Esito pilot pubblico
+
+- Task 5 completato: quattro job completati, 200 immagini, zero box e zero tag.
+- Yield positivo: `0/200` (`0%`). Come previsto dal piano, non viene creata una
+  seconda coda pubblica prima di correggere il ranking.
+- Export COCO verificato: 200 immagini, zero annotazioni, SHA-256
+  `66ce803c6f8615d8fb9aa8b47784729899afaae47dc16399ed0f4b6f2841d1c5`.
+- Backup completo SHA-256:
+  `ec601fc68e999777d450c08399965cffc82e3b835fc53c057c13c6e0af9428a0`.
+- Diagnosi: soltanto 7 dei 200 frame avevano V2 `>=0,30`; 161 erano
+  `crop_only` e la confidenza massima V2 mediana era `0,0193`. Il selettore
+  considerava condivise anche predizioni sovrapposte a confidence floor `0,01`
+  e applicava la diversità prima della confidenza.
+- Controllo diagnostico non indipendente sui 15 positivi PhenoCam v2 noti:
+  14/15 hanno V2 `>=0,30`, con mediana `0,7574`. Il campione include immagini
+  di training e serve soltanto come sanity check del ranking.
+
+## Feedback sulle preannotazioni interne
+
+I bundle interni hanno importato tutte le predizioni di screening a soglia
+`0,01`, producendo troppi falsi box. Il task 8 non era ancora iniziato; nel task
+7 era iniziato soltanto il job 26. Sul primo piccolo campione modificato, il
+gate `stessa classe + IoU >=0,5 + entrambi i modelli >=0,30` conserva 10 box
+umani su 11 proposti, ma copre soltanto 10 dei 37 box correnti. Il risultato è
+preliminare perché il job non era completato. I task esistenti non vengono
+sovrascritti e nessun sostituto viene creato senza decisione esplicita.
+
 ## Prossima azione
 
-Completare manualmente i task CVAT e comunicare l'ID completato. Il workflow si
-ferma qui fino alla dichiarazione esplicita dell'utente.
+Decidere se sostituire i task interni 7 e 8 con copie pulite e preannotazioni ad
+alta precisione. Non creare altri batch pubblici prima di correggere e validare
+il ranking.
