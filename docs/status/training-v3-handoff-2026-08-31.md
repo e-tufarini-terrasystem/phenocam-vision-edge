@@ -20,10 +20,10 @@ task attivi e utili:
 - Task 10: <http://localhost:8080/tasks/10>
 
 Le box sono soltanto suggerimenti. Vanno eliminate quando palesemente errate e
-vanno aggiunti tutti i target reali mancanti. Ogni oggetto richiede una box
-separata: non usare una box unica per gruppi di macchine. Se non è possibile
-separare oggetti minuscoli o sovrapposti in modo affidabile, il frame va marcato
-`ambiguous`.
+vanno aggiunti tutti i target reali mancanti. Usa box separate per oggetti
+chiaramente separabili; è ammessa una box unica e stretta per un gruppo compatto
+della stessa classe (`car` per automobili, `person` per persone), senza unire
+oggetti lontani o molto sfondo. Il gruppo è un target privacy valido.
 
 ## Cosa è stato completato
 
