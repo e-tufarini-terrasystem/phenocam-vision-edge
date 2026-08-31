@@ -17,10 +17,33 @@ CVAT Community `v2.71.0` è disponibile soltanto in locale su
 
 ## 2. Creazione dei task
 
+### Regole v3
+
+Nei task v3 annota ogni target reale visibile: `person`, `car`, `motorcycle`,
+`bus` e `truck`. Furgoni e pickup sono `car`; trattori e macchine agricole
+semoventi sono `truck`, con il sottotipo corrispondente. Una bicicletta senza
+persona resta senza box; per un ciclista annota la persona. Foto, cartelli,
+display, statue, manichini, giocattoli e miniature non sono target reali.
+
+Imposta `occluded` e `truncated` quando evidenti. Usa il tag immagine
+`ambiguous` soltanto quando non puoi decidere in modo affidabile: il frame sarà
+escluso da training ed evaluation finché il dubbio non viene risolto. Le box
+precaricate sono suggerimenti dei modelli e non ground truth.
+
+I 22 casi segnalati durante il controllo del viewer sono in un task separato:
+partono dalle annotazioni correnti del dataset e non fanno parte del pilot da
+200 immagini. Nei 20 casi indicati come probabile errore elimina i box che non
+rappresentano target reali e conserva o aggiungi soltanto eventuali target
+validi. Nei due casi indicati come dubbi (`possible_motorcycle_part` e
+`negative_photograph`) usa `ambiguous` se l'immagine non consente una decisione
+affidabile. I frame ambigui non entrano nel training v3.
+
 ```sh
 dataset/commands/cvat-tasks.sh upload-open-images
 dataset/commands/cvat-tasks.sh upload-phenocam
 dataset/commands/cvat-tasks.sh upload-open-images-supplement
+dataset/commands/cvat-tasks.sh upload-v3
+dataset/commands/cvat-tasks.sh read-v3
 dataset/commands/cvat-tasks.sh list
 ```
 

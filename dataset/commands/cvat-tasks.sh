@@ -8,15 +8,46 @@ profile=phenocam-local
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/commands/cvat-tasks.sh profile|list|upload-open-images|upload-open-images-supplement|upload-phenocam|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
+        "usage: dataset/commands/cvat-tasks.sh profile|list|upload-open-images|upload-open-images-supplement|upload-phenocam|upload-v3|read-v3|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
         "" \
         "profile            save a local personal-access-token profile interactively" \
         "list               list CVAT tasks" \
         "upload-open-images  create the 202-image Open Images task" \
         "upload-open-images-supplement create the reduced supplemental review task" \
         "upload-phenocam    create the 350-image PhenoCam task" \
+        "upload-v3          create the v3 project and four initial tasks" \
+        "read-v3            read back the v3 project and tasks as JSON" \
         "export ID NAME     export COCO and a full backup for a completed task" \
         "finish ID NAME A R export, audit, and import open-images or phenocam"
+}
+
+v3_project_id() {
+    "$cli" --profile "$profile" project ls --json | "$repository_root/dataset/.venv/bin/python" -c '
+import json, sys
+name = "Phenocam privacy detector v3"
+matches = [str(project["id"]) for project in json.load(sys.stdin) if project["name"] == name]
+if len(matches) > 1: raise SystemExit("error: duplicate CVAT project names")
+print(matches[0] if matches else "")
+'
+}
+
+create_v3_task() {
+    name=$1
+    bundle=$2
+    project_id=$3
+    existing_id=$("$cli" --profile "$profile" task ls --json | "$repository_root/dataset/.venv/bin/python" -c '
+import json, sys
+name, project = sys.argv[1:]
+matches = [str(task["id"]) for task in json.load(sys.stdin) if task["name"] == name and str(task["project_id"]) == project]
+if len(matches) > 1: raise SystemExit("error: duplicate CVAT task names")
+print(matches[0] if matches else "")
+' "$name" "$project_id")
+    [ -z "$existing_id" ] || { printf '%s\n' "task already exists: $existing_id"; return; }
+    set -- "$bundle/images/default"/*
+    [ -f "$1" ] || { printf '%s\n' "error: no bundle images in $bundle" >&2; exit 1; }
+    "$cli" --profile "$profile" task create "$name" --project_id "$project_id" \
+        --segment_size 50 --annotation_path "$bundle/annotations.coco.zip" \
+        --annotation_format "COCO 1.0" local "$@"
 }
 
 require_cli() {
@@ -89,6 +120,24 @@ case "$command_name" in
     upload-phenocam)
         require_cli
         create_task "Public dataset — PhenoCam positive annotation" "$annotation_root/cvat/phenocam-positive"
+        ;;
+    upload-v3)
+        require_cli
+        project_id=$(v3_project_id)
+        if [ -z "$project_id" ]; then
+            "$cli" --profile "$profile" project create "Phenocam privacy detector v3" --labels "$annotation_root/cvat/v3-public-pilot/labels.json"
+            project_id=$(v3_project_id)
+        fi
+        [ -n "$project_id" ] || { printf '%s\n' "error: v3 project creation failed" >&2; exit 1; }
+        create_v3_task "V3 public PhenoCam mining - pilot 200" "$annotation_root/cvat/v3-public-pilot" "$project_id"
+        create_v3_task "V3 public dataset label audit - reported 22" "$annotation_root/cvat/v3-public-label-audit" "$project_id"
+        create_v3_task "V3 internal operational dev - representative 120" "$annotation_root/cvat/v3-internal-representative" "$project_id"
+        create_v3_task "V3 internal operational mining - informative 120" "$annotation_root/cvat/v3-internal-informative" "$project_id"
+        ;;
+    read-v3)
+        require_cli
+        "$cli" --profile "$profile" project ls --json
+        "$cli" --profile "$profile" task ls --json
         ;;
     export)
         require_cli

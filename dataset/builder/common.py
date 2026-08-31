@@ -5,6 +5,7 @@ import hashlib
 import math
 import os
 import tempfile
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -109,16 +110,23 @@ def inspect_image(path, eligibility, rotation_ccw=0):
     if size_bytes <= 0 or size_bytes > maximum_bytes:
         raise DatasetError("image_size_bytes_out_of_range")
 
+    maximum_pixels = int(eligibility["maximum_pixels"])
     previous_limit = Image.MAX_IMAGE_PIXELS
-    Image.MAX_IMAGE_PIXELS = int(eligibility["maximum_pixels"])
+    Image.MAX_IMAGE_PIXELS = maximum_pixels
     try:
-        with Image.open(path) as source:
-            source.verify()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+            with Image.open(path) as source:
+                if source.width * source.height > maximum_pixels:
+                    raise DatasetError("image_pixels_out_of_range")
+                source.verify()
         with Image.open(path) as source:
             normalized = ImageOps.exif_transpose(source).convert("RGB")
             if rotation_ccw:
                 normalized = normalized.rotate(int(rotation_ccw), expand=True)
             normalized.load()
+    except DatasetError:
+        raise
     except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError) as error:
         raise DatasetError("image_decode_failed") from error
     finally:

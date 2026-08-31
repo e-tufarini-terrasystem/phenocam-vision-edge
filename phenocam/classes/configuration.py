@@ -12,7 +12,7 @@ COCO_CLASSES = (
         ("person", True),
     )),
     ("vehicle", (
-        ("bicycle", True),
+        ("bicycle", False),
         ("car", True),
         ("motorcycle", True),
         ("airplane", False),

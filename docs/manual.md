@@ -54,8 +54,9 @@ The commands work without activation. To use the environment's `python`, run
 
 The fixed `phenocam/classes/configuration.py` file is loaded automatically.
 Change only its existing `True` and `False` values and keep at least one class
-enabled. The committed configuration enables `person`, `bicycle`, `car`,
-`motorcycle`, `bus`, and `truck`.
+enabled. The committed configuration enables `person`, `car`, `motorcycle`,
+`bus`, and `truck`. A bicycle without a person is not a privacy target; a
+cyclist is protected by the `person` box.
 
 Class filtering controls final annotations, privacy regions, and the conditional
 deletion trigger. All model classes still participate in inference, merging,

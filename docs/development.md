@@ -81,3 +81,29 @@ Run the cells in order. Generated splits, metrics, plots, and the runtime sample
 stay under ignored `output/training-v2/`. Validation in the notebook reuses part
 of the public training dataset and does not satisfy the pending operational
 validation on internal deployment imagery.
+
+## V3 operational mining
+
+V3 keeps the read-only operational root outside the committed configuration.
+Set it only in the current shell, then create the deterministic inventory and
+sealed site-day split:
+
+```sh
+OPERATIONAL_ROOT=/path/to/read-only/phenocam
+dataset/.venv/bin/python -m dataset.builder.mining inventory \
+  --root "$OPERATIONAL_ROOT" \
+  --output dataset/workspace/training-v3/internal/inventory.csv \
+  --rejections dataset/workspace/training-v3/internal/inventory-rejections.csv
+dataset/.venv/bin/python -m dataset.builder.mining split \
+  --inventory dataset/workspace/training-v3/internal/inventory.csv \
+  --output dataset/workspace/training-v3/internal/operational-split.csv \
+  --audit dataset/workspace/training-v3/internal/operational-split.json
+```
+
+The screening command writes one atomic JSON record per image. Pass only
+`operational_dev` and `operational_mining` for internal runs; never pass
+`sealed_test` before thresholds and rules are frozen. Matching run/model hashes
+make `--resume` idempotent and reject stale checkpoints.
+
+Generated inventories, predictions, selections, copied CVAT images and exports
+remain under ignored `dataset/workspace/`. They must not be added to Git.

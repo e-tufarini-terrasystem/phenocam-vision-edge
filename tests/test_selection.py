@@ -122,7 +122,7 @@ class SelectionTests(unittest.TestCase):
     def test_real_configuration_enables_privacy_classes_in_canonical_order(self):
         self.assertEqual(
             enabled_class_names(),
-            ("person", "bicycle", "car", "motorcycle", "bus", "truck"),
+            ("person", "car", "motorcycle", "bus", "truck"),
         )
 
     def test_valid_configuration_returns_names_in_canonical_order(self):
@@ -136,7 +136,7 @@ class SelectionTests(unittest.TestCase):
         with patch("phenocam.classes.selection._CONFIG_PATH", self.configuration_path):
             self.assertEqual(
                 enabled_class_names(),
-                ("person", "bicycle", "car", "motorcycle", "bus", "truck"),
+                ("person", "car", "motorcycle", "bus", "truck"),
             )
             configured = self.configuration_with_enabled("toothbrush")
             self.write_configuration(self.freeze(configured))

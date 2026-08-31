@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "inventory_seed": 20260831,
+  "selection_seed": 20260831,
+  "single_reviewer_waiver": true,
+  "test_status": "sealed",
+  "workspace": {
+    "internal": "dataset/workspace/training-v3/internal",
+    "screening": "dataset/workspace/training-v3/screening",
+    "selection": "dataset/workspace/training-v3/selection",
+    "cvat": "dataset/workspace/annotation/cvat"
+  },
+  "inputs": {
+    "public_candidates": "dataset/workspace/sources/phenocam/baseline-screened.csv",
+    "public_dataset": "dataset/training-dataset/metadata/source-images.csv",
+    "public_embeddings": "dataset/workspace/deduplication/embeddings.npz",
+    "sscd_model": "dataset/workspace/models/sscd_disc_mixup.torchscript.pt"
+  },
+  "models": {
+    "baseline": {
+      "path": "models/yolo26n.onnx",
+      "sha256": "09fa4b119751eafe13962607f5a9742aff9f8e3e3e3a950c057ecb8d40cd82ec"
+    },
+    "v2": {
+      "path": "models/yolo26n-v2.onnx",
+      "sha256": "f62fd573fd6315fc34ddc3b0f22f4351be78f05db768babf6bca35b0c69d8962"
+    }
+  },
+  "image_eligibility": {
+    "minimum_width": 640,
+    "minimum_height": 480,
+    "minimum_aspect_ratio": 0.5,
+    "maximum_aspect_ratio": 2.0,
+    "maximum_source_bytes": 52428800,
+    "maximum_pixels": 80000000
+  },
+  "screening": {
+    "confidence_floor": 0.01,
+    "production_threshold": 0.30,
+    "threads": 4,
+    "checkpoint_every": 25
+  },
+  "split": {
+    "test_fraction_per_site": 0.20,
+    "minimum_test_days_per_site": 3,
+    "development_fraction": 0.50
+  },
+  "classes": {
+    "person": 0,
+    "car": 2,
+    "motorcycle": 3,
+    "bus": 5,
+    "truck": 7
+  },
+  "privacy_family": {
+    "person": ["person"],
+    "vehicle": ["car", "motorcycle", "bus", "truck"]
+  },
+  "selection": {
+    "maximum_per_group": 5,
+    "internal_maximum_per_group": 15,
+    "public_pilot_images": 200,
+    "public_quotas": {
+      "high_or_shared": 70,
+      "baseline_only": 45,
+      "v2_only": 25,
+      "crop_disagreement": 30,
+      "confuser": 30
+    },
+    "internal_representative_per_site": 60,
+    "internal_informative_per_site": 60
+  },
+  "cvat": {
+    "server": "http://localhost:8080",
+    "project": "Phenocam privacy detector v3",
+    "segment_size": 50,
+    "tasks": {
+      "public": "V3 public PhenoCam mining - pilot 200",
+      "label_audit": "V3 public dataset label audit - reported 22",
+      "representative": "V3 internal operational dev - representative 120",
+      "informative": "V3 internal operational mining - informative 120"
+    }
+  }
+}
