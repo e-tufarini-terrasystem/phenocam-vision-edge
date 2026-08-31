@@ -8,7 +8,7 @@ profile=phenocam-local
 
 usage() {
     printf '%s\n' \
-        "usage: dataset/commands/cvat-tasks.sh profile|list|upload-open-images|upload-open-images-supplement|upload-phenocam|upload-v3|read-v3|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
+        "usage: dataset/commands/cvat-tasks.sh profile|list|upload-open-images|upload-open-images-supplement|upload-phenocam|upload-v3|upload-v3-clean|read-v3|export TASK_ID NAME|finish TASK_ID NAME ANNOTATOR REVIEWER" \
         "" \
         "profile            save a local personal-access-token profile interactively" \
         "list               list CVAT tasks" \
@@ -16,6 +16,7 @@ usage() {
         "upload-open-images-supplement create the reduced supplemental review task" \
         "upload-phenocam    create the 350-image PhenoCam task" \
         "upload-v3          create the v3 project and four initial tasks" \
+        "upload-v3-clean    create the two replacement internal tasks" \
         "read-v3            read back the v3 project and tasks as JSON" \
         "export ID NAME     export COCO and a full backup for a completed task" \
         "finish ID NAME A R export, audit, and import open-images or phenocam"
@@ -133,6 +134,13 @@ case "$command_name" in
         create_v3_task "V3 public dataset label audit - reported 22" "$annotation_root/cvat/v3-public-label-audit" "$project_id"
         create_v3_task "V3 internal operational dev - representative 120" "$annotation_root/cvat/v3-internal-representative" "$project_id"
         create_v3_task "V3 internal operational mining - informative 120" "$annotation_root/cvat/v3-internal-informative" "$project_id"
+        ;;
+    upload-v3-clean)
+        require_cli
+        project_id=$(v3_project_id)
+        [ -n "$project_id" ] || { printf '%s\n' "error: create the v3 project first" >&2; exit 1; }
+        create_v3_task "V3 internal operational dev - representative 120 - clean" "$annotation_root/cvat/v3-internal-representative-clean" "$project_id"
+        create_v3_task "V3 internal operational mining - informative 120 - clean" "$annotation_root/cvat/v3-internal-informative-clean" "$project_id"
         ;;
     read-v3)
         require_cli

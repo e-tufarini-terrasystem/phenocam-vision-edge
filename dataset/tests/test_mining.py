@@ -18,6 +18,7 @@ from dataset.builder.mining.cvat import build_bundle, build_label_audit_bundle
 from dataset.builder.mining.selection import SELECTION_FIELDS, _diverse, _signals
 from dataset.builder.mining.screening import INDEX_FIELDS, screen
 from dataset.builder.mining.split import create_split
+from dataset.builder.mining.suggestions import suggestions
 
 
 CONFIG = {
@@ -224,6 +225,15 @@ class MiningTests(unittest.TestCase):
         with (output / "manifest.csv").open(newline="", encoding="utf-8") as source_stream:
             manifest = list(csv.DictReader(source_stream))
         self.assertEqual(manifest[0]["suggestion_models"], "baseline;v2")
+
+    def test_clean_suggestions_require_strong_same_class_model_agreement(self):
+        person = {"class_id": 0, "confidence": 0.4, "x1": 1, "y1": 1, "x2": 9, "y2": 9, "view_priority": 0}
+        policy = {"minimum_confidence": 0.3, "minimum_iou": 0.5, "require_both_models": True, "require_same_class": True}
+        agreed = suggestions([person], [{**person, "confidence": 0.5}], {0, 2}, policy)
+        self.assertEqual(len(agreed), 1)
+        self.assertEqual(agreed[0]["models"], {"baseline", "v2"})
+        self.assertEqual(suggestions([person], [{**person, "class_id": 2}], {0, 2}, policy), [])
+        self.assertEqual(suggestions([{**person, "confidence": 0.2}], [person], {0, 2}, policy), [])
 
     def test_label_audit_bundle_starts_from_current_annotations(self):
         dataset = self.root / "dataset"

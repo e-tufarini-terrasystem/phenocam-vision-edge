@@ -101,8 +101,9 @@ separata prima della correzione:
 
 ## 2026-08-31 — Fase 4 al gate umano obbligatorio
 
-Progetto CVAT `Phenocam privacy detector v3`, ID 1. Readback autenticato:
-quattro task, label `person`, `car`, `motorcycle`, `bus`, `truck`, `ambiguous`,
+Progetto CVAT `Phenocam privacy detector v3`, ID 1. Readback autenticato al
+momento della creazione: quattro task, label `person`, `car`, `motorcycle`,
+`bus`, `truck`, `ambiguous`,
 attributi `occluded`, `truncated` e `vehicle_subtype`. Tutte le rotte task/job
 seguenti rispondono HTTP 200; la superficie browser in-app non era disponibile
 per una seconda verifica visuale.
@@ -148,11 +149,75 @@ I bundle interni hanno importato tutte le predizioni di screening a soglia
 7 era iniziato soltanto il job 26. Sul primo piccolo campione modificato, il
 gate `stessa classe + IoU >=0,5 + entrambi i modelli >=0,30` conserva 10 box
 umani su 11 proposti, ma copre soltanto 10 dei 37 box correnti. Il risultato è
-preliminare perché il job non era completato. I task esistenti non vengono
-sovrascritti e nessun sostituto viene creato senza decisione esplicita.
+preliminare perché il job non era completato.
+
+### Sostituti clean
+
+L'utente ha autorizzato due task sostitutivi e la rimozione dei task superati.
+Il filtro conserva soltanto box con stessa classe, IoU `>=0,5` e confidenza
+`>=0,30` in entrambi i modelli. Prima dell'implementazione è stato separato per
+mantenere l'orchestrazione CVAT sotto 200 linee produttive:
+
+- `dataset/builder/mining/suggestions.py` (~50 linee produttive): unione
+  diagnostica e gate di accordo ad alta precisione;
+- `dataset/builder/mining/cvat.py` (~185 linee produttive): materializzazione
+  atomica dei bundle.
+
+Bundle e task verificati:
+
+| Task attivo | ID | Immagini | Job | Box iniziali |
+|---|---:|---:|---|---:|
+| V3 internal operational dev - representative 120 - clean | 9 | 120 | 30-32 | 1.019 |
+| V3 internal operational mining - informative 120 - clean | 10 | 120 | 33-35 | 1.115 |
+
+- Receipt SHA-256: rappresentativo
+  `8f5a20d585b5e7bc6f2846c5065e45a2963718190f9d5ead630239b97e12e324`;
+  informativo
+  `b69421f659ac7f00e83fbbc04077c53c121fc431d4a170370a3f40fc7d846ea9`.
+- COCO iniziale SHA-256: rappresentativo
+  `2d034684876f1b66044c4c31ae54eed8d5c1c1b81db24cb43170232dc7363ba5`;
+  informativo
+  `1af9434a0c5639ffae48e63d4ca67645ced48ee9b5fee3996877d2dbd0921a59`.
+- Le 1.019 e 1.115 box sono proposte, non ground truth: vanno eliminate quando
+  errate e integrate quando manca un target reale.
+
+## Pulizia dei task CVAT
+
+La lista CVAT contiene ora soltanto i task attivi 9 e 10. Sono stati rimossi:
+
+- task 7 e 8, sostituiti dalle versioni clean;
+- task 5 e 6, già completati ed esportati;
+- task storici 2-4, già esportati e importati nel dataset.
+
+Tutte le rimozioni sono recuperabili. I backup completi sono sotto
+`dataset/workspace/annotation/exports/` e sono stati verificati con il test
+dell'archivio. Per i task superati 7 e 8, gli export COCO conservano
+rispettivamente 120 immagini/8.540 box e 120 immagini/8.856 box; SHA-256 backup
+`400363c61826e70101d97938af764f1015558b896da090dec95a1cdf776d771b` e
+`f0beacba6d927a2561c6225197e71885be705804ac16b7c46b56d56fd48f6fd6`.
+L'audit pubblico completato conserva 22 immagini e 4 box; SHA-256 COCO
+`36f054124c522d1cf42efab0a6dddac01f3d0f857663fce45e1143dd3aedaff5`
+e backup
+`60c978240f107ebe58d5759e140a8211aae14c4d94e2bce41979a78d09574dc1`.
+
+## Valutazione di un nuovo batch PhenoCam
+
+Dopo le esclusioni originarie restano 3.361 candidati. Il gate stretto usato
+per i task clean trova soltanto 58 immagini con accordo baseline/v2; 2 erano
+già nel pilot e sono state marcate negative, quindi ne restano 56 distribuite
+su 10 siti e 49 gruppi. Dieci hanno confidenza congiunta `>=0,70`.
+
+Il controllo visuale dei dieci candidati più forti mostra soprattutto veicoli
+molto lontani, spesso alti 7-15 pixel. Anche uno dei due candidati già respinti
+dal pilot contiene lo stesso tipo di veicoli lontani. Poiché la guida corrente
+richiede di annotare ogni target reale visibile ma il feedback umano li ha
+trattati come negativi, non viene creato ora un nuovo task pubblico: prima va
+resa esplicita la regola sui target piccoli/lontani. Un nuovo pilot avrebbe
+altrimenti ground truth incoerente e aggiungerebbe lavoro manuale senza una
+decisione utilizzabile.
 
 ## Prossima azione
 
-Decidere se sostituire i task interni 7 e 8 con copie pulite e preannotazioni ad
-alta precisione. Non creare altri batch pubblici prima di correggere e validare
-il ranking.
+Completare i task clean 9 e 10. Prima di riaprire il mining pubblico, decidere
+se i veicoli riconoscibili ma molto lontani devono essere target privacy oppure
+negativi operativi; solo dopo creare un eventuale pilot stretto da 20 immagini.

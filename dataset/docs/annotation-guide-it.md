@@ -25,6 +25,12 @@ semoventi sono `truck`, con il sottotipo corrispondente. Una bicicletta senza
 persona resta senza box; per un ciclista annota la persona. Foto, cartelli,
 display, statue, manichini, giocattoli e miniature non sono target reali.
 
+Disegna una box separata e stretta per ogni persona o veicolo. Non racchiudere
+più veicoli vicini in una sola box di gruppo: introdurrebbe sfondo fra gli
+oggetti e un target che il detector non deve imparare. Se gli oggetti sono
+troppo piccoli o sovrapposti per separarli in modo affidabile, non creare una
+box di gruppo e marca il frame `ambiguous`.
+
 Imposta `occluded` e `truncated` quando evidenti. Usa il tag immagine
 `ambiguous` soltanto quando non puoi decidere in modo affidabile: il frame sarà
 escluso da training ed evaluation finché il dubbio non viene risolto. Le box

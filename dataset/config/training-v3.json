@@ -74,11 +74,19 @@
     "server": "http://localhost:8080",
     "project": "Phenocam privacy detector v3",
     "segment_size": 50,
+    "clean_suggestions": {
+      "minimum_confidence": 0.30,
+      "minimum_iou": 0.50,
+      "require_both_models": true,
+      "require_same_class": true
+    },
     "tasks": {
       "public": "V3 public PhenoCam mining - pilot 200",
       "label_audit": "V3 public dataset label audit - reported 22",
       "representative": "V3 internal operational dev - representative 120",
-      "informative": "V3 internal operational mining - informative 120"
+      "informative": "V3 internal operational mining - informative 120",
+      "representative_clean": "V3 internal operational dev - representative 120 - clean",
+      "informative_clean": "V3 internal operational mining - informative 120 - clean"
     }
   }
 }

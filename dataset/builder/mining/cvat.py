@@ -11,7 +11,8 @@ from pathlib import Path
 from PIL import Image
 
 from ..common import DatasetError, atomic_text, require_columns, sha256_file, write_csv
-from .selection import SELECTION_FIELDS, _iou, load_predictions
+from .selection import SELECTION_FIELDS, load_predictions
+from .suggestions import suggestions
 
 
 BUNDLE_FIELDS = (
@@ -39,25 +40,6 @@ def _labels(config):
     return labels
 
 
-def _suggestions(baseline, candidate, class_ids):
-    accepted = []
-    for model, detections in (("baseline", baseline), ("v2", candidate)):
-        for detection in detections:
-            if detection["class_id"] not in class_ids:
-                continue
-            family = "person" if detection["class_id"] == 0 else "vehicle"
-            match = next((item for item in accepted if item["family"] == family and _iou(item, detection) >= 0.5), None)
-            if match is None:
-                accepted.append({**detection, "family": family, "models": {model}})
-            else:
-                match["models"].add(model)
-                if detection["confidence"] > match["confidence"]:
-                    models = match["models"]
-                    match.update(detection)
-                    match.update({"family": family, "models": models})
-    return accepted
-
-
 def _copy(source, destination):
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent)
     os.close(descriptor)
@@ -81,7 +63,7 @@ def _archive(annotation_path, archive_path):
     os.replace(temporary, archive_path)
 
 
-def build_bundle(selection_path, baseline_index, v2_index, output_dir, config):
+def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, suggestion_policy=None):
     selection_path, output_dir = Path(selection_path), Path(output_dir)
     with selection_path.open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
@@ -92,6 +74,8 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config):
         "schema_version": 1, "selection_sha256": sha256_file(selection_path),
         "baseline_index_sha256": sha256_file(baseline_index), "v2_index_sha256": sha256_file(v2_index),
     }
+    if suggestion_policy is not None:
+        identity["suggestion_policy"] = suggestion_policy
     receipt = output_dir / "bundle.json"
     if receipt.exists():
         existing = json.loads(receipt.read_text(encoding="utf-8"))
@@ -116,16 +100,16 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config):
             image_name = f"{image_id:04d}-{row['source_sha256'][:16]}{suffix}"
             _copy(row["local_path"], image_dir / image_name)
             images.append({"id": image_id, "file_name": image_name, "width": int(row["width"]), "height": int(row["height"])})
-            suggestions = _suggestions(baseline[row["source_identity"]], v2[row["source_identity"]], set(category_by_class))
-            for suggestion in suggestions:
+            proposed = suggestions(baseline[row["source_identity"]], v2[row["source_identity"]], set(category_by_class), suggestion_policy)
+            for suggestion in proposed:
                 width, height = suggestion["x2"] - suggestion["x1"], suggestion["y2"] - suggestion["y1"]
                 annotations.append({"id": len(annotations) + 1, "image_id": image_id, "category_id": category_by_class[suggestion["class_id"]], "bbox": [suggestion["x1"], suggestion["y1"], width, height], "area": width * height, "iscrowd": 0})
             manifest.append({
                 "source_identity": row["source_identity"], "image_name": image_name,
                 "source_sha256": row["source_sha256"], "group_id": row["group_id"],
                 "cohort": row["cohort"], "selection_category": row["selection_category"],
-                "suggestion_count": len(suggestions),
-                "suggestion_models": ";".join(sorted({model for item in suggestions for model in item["models"]})),
+                "suggestion_count": len(proposed),
+                "suggestion_models": ";".join(sorted({model for item in proposed for model in item["models"]})),
             })
         annotation_path = temporary / "instances_default.json"
         with atomic_text(annotation_path) as output:

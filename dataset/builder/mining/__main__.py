@@ -51,6 +51,7 @@ def _parser():
     bundle = commands.add_parser("cvat-bundle")
     for option in ("selection", "baseline-index", "v2-index", "output-dir"):
         bundle.add_argument(f"--{option}", type=Path, required=True)
+    bundle.add_argument("--clean-suggestions", action="store_true")
     audit = commands.add_parser("cvat-label-audit")
     for option in ("audit", "dataset-root", "manifest", "output-dir"):
         audit.add_argument(f"--{option}", type=Path, required=True)
@@ -76,7 +77,8 @@ def main(argv=None):
     elif arguments.command == "select-internal":
         result = select_internal(arguments.split, arguments.baseline_index, arguments.v2_index, arguments.embeddings, arguments.representative, arguments.informative, arguments.statistics, config)
     elif arguments.command == "cvat-bundle":
-        result = build_bundle(arguments.selection, arguments.baseline_index, arguments.v2_index, arguments.output_dir, config)
+        policy = config["cvat"]["clean_suggestions"] if arguments.clean_suggestions else None
+        result = build_bundle(arguments.selection, arguments.baseline_index, arguments.v2_index, arguments.output_dir, config, policy)
     elif arguments.command == "cvat-label-audit":
         result = build_label_audit_bundle(arguments.audit, arguments.dataset_root, arguments.manifest, arguments.output_dir, config)
     else:  # pragma: no cover

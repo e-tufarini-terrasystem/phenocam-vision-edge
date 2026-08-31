@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from ..common import DatasetError, atomic_text, require_columns, stable_rank, write_csv
+from .suggestions import _iou
 
 
 SELECTION_FIELDS = ("source_identity", "source_dataset", "source_subset", "source_id", "site_id", "group_id", "timestamp", "local_path", "width", "height", "source_sha256", "decoded_sha256", "phash", "split", "cohort", "selection_category", "signals")
@@ -33,14 +34,6 @@ def load_predictions(index_path):
         record = json.loads((Path(index_path).parent / row["record_path"]).read_text(encoding="utf-8"))
         values[row["source_identity"]] = record["detections_after_dedup"]
     return values
-
-
-def _iou(left, right):
-    area = max(0, min(left["x2"], right["x2"]) - max(left["x1"], right["x1"])) * max(0, min(left["y2"], right["y2"]) - max(left["y1"], right["y1"]))
-    if not area:
-        return 0.0
-    union = (left["x2"] - left["x1"]) * (left["y2"] - left["y1"]) + (right["x2"] - right["x1"]) * (right["y2"] - right["y1"]) - area
-    return area / union
 
 
 def _signals(baseline, candidate, config):
