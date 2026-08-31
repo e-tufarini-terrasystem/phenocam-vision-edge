@@ -83,6 +83,14 @@ Run the tests directly with:
 dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 ```
 
+## Dataset viewer
+
+Open [`viewer.html`](viewer.html) in a browser and select the complete
+`dataset/training-dataset/` directory. The local-only viewer associates each
+YOLO label with its image, draws the bounding boxes, and supports filename and
+positive/negative filters without uploading dataset files. Click the selected
+image name to select it for copying.
+
 ## Annotation commands
 
 CVAT Community `v2.71.0` is pinned in the ignored workspace:

@@ -7,8 +7,9 @@ local verification procedure, and optional model-export workflow.
 
 ## Inference architecture
 
-Inference uses the original `models/yolo26n.onnx` model and its end-to-end ONNX
-graph. The runtime calls it directly through ONNX Runtime.
+Inference uses the development baseline `models/yolo26n-v2.onnx` and its
+end-to-end ONNX graph. The original `models/yolo26n.onnx` remains available for
+comparisons. The runtime calls the selected model directly through ONNX Runtime.
 
 Each image is processed sequentially in one ONNX session using one full-image
 view plus fifteen adaptive overlapping crops. Horizontal and square images use
@@ -57,5 +58,26 @@ python3 -m venv .venv-export
 .venv-export/bin/python scripts/export/fp32.py
 ```
 
-The included and tested `models/yolo26n.onnx` does not need to be exported on
-the Raspberry Pi.
+The included and tested `models/yolo26n-v2.onnx` does not need to be exported
+on the Raspberry Pi. V2 is a development baseline; operational validation on
+deployment imagery remains pending.
+
+## Optional v2 training on Apple Silicon
+
+`training-v2.ipynb` fine-tunes the committed checkpoint through MPS, keeps its
+80-class COCO runtime contract, compares both checkpoints on a deterministic
+group-safe validation split, plots the training curves, exports
+`models/yolo26n-v2.onnx`, and runs one end-to-end application inference. From
+the repository root:
+
+```sh
+python3.13 -m venv .venv-export
+.venv-export/bin/python -m pip install -r requirements/export.txt jupyterlab
+.venv-export/bin/python -m ipykernel install --sys-prefix --name phenocam-training-v2
+.venv-export/bin/jupyter lab training-v2.ipynb
+```
+
+Run the cells in order. Generated splits, metrics, plots, and the runtime sample
+stay under ignored `output/training-v2/`. Validation in the notebook reuses part
+of the public training dataset and does not satisfy the pending operational
+validation on internal deployment imagery.

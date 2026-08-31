@@ -35,12 +35,14 @@ class InstallerTests(unittest.TestCase):
         self.commands = self.root / "commands"
         (self.package / "scripts").mkdir(parents=True)
         (self.package / "requirements").mkdir()
+        (self.package / "models").mkdir()
         self.commands.mkdir()
         shutil.copy2(ROOT / "scripts/installer.sh", self.package / "scripts/installer.sh")
         shutil.copy2(
             ROOT / "requirements/runtime.txt",
             self.package / "requirements/runtime.txt",
         )
+        (self.package / "models/yolo26n-v2.onnx").write_bytes(b"model")
         self.pip_log = self.root / "pip.log"
         self.venv_python = self.root / "venv-python"
         self._write_executable(
@@ -210,6 +212,14 @@ exit 1
         self.assert_failure("error: runtime requirements do not exist")
         self.assertFalse((self.package / ".venv").exists())
 
+    def test_missing_or_symlinked_runtime_model_is_rejected(self):
+        model = self.package / "models/yolo26n-v2.onnx"
+        model.unlink()
+        self.assert_failure("error: runtime model does not exist")
+        model.symlink_to(self.root / "outside-model.onnx")
+        self.assert_failure("error: runtime model does not exist")
+        self.assertFalse((self.package / ".venv").exists())
+
     def test_preexisting_environment_is_not_modified(self):
         environment = self.package / ".venv"
         environment.mkdir()
@@ -257,7 +267,7 @@ exit 1
         self.assertEqual(result.returncode, 0, result.stderr)
         installed = destination / "phenocam-vision-edge-0.1.0"
         self.assertTrue((installed / "README.md").is_file())
-        self.assertTrue((installed / "models/yolo26n.onnx").is_file())
+        self.assertTrue((installed / "models/yolo26n-v2.onnx").is_file())
         self.assertTrue(os.access(installed / ".venv/bin/python", os.X_OK))
         self.assertTrue((installed / "input").is_dir())
         self.assertTrue((installed / "output").is_dir())

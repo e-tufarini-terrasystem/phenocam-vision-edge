@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phenocam Dataset Viewer</title>
+  <style>
+    :root { color-scheme:dark; --ink:#f4f2eb; --muted:#9ea39d; --panel:#171a18; --line:#303530; --accent:#c9f26b; }
+    * { box-sizing:border-box; }
+    body { margin:0; height:100vh; overflow:hidden; background:#0c0e0d; color:var(--ink); font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:24px; height:86px; padding:18px 24px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font:700 clamp(20px,3vw,30px)/1.1 system-ui,sans-serif; letter-spacing:-.04em; }
+    .eyebrow { margin:0 0 5px; color:var(--accent); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+    .load { display:inline-flex; padding:10px 14px; border:1px solid var(--accent); border-radius:8px; color:#0c0e0d; background:var(--accent); font-weight:700; cursor:pointer; white-space:nowrap; }
+    .load:focus-within { outline:3px solid #fff4; outline-offset:3px; }
+    .load input { position:absolute; width:1px; height:1px; opacity:0; }
+    main { display:grid; grid-template-columns:250px minmax(0,1fr) 290px; height:calc(100vh - 86px); }
+    aside { padding:22px; border-right:1px solid var(--line); background:var(--panel); }
+    label.control { display:block; margin:0 0 18px; color:var(--muted); font-size:12px; }
+    input[type="search"], select { width:100%; margin-top:6px; padding:10px; border:1px solid var(--line); border-radius:7px; background:#0c0e0d; color:var(--ink); font:inherit; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:24px 0; }
+    .stat { padding:11px; border:1px solid var(--line); border-radius:7px; }
+    .stat strong { display:block; color:var(--accent); font-size:18px; }
+    .stat span,.help { color:var(--muted); font-size:10px; text-transform:uppercase; }
+    .help { font-size:12px; text-transform:none; }
+    .workspace { display:grid; grid-template-rows:minmax(0,1fr) auto; min-width:0; min-height:0; }
+    .stage { display:grid; place-items:center; min-height:0; padding:24px; overflow:hidden; background-color:#101311; background-image:linear-gradient(45deg,#151815 25%,transparent 25%),linear-gradient(-45deg,#151815 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#151815 75%),linear-gradient(-45deg,transparent 75%,#151815 75%); background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0; }
+    canvas { display:block; max-width:100%; max-height:calc(100vh - 190px); width:auto; height:auto; box-shadow:0 20px 60px #0008; }
+    .empty { max-width:390px; text-align:center; color:var(--muted); }
+    .empty strong { display:block; margin-bottom:8px; color:var(--ink); font:650 22px system-ui,sans-serif; }
+    .toolbar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; padding:13px 18px; border-top:1px solid var(--line); background:var(--panel); }
+    button { padding:8px 11px; border:1px solid var(--line); border-radius:7px; background:#252925; color:var(--ink); font:inherit; cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.35; }
+    .nav { display:flex; gap:7px; }
+    .identity { min-width:0; }
+    #name { width:100%; padding:0; overflow:hidden; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; text-overflow:ellipsis; white-space:nowrap; cursor:text; }
+    #detail { color:var(--muted); font-size:11px; }
+    .rail { display:grid; grid-template-rows:auto minmax(0,1fr); min-width:0; min-height:0; overflow:hidden; border-left:1px solid var(--line); background:var(--panel); }
+    .rail h2 { margin:0; padding:17px; border-bottom:1px solid var(--line); font:650 14px system-ui,sans-serif; }
+    .gallery { min-height:0; overflow-y:auto; padding:10px; }
+    .thumb { display:grid; grid-template-columns:78px minmax(0,1fr); align-items:center; gap:10px; width:100%; margin-bottom:8px; padding:6px; text-align:left; background:#111412; }
+    .thumb:hover { border-color:#626a62; }
+    .thumb.selected { border-color:var(--accent); box-shadow:inset 3px 0 var(--accent); }
+    .thumb img { width:78px; height:58px; object-fit:cover; border-radius:4px; background:#252925; }
+    .thumb span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .thumb small { display:block; color:var(--muted); font-size:10px; }
+    @media (max-width:900px) { body { height:auto; overflow:auto; } header { height:auto; } main { display:block; height:auto; } aside { border-right:0; border-bottom:1px solid var(--line); } .controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; } label.control { margin:0; } .stats,.help { display:none; } .workspace { height:62vh; } .rail { height:45vh; border-top:1px solid var(--line); border-left:0; } .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px; } .thumb { margin:0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">YOLO inspection tool</p><h1>Phenocam Dataset Viewer</h1></div>
+    <label class="load">Scegli training-dataset<input id="folder" type="file" webkitdirectory multiple></label>
+  </header>
+  <main>
+    <aside>
+      <div class="controls">
+        <label class="control">Cerca per nome<input id="search" type="search" placeholder="open-images, phenocam…" disabled></label>
+        <label class="control">Contenuto<select id="filter" disabled><option value="all">Tutte</option><option value="positive">Con bounding box</option><option value="negative">Senza bounding box</option></select></label>
+      </div>
+      <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
+      <p class="help">Seleziona il dataset, poi scorri e scegli un’immagine dal pannello a destra. Tutto resta nel browser.</p>
+    </aside>
+    <section class="workspace">
+      <div class="stage"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri la cartella <code>dataset/training-dataset</code> per iniziare.</div></div>
+      <div class="toolbar">
+        <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
+        <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>
+        <button id="random" disabled>Casuale</button>
+      </div>
+    </section>
+    <section class="rail"><h2>Immagini</h2><div id="gallery" class="gallery" aria-label="Elenco immagini"></div></section>
+  </main>
+  <script>
+    const elements = Object.fromEntries([...document.querySelectorAll('[id]')].map(node => [node.id, node]));
+    const colors = ['#c9f26b','#70d6ff','#ff9770','#ffd670','#e9ff70','#ff70a6','#b8c0ff','#9cfffa'];
+    let images = [], visible = [], labels = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '';
+    const thumbnailObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) entry.isIntersecting ? loadThumbnail(entry.target) : unloadThumbnail(entry.target);
+    }, {root:elements.gallery, rootMargin:'180px 0px'});
+
+    function labelPath(file) {
+      return file.webkitRelativePath.replace('/images/', '/labels/').replace(/\.[^.]+$/, '.txt');
+    }
+
+    function parseBoxes(text) {
+      return text.split(/\r?\n/).filter(Boolean).flatMap(line => {
+        const values = line.trim().split(/\s+/).map(Number);
+        if (values.length !== 5 || !values.every(Number.isFinite)) return [];
+        const [id, x, y, width, height] = values;
+        if (!Number.isInteger(id) || [x,y,width,height].some(value => value < 0 || value > 1) || !width || !height) return [];
+        return [{id, x, y, width, height}];
+      });
+    }
+
+    function loadThumbnail(button) {
+      if (button._url) return;
+      button._url = URL.createObjectURL(button._file); button.querySelector('img').src = button._url;
+    }
+
+    function unloadThumbnail(button) {
+      if (!button._url) return;
+      URL.revokeObjectURL(button._url); button._url = ''; button.querySelector('img').removeAttribute('src');
+    }
+
+    async function render(scrollToSelection = false) {
+      const token = ++renderId, file = visible[position];
+      elements.canvas.style.display = file ? 'block' : 'none'; elements.empty.style.display = file ? 'none' : 'block';
+      elements.prev.disabled = elements.next.disabled = elements.random.disabled = visible.length < 2;
+      for (const button of elements.gallery.children) button.classList.toggle('selected', Number(button.dataset.index) === position);
+      const selected = elements.gallery.querySelector('.selected'); if (scrollToSelection && selected) selected.scrollIntoView({block:'nearest'});
+      if (!file) { elements.name.value = images.length ? 'Nessun risultato' : '—'; elements.detail.textContent = '0 / 0'; return; }
+      const label = labels.get(labelPath(file)), boxes = label ? parseBoxes(await label.text()) : [];
+      if (token !== renderId) return;
+      if (centerUrl) URL.revokeObjectURL(centerUrl); centerUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        if (token !== renderId) return;
+        const canvas = elements.canvas, context = canvas.getContext('2d'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+        context.drawImage(image,0,0); context.font = `600 ${Math.max(13,image.naturalWidth/65)}px ui-monospace,monospace`; context.lineWidth = Math.max(2,image.naturalWidth/450);
+        for (const box of boxes) {
+          const color = colors[box.id%colors.length], left = (box.x-box.width/2)*canvas.width, top = (box.y-box.height/2)*canvas.height, width = box.width*canvas.width, height = box.height*canvas.height, text = classes[box.id] || `classe ${box.id}`;
+          context.strokeStyle = color; context.strokeRect(left,top,width,height);
+          const labelHeight = Math.max(18,image.naturalWidth/45), labelTop = Math.max(0,top-labelHeight), textWidth = context.measureText(text).width;
+          context.fillStyle = color; context.fillRect(left,labelTop,textWidth+12,labelHeight); context.fillStyle = '#0c0e0d'; context.fillText(text,left+6,labelTop+labelHeight*.76);
+        }
+        elements.name.value = file.name; elements.detail.textContent = `${position+1} / ${visible.length} · ${image.naturalWidth}×${image.naturalHeight} · ${boxes.length} box`;
+      };
+      image.onerror = () => { if (token === renderId) { elements.canvas.style.display = 'none'; elements.empty.style.display = 'block'; elements.empty.textContent = 'Immagine non leggibile'; } };
+      image.src = centerUrl;
+    }
+
+    function applyFilters() {
+      const current = visible[position], query = elements.search.value.trim().toLowerCase(), mode = elements.filter.value;
+      visible = images.filter(file => file.name.toLowerCase().includes(query) && (mode === 'all' || (mode === 'positive') === labels.has(labelPath(file)))); position = Math.max(0,visible.indexOf(current));
+      thumbnailObserver.disconnect(); for (const button of elements.gallery.children) unloadThumbnail(button); elements.gallery.replaceChildren();
+      for (const [index,file] of visible.entries()) {
+        const button = document.createElement('button'), image = document.createElement('img'), text = document.createElement('span'), detail = document.createElement('small');
+        button.type = 'button'; button.className = 'thumb'; button.dataset.index = index; button._file = file; button._url = ''; image.alt = ''; image.decoding = 'async'; text.textContent = file.name;
+        detail.textContent = labels.has(labelPath(file)) ? 'Con bounding box' : 'Senza bounding box'; text.append(detail); button.append(image,text);
+        button.addEventListener('click', () => { position = index; render(); }); elements.gallery.append(button); thumbnailObserver.observe(button);
+      }
+      elements.shown.textContent = visible.length.toLocaleString('it-IT'); elements.gallery.scrollTop = 0; render();
+    }
+
+    elements.folder.addEventListener('change', async event => {
+      const files = [...event.target.files]; labels = new Map(files.filter(file => /\/labels\/.*\.txt$/i.test(file.webkitRelativePath)).map(file => [file.webkitRelativePath,file]));
+      images = files.filter(file => /\/images\/.*\.(jpe?g|png|webp)$/i.test(file.webkitRelativePath)).sort((a,b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+      const yaml = files.find(file => /\/yolo-dataset\.ya?ml$/i.test(file.webkitRelativePath)); classes = {};
+      if (yaml) { const match = (await yaml.text()).match(/names:\s*\{([^}]+)\}/); if (match) for (const item of match[1].split(',')) { const [id,name] = item.split(':'); classes[Number(id.trim())] = name.trim(); } }
+      elements.total.textContent = images.length.toLocaleString('it-IT'); elements.search.disabled = elements.filter.disabled = !images.length; position = 0; applyFilters();
+    });
+    elements.search.addEventListener('input',applyFilters); elements.filter.addEventListener('change',applyFilters);
+    elements.name.addEventListener('click',() => elements.name.select());
+    elements.prev.addEventListener('click',() => { position = (position-1+visible.length)%visible.length; render(true); });
+    elements.next.addEventListener('click',() => { position = (position+1)%visible.length; render(true); });
+    elements.random.addEventListener('click',() => { position = Math.floor(Math.random()*visible.length); render(true); });
+    addEventListener('keydown',event => { if (event.target.matches('input,select')) return; if (event.key === 'ArrowLeft') elements.prev.click(); if (event.key === 'ArrowRight') elements.next.click(); });
+    addEventListener('beforeunload',() => { if (centerUrl) URL.revokeObjectURL(centerUrl); for (const button of elements.gallery.children) unloadThumbnail(button); });
+  </script>
+</body>
+</html>

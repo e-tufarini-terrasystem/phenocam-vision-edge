@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "model": "yolo26n-v2",
+  "status": "development_baseline",
+  "trained_at": "2026-08-28",
+  "base_model": {
+    "path": "models/yolo26n.pt",
+    "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+  },
+  "artifacts": {
+    "pt_sha256": "49f3d38cb891c95069590edf76ec8b59ce399163f27f1e297831d042baffb912",
+    "onnx_sha256": "f62fd573fd6315fc34ddc3b0f22f4351be78f05db768babf6bca35b0c69d8962"
+  },
+  "dataset": {
+    "source_manifest_sha256": "b3b557e47ef22469bbf4c7d06033fc6bbcfb205cf092da1611329eda034014cd",
+    "images": 2000,
+    "train_images": 1600,
+    "validation_images": 400,
+    "train_list_sha256": "51fc5aefff8bcf58f3edc6d54d131ab28dda7c72dfaa9049f8e278aeaf6a103c",
+    "validation_list_sha256": "168ec7a4b454addadcea27121de498a0740bb179a3a61373f78fddb94ac81bdb"
+  },
+  "training": {
+    "seed": 42,
+    "epochs_requested": 30,
+    "best_epoch": 16,
+    "image_size": 640,
+    "batch": 8,
+    "device": "mps"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "torch": "2.13.0",
+    "ultralytics": "8.4.48",
+    "onnx": "1.19.1"
+  },
+  "validation": {
+    "mAP50_95": 0.5127823700954893,
+    "mAP50": 0.6801695531773739,
+    "precision": 0.6985794160765485,
+    "recall": 0.6425773685104611,
+    "operational_validation": "pending"
+  },
+  "contract": {"classes": 80, "input": [1, 3, 640, 640], "output_columns": 6}
+}

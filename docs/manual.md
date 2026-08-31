@@ -31,8 +31,9 @@ Ultralytics, PyTorch, OpenCV, and the export toolchain are not required on the
 Pi. The virtual environment occupies about 154 MiB and the complete tested
 working copy about 187 MiB.
 
-A minimal source copy may omit `models/yolo26n.pt`, the export scripts, and
-`requirements/export.txt`, but must retain `models/yolo26n.onnx`.
+A minimal source copy may omit the PT checkpoints, the original
+`models/yolo26n.onnx`, the export scripts, and `requirements/export.txt`, but
+must retain the packaged development baseline `models/yolo26n-v2.onnx`.
 
 ### macOS
 
@@ -79,6 +80,11 @@ preserving extension spelling. If a regular non-symlink
 `input/<stem>.meta` exists, it is passed through `--meta`; a missing match is
 not created and does not fail that image.
 
+The batch script and installer use `models/yolo26n-v2.onnx`. This model is a
+development baseline whose validation on operational deployment images is
+still pending; the original model remains in the source repository for paired
+comparisons.
+
 Existing files are overwritten. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is
 supported. The batch script never enables `--delete-input-on-detection`.
@@ -96,6 +102,7 @@ these terminal errors without additional host details:
 - `error: python3-venv is required`
 - `error: virtual environment already exists`
 - `error: runtime requirements do not exist`
+- `error: runtime model does not exist`
 - `error: virtual environment could not be created`
 - `error: runtime dependencies could not be installed`
 - `error: input directory could not be created`

@@ -21,7 +21,7 @@ class BatchTests(unittest.TestCase):
         (self.root / "models").mkdir()
         (self.root / ".venv" / "bin").mkdir(parents=True)
         shutil.copy2("scripts/batch.sh", self.root / "scripts" / "batch.sh")
-        (self.root / "models" / "yolo26n.onnx").write_bytes(b"model")
+        (self.root / "models" / "yolo26n-v2.onnx").write_bytes(b"model")
         self.invocations = self.root / "invocations.log"
         self.python = self.root / ".venv" / "bin" / "python"
         self.python.write_text(
@@ -65,6 +65,7 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(call[-2:], ("--meta", str(metadata)))
         self.assertEqual(call.count("--meta"), 1)
         self.assertIn(str(image), call)
+        self.assertIn(str(self.root / "models/yolo26n-v2.onnx"), call)
 
     def test_missing_or_symlink_match_omits_metadata(self):
         missing_image = self.root / "input" / "a.jpg"
