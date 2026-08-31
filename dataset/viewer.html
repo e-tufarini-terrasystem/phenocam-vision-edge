@@ -56,10 +56,10 @@
     <aside>
       <div class="controls">
         <label class="control">Cerca per nome<input id="search" type="search" placeholder="open-images, phenocam…" disabled></label>
-        <label class="control">Contenuto<select id="filter" disabled><option value="all">Tutte</option><option value="positive">Con bounding box</option><option value="negative">Senza bounding box</option></select></label>
+        <label class="control">Contenuto<select id="filter" disabled><option id="allCount" value="all">Tutte</option><option id="positiveCount" value="positive">Solo positive</option><option id="negativeCount" value="negative">Solo negative</option></select></label>
       </div>
       <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
-      <p class="help">Seleziona il dataset, poi scorri e scegli un’immagine dal pannello a destra. Tutto resta nel browser.</p>
+      <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Tutto resta nel browser.</p>
     </aside>
     <section class="workspace">
       <div class="stage"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri la cartella <code>dataset/training-dataset</code> per iniziare.</div></div>
@@ -132,7 +132,9 @@
 
     function applyFilters() {
       const current = visible[position], query = elements.search.value.trim().toLowerCase(), mode = elements.filter.value;
-      visible = images.filter(file => file.name.toLowerCase().includes(query) && (mode === 'all' || (mode === 'positive') === labels.has(labelPath(file)))); position = Math.max(0,visible.indexOf(current));
+      const named = images.filter(file => file.name.toLowerCase().includes(query)), positives = named.filter(file => labels.has(labelPath(file)));
+      elements.allCount.textContent = `Tutte (${named.length.toLocaleString('it-IT')})`; elements.positiveCount.textContent = `Solo positive (${positives.length.toLocaleString('it-IT')})`; elements.negativeCount.textContent = `Solo negative (${(named.length-positives.length).toLocaleString('it-IT')})`;
+      visible = named.filter(file => mode === 'all' || (mode === 'positive') === labels.has(labelPath(file))); position = Math.max(0,visible.indexOf(current));
       thumbnailObserver.disconnect(); for (const button of elements.gallery.children) unloadThumbnail(button); elements.gallery.replaceChildren();
       for (const [index,file] of visible.entries()) {
         const button = document.createElement('button'), image = document.createElement('img'), text = document.createElement('span'), detail = document.createElement('small');
@@ -155,7 +157,11 @@
     elements.prev.addEventListener('click',() => { position = (position-1+visible.length)%visible.length; render(true); });
     elements.next.addEventListener('click',() => { position = (position+1)%visible.length; render(true); });
     elements.random.addEventListener('click',() => { position = Math.floor(Math.random()*visible.length); render(true); });
-    addEventListener('keydown',event => { if (event.target.matches('input,select')) return; if (event.key === 'ArrowLeft') elements.prev.click(); if (event.key === 'ArrowRight') elements.next.click(); });
+    addEventListener('keydown',event => {
+      if (event.target.matches('input[type="search"],select')) return;
+      const button = event.key === 'ArrowLeft' ? elements.prev : event.key === 'ArrowRight' ? elements.next : null;
+      if (button && !button.disabled) { event.preventDefault(); button.click(); }
+    });
     addEventListener('beforeunload',() => { if (centerUrl) URL.revokeObjectURL(centerUrl); for (const button of elements.gallery.children) unloadThumbnail(button); });
   </script>
 </body>
