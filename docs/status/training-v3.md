@@ -342,10 +342,11 @@ diretto per `raspberrypi2.local` e `sitets02`.
 ## 2026-09-02 — Dataset v3 espanso verificato
 
 `dataset/training-dataset-v3-expanded/` è stato materializzato senza modificare
-il precedente `training-dataset-v3/`. Contiene 2.258 immagini e 10.667 box:
+il precedente `training-dataset-v3/`. Dopo la correzione manuale descritta
+sotto contiene 2.258 immagini e 10.666 box:
 
 - `train`: 2.018 immagini, 1.262 positive e 4.781 box;
-- `operational_dev`: 120 immagini, 114 positive e 2.877 box;
+- `operational_dev`: 120 immagini, 114 positive e 2.876 box;
 - `operational_mining`: 120 immagini, 117 positive e 3.009 box.
 
 Le 18 aggiunte pubbliche PhenoCam provengono da quattro siti e contengono 104
@@ -358,6 +359,14 @@ Tutti i checksum sono validi, i 3.244 file immagine/label del training v2 sono
 byte-identici e i 43 test dataset passano. Il file di acceptance dichiara
 `reviewed_public_expansion_ready`; gli split operativi restano esclusi dal
 training e il test operativo resta sigillato.
+
+### Correzione annotazione del 2 settembre 2026
+
+Nel frame operativo
+`raspberrypi2.local--2025-11-11T091905--be026e5d2e7d.jpg` la sola box `bus`
+puntava a un edificio ed è stata rimossa. Le tre box `truck` del frame sono
+corrette e restano invariate. `bus` e il totale di `operational_dev`
+diminuiscono di uno.
 
 ## Prossima azione
 

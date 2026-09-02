@@ -1,7 +1,7 @@
 {
   "class_instances": {
     "bicycle": 200,
-    "bus": 182,
+    "bus": 181,
     "car": 6420,
     "motorcycle": 241,
     "person": 3232,
@@ -9,7 +9,6 @@
   },
   "images": 2258,
   "operational_class_instances": {
-    "bus": 1,
     "car": 5558,
     "motorcycle": 37,
     "person": 180,
@@ -19,7 +18,6 @@
   "public_expansion_images": 18,
   "split_class_instances": {
     "operational_dev": {
-      "bus": 1,
       "car": 2706,
       "motorcycle": 25,
       "person": 98,

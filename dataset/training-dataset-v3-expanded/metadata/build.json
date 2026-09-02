@@ -1,8 +1,8 @@
 {
   "identity": {
     "operational-dev-representative": {
-      "annotations_sha256": "5e25cf4a4f9a505e45fb138911ca184e8b2cde857c46a4b8d602a5917854f6a7",
-      "manifest_sha256": "274e973025b9ed30c6401d2da94615f12d3e807e6d263f012219bcaa407cf45b"
+      "annotations_sha256": "235565b5628d8006a24ec62d32acd395d39140ac8e2a76c6fe96889cf68d1580",
+      "manifest_sha256": "be906c5d48299b1ed3cf84157243d19fc24b9ba04083820b7080f2324b99f04f"
     },
     "operational-mining-informative": {
       "annotations_sha256": "98ae8f80d88f349dbec0b5588612f63298ef7793a65bbfabdb352148aa43640e",
@@ -22,7 +22,7 @@
   "statistics": {
     "class_instances": {
       "bicycle": 200,
-      "bus": 182,
+      "bus": 181,
       "car": 6420,
       "motorcycle": 241,
       "person": 3232,
@@ -30,7 +30,6 @@
     },
     "images": 2258,
     "operational_class_instances": {
-      "bus": 1,
       "car": 5558,
       "motorcycle": 37,
       "person": 180,
@@ -40,7 +39,6 @@
     "public_expansion_images": 18,
     "split_class_instances": {
       "operational_dev": {
-        "bus": 1,
         "car": 2706,
         "motorcycle": 25,
         "person": 98,

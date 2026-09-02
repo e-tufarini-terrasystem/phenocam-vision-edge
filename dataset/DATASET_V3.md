@@ -17,8 +17,8 @@ Il file `yolo-dataset.yaml` usa esclusivamente `images/train` per il training.
 Gli split interni sono inclusi nello stesso artifact per consultazione,
 development ed evaluation, ma non entrano automaticamente nel training.
 
-In totale l'artifact contiene 2.258 immagini e 10.667 annotazioni: 4.781 nel
-training e 5.886 nei due split operativi. Le 18 nuove immagini aggiungono 104
+In totale l'artifact contiene 2.258 immagini e 10.666 annotazioni: 4.781 nel
+training e 5.885 nei due split operativi. Le 18 nuove immagini aggiungono 104
 box umane (`car` 90, `truck` 12, `bus` 1, `person` 1). Le altre 22 immagini del
 Task CVAT 11 restano nella riserva revisionata e non sono materializzate.
 

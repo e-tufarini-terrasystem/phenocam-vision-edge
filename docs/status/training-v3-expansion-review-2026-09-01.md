@@ -1,5 +1,12 @@
 # Revisione pre-ampliamento del dataset v3
 
+> Errata corrige del 2 settembre 2026: una box `bus` del frame
+> `raspberrypi2.local--2025-11-11T091905--be026e5d2e7d.jpg` racchiudeva un
+> edificio. La correzione elimina soltanto quella box e riduce di uno i conteggi
+> `bus`, `operational_dev` e totali; le box `truck` restano invariate. Le misure
+> pre-correzione restano nel corpo come
+> fotografia storica; l'esito materializzato corretto è riportato sotto.
+
 Data della misura: 2026-09-01.
 
 Stato: report pre-modifica. `dataset/training-dataset-v3/` non è stato
@@ -401,24 +408,24 @@ Contengono 104 box umane (`car` 90, `truck` 12, `bus` 1, `person` 1). Le altre
 22 immagini restano in riserva con motivazione; nessuna è stata cancellata o
 classificata come rifiutata.
 
-La composizione materializzata diventa quindi 2.258 immagini e 10.667
+La composizione materializzata corretta è quindi 2.258 immagini e 10.666
 annotazioni: 2.018 immagini e 4.781 annotazioni nel training pubblico, più i
-240 frame e 5.886 annotazioni operative già separati. La provenienza PhenoCam
+240 frame e 5.885 annotazioni operative già separati. La provenienza PhenoCam
 sale da 721 a 739 immagini. Questi sono conteggi ground truth, non stime del
 teacher.
 
-| Classe | Immagini che la contengono | % delle 2.258 immagini | Box | % dei 10.667 box |
+| Classe | Immagini che la contengono | % delle 2.258 immagini | Box | % dei 10.666 box |
 | --- | ---: | ---: | ---: | ---: |
-| `person` | 809 | 35,828% | 3.232 | 30,299% |
+| `person` | 809 | 35,828% | 3.232 | 30,302% |
 | `bicycle` | 125 | 5,536% | 200 | 1,875% |
-| `car` | 680 | 30,115% | 6.420 | 60,186% |
-| `motorcycle` | 144 | 6,377% | 241 | 2,259% |
-| `bus` | 128 | 5,669% | 182 | 1,706% |
+| `car` | 680 | 30,115% | 6.420 | 60,191% |
+| `motorcycle` | 144 | 6,377% | 241 | 2,260% |
+| `bus` | 127 | 5,624% | 181 | 1,697% |
 | `truck` | 326 | 14,438% | 392 | 3,675% |
 
 Le percentuali per immagine non sommano a 100% perché un frame può contenere
-più classi. Per split, le annotazioni sono 4.781 nel training (44,820%), 2.877
-in `operational_dev` (26,971%) e 3.009 in `operational_mining` (28,208%). Il
+più classi. Per split, le annotazioni sono 4.781 nel training (44,825%), 2.876
+in `operational_dev` (26,964%) e 3.009 in `operational_mining` (28,211%). Il
 training conserva 3.052 `person`, 200 `bicycle`, 862 `car`, 204 `motorcycle`,
 181 `bus` e 282 `truck`; l'espansione rafforza `car` e `truck`, mentre
 `bicycle`, `motorcycle` e `bus` restano le classi meno rappresentate.
