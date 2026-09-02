@@ -81,7 +81,7 @@ cp /path/to/image.jpg input/example.jpg
   --input input/example.jpg \
   --annotated-output output/example_annotated.jpg \
   --privacy-output output/example_privacy.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-v3-extended.onnx
 ```
 
 The command leaves the source image unchanged. See the

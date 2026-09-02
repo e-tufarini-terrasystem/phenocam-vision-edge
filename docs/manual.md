@@ -33,7 +33,7 @@ working copy about 187 MiB.
 
 A minimal source copy may omit the PT checkpoints, the original
 `models/yolo26n.onnx`, the export scripts, and `requirements/export.txt`, but
-must retain the packaged development baseline `models/yolo26n-v2.onnx`.
+must retain the packaged model `models/yolo26n-v3-extended.onnx`.
 
 ### macOS
 
@@ -76,15 +76,15 @@ Run inference on every supported image directly inside `input/`:
 ```
 
 The script creates `output/` when needed and writes
-`<stem>_annotated.<ext>` and `<stem>_privacy.<ext>` in one process per input,
-preserving extension spelling. If a regular non-symlink
+`<stem>_annotated.<ext>` in one process per input, preserving extension
+spelling. Privacy output remains available through the direct CLI. If a regular
+non-symlink
 `input/<stem>.meta` exists, it is passed through `--meta`; a missing match is
 not created and does not fail that image.
 
-The batch script and installer use `models/yolo26n-v2.onnx`. This model is a
-development baseline whose validation on operational deployment images is
-still pending; the original model remains in the source repository for paired
-comparisons.
+The batch script and installer use the validation-selected
+`models/yolo26n-v3-extended.onnx`. Test evaluation and validation on operational
+deployment images remain pending.
 
 Existing files are overwritten. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is

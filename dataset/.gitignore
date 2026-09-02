@@ -18,6 +18,7 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 *.bak
+*.cache
 *.log
 *.old
 *.tmp

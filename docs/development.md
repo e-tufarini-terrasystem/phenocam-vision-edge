@@ -7,8 +7,8 @@ local verification procedure, and optional model-export workflow.
 
 ## Inference architecture
 
-Inference uses the development baseline `models/yolo26n-v2.onnx` and its
-end-to-end ONNX graph. The original `models/yolo26n.onnx` remains available for
+Inference uses the validation-selected `models/yolo26n-v3-extended.onnx` and
+its end-to-end ONNX graph. The original and v2 models remain available for
 comparisons. The runtime calls the selected model directly through ONNX Runtime.
 
 Each image is processed sequentially in one ONNX session using one full-image
@@ -58,9 +58,9 @@ python3 -m venv .venv-export
 .venv-export/bin/python scripts/export/fp32.py
 ```
 
-The included and tested `models/yolo26n-v2.onnx` does not need to be exported
-on the Raspberry Pi. V2 is a development baseline; operational validation on
-deployment imagery remains pending.
+The included and tested `models/yolo26n-v3-extended.onnx` does not need to be
+exported on the Raspberry Pi. Test evaluation and operational validation on
+deployment imagery remain pending.
 
 ## Optional v2 training on Apple Silicon
 
