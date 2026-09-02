@@ -4,7 +4,7 @@ import csv, json, os, shutil, tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from ..common import DatasetError, atomic_text, require_columns, sha256_file, write_csv
+from ..common import DatasetError, require_columns, sha256_file, write_csv
 from ..mining.review import REVIEW_FIELDS
 from .materialize import SOURCE_FIELDS
 from .public_expansion import CLASS_NAMES, append_public_expansion, copy_verified, expansion_identity, review_annotations
@@ -41,25 +41,31 @@ def _verify_checksums(root):
             raise DatasetError("dataset checksum verification failed")
 
 
-def _identity(public_root, reviewed_root):
-    values = {"schema_version": 1, "public_v2_checksums_sha256": sha256_file(public_root / "metadata/checksums.sha256")}
+def _identity(public_root, reviewed_root, include_public_expansion):
+    values = {
+        "schema_version": 1,
+        "public_expansion_included": include_public_expansion,
+        "public_v2_checksums_sha256": sha256_file(public_root / "metadata/checksums.sha256"),
+    }
     for folder, _ in REVIEWED:
         root = reviewed_root / folder
         values[folder] = {
             "manifest_sha256": sha256_file(root / "manifest.csv"),
             "annotations_sha256": sha256_file(root / "annotations.coco.zip"),
         }
-    values.update(expansion_identity(public_root.parent))
+    # Canonical v3 stays fixed at 2,240 images; reviewed expansion is explicit.
+    if include_public_expansion:
+        values.update(expansion_identity(public_root.parent))
     return values
 
 
-def materialize_operational(dataset_root, destination=None):
+def materialize_operational(dataset_root, destination=None, include_public_expansion=False):
     """Build a viewer-compatible v3 dataset without mixing operational data into training."""
     dataset_root = Path(dataset_root)
     public_root = dataset_root / "training-dataset"
     reviewed_root = dataset_root / "workspace" / "training-v3" / "reviewed"
     destination = Path(destination) if destination else dataset_root / "dataset-v3-source"
-    identity = _identity(public_root, reviewed_root)
+    identity = _identity(public_root, reviewed_root, include_public_expansion)
     if destination.exists():
         try:
             receipt = json.loads((destination / "metadata/build.json").read_text(encoding="utf-8"))
@@ -96,7 +102,11 @@ def materialize_operational(dataset_root, destination=None):
             manifests.append({**{field: row.get(field, "") for field in SOURCE_FIELDS}, "cohort": "public_v2", "original_file_name": Path(row["image_path"]).name, "task_id": ""})
             split_images["train"] += 1
         annotations.extend((public_root / "metadata/source-annotations.jsonl").read_text(encoding="utf-8").splitlines())
-        expansion = append_public_expansion(dataset_root, temporary)
+        expansion = (
+            append_public_expansion(dataset_root, temporary)
+            if include_public_expansion
+            else {"manifests": [], "annotations": [], "classes": Counter()}
+        )
         manifests.extend(expansion["manifests"]); annotations.extend(expansion["annotations"])
         split_images["train"] += len(expansion["manifests"]); split_positive["train"] += len(expansion["manifests"])
         split_classes["train"].update(expansion["classes"])
@@ -164,7 +174,6 @@ def materialize_operational(dataset_root, destination=None):
         (metadata / "acceptance-audit.json").write_text(json.dumps(acceptance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         receipt = {"identity": identity, "statistics": statistics}
         (metadata / "build.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        shutil.copyfile(Path(__file__).resolve().parents[2] / "DATASET_V3.md", temporary / "README.md")
         names = ", ".join(f"{key}: {value}" for key, value in sorted({**CLASS_NAMES, 4: "__unused_class_4", 6: "__unused_class_6"}.items()))
         (temporary / "yolo-dataset.yaml").write_text(f"path: .\ntrain: images/train\noperational_dev: images/operational_dev\noperational_mining: images/operational_mining\nnames: {{{names}}}\n", encoding="utf-8")
         checksum_paths = sorted(path for path in temporary.rglob("*") if path.is_file())

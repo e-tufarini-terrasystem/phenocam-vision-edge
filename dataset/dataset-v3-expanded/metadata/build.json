@@ -16,6 +16,7 @@
       "public-teacher-reviewed-statistics.json": "bdedcdeb396e0ac737a39114a4d716cf665bade5ffbfded1e113b647ea2ad731",
       "training-v3.json": "5603d5eb3ae33f0933a102339ae4c8e06314cb8b8c562aa9fa5b2c377a638ede"
     },
+    "public_expansion_included": true,
     "public_v2_checksums_sha256": "9cc4c9fada22a9c92df007994b663f8768e37d1df2fc393f67616e35addd2ab0",
     "schema_version": 1
   },

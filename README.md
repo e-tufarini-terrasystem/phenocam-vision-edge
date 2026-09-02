@@ -114,6 +114,7 @@ Release claims and verification apply only to the exact tagged commit.
 - [Manual installation and configuration](docs/manual.md)
 - [Development, verification, and model export](docs/development.md)
 - [Training dataset composition and reproducible builder](dataset/README.md)
+- [V2, v3, and v3-expanded training notebooks](notebooks/)
 
 ## Support and license
 

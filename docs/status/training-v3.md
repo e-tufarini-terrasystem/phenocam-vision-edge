@@ -341,7 +341,7 @@ diretto per `raspberrypi2.local` e `sitets02`.
 
 ## 2026-09-02 — Dataset v3 espanso verificato
 
-`dataset/training-dataset-v3-expanded/` è stato materializzato senza modificare
+`dataset/dataset-v3-expanded/` è stato materializzato senza modificare
 il precedente artifact ora sostituito da `dataset-v3/`. Dopo la correzione manuale descritta
 sotto contiene 2.258 immagini e 10.666 box:
 

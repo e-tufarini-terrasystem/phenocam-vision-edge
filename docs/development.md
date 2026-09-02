@@ -64,7 +64,7 @@ deployment imagery remains pending.
 
 ## Optional v2 training on Apple Silicon
 
-`training-v2.ipynb` fine-tunes the committed checkpoint through MPS, keeps its
+`notebooks/training-v2.ipynb` fine-tunes the committed checkpoint through MPS, keeps its
 80-class COCO runtime contract, compares both checkpoints on a deterministic
 group-safe validation split, plots the training curves, exports
 `models/yolo26n-v2.onnx`, and runs one end-to-end application inference. From
@@ -74,13 +74,33 @@ the repository root:
 python3.13 -m venv .venv-export
 .venv-export/bin/python -m pip install -r requirements/export.txt jupyterlab
 .venv-export/bin/python -m ipykernel install --sys-prefix --name phenocam-training-v2
-.venv-export/bin/jupyter lab training-v2.ipynb
+.venv-export/bin/jupyter lab notebooks/training-v2.ipynb
 ```
 
 Run the cells in order. Generated splits, metrics, plots, and the runtime sample
 stay under ignored `output/training-v2/`. Validation in the notebook reuses part
 of the public training dataset and does not satisfy the pending operational
 validation on internal deployment imagery.
+
+## V3 training notebooks
+
+Both v3 notebooks start from the original COCO checkpoint rather than v2. This
+prevents a v2 training image from leaking into the canonical TEST-ID benchmark.
+They preserve the 80-class runtime contract, select `best.pt` on Validation,
+report TEST-ID and TEST-OOD separately, export ONNX, and run the application
+contract check.
+
+```sh
+.venv-export/bin/jupyter lab notebooks/training-v3.ipynb
+.venv-export/bin/jupyter lab notebooks/training-v3-expanded.ipynb
+```
+
+The canonical notebook trains on the 1,600-image v3 Train split. The expanded
+notebook adds only the 18 reviewed public PhenoCam images whose sites already
+belong to Train. It reuses the canonical Validation and test splits; the 240
+private operational images remain excluded from training. Outputs stay under
+ignored `output/training-v3*/`, while accepted checkpoints and ONNX exports are
+copied to `models/`.
 
 ## V3 operational mining
 
@@ -157,8 +177,9 @@ expanded artifact beside the current v3 so it can be verified without an
 overwrite:
 
 ```sh
-dataset/commands/dataset-finalization.sh build-v3 \
-  dataset/training-dataset-v3-expanded
+dataset/.venv/bin/python -m dataset.builder.finalization build-v3 \
+  --destination dataset/dataset-v3-expanded \
+  --include-public-expansion
 ```
 
 Generated inventories, predictions, selections, copied CVAT images and exports

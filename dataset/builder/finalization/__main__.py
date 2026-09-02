@@ -39,6 +39,7 @@ def _parser():
     commands.add_parser("build")
     build_v3 = commands.add_parser("build-v3")
     build_v3.add_argument("--destination", type=Path)
+    build_v3.add_argument("--include-public-expansion", action="store_true")
     retry = commands.add_parser("complete-retry")
     retry.add_argument("--openimages", type=Path, required=True)
     importer = commands.add_parser("import-negatives")
@@ -100,7 +101,11 @@ def main(argv=None):
     elif arguments.command == "build":
         result = materialize(DATASET_ROOT, config)
     elif arguments.command == "build-v3":
-        result = materialize_operational(DATASET_ROOT, arguments.destination)
+        result = materialize_operational(
+            DATASET_ROOT,
+            arguments.destination,
+            include_public_expansion=arguments.include_public_expansion,
+        )
     else:
         result = import_negative_reviews(
             DATASET_ROOT / "workspace" / "annotation" / "final-negative-review",

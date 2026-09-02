@@ -10,7 +10,7 @@ boundary.
 
 The canonical training artifact is [`training-dataset/`](training-dataset/).
 Its versioned composition and limitations are documented in
-[`DATASET.md`](DATASET.md), which is copied to
+[`docs/dataset-v2/README.md`](docs/dataset-v2/README.md), which is copied to
 `training-dataset/README.md` during materialization.
 
 ## Current status
@@ -25,7 +25,7 @@ The 2,000-frame YOLO dataset is complete with status
   unavailable;
 - operational validation on internal imagery remains `pending`.
 
-The leakage-aware v3 artifact contains 2,240 images and 10,563 annotations:
+The leakage-aware v3 artifact contains 2,240 images and 10,562 annotations:
 1,600 train images, 200 validation images, 200 TEST-ID images, and 240 TEST-OOD
 images. Public splits keep PhenoCam cameras and pHash-near components disjoint;
 TEST-OOD contains the two later private operational cameras.
@@ -38,9 +38,8 @@ not evidence of production accuracy on internal camera imagery.
 - `training-dataset/`: ignored, materialized YOLO dataset ready for training;
 - `dataset-v3/`: ignored, final leakage-aware YOLO v3 artifact;
 - `dataset-v3-source/`: optional ignored unsplit v3 build input;
-- `training-dataset-v3-expanded/`: ignored, viewer-compatible expanded v3 with
+- `dataset-v3-expanded/`: optional, viewer-compatible expanded v3 with
   the reviewed public addition and separate operational splits;
-- `DATASET.md`: versioned description copied into the materialized dataset;
 - `builder/`: deterministic dataset-construction package;
 - `commands/`: shell entry points for building, review, CVAT, and finalization;
 - `config/`: versioned dataset contract and fixed invariants;
@@ -57,7 +56,6 @@ workspace/
 ├── deduplication/
 ├── history/
 ├── models/
-├── quarantine/
 ├── reviews/
 ├── sources/
 │   ├── open-images/
@@ -86,7 +84,6 @@ then materialized with:
 ```sh
 dataset/commands/dataset-finalization.sh build
 dataset/commands/dataset-finalization.sh build-v3
-dataset/commands/dataset-finalization.sh build-v3 dataset/training-dataset-v3-expanded
 cd dataset && .venv/bin/python -m builder.partition build dataset-v3-source dataset-v3
 ```
 
@@ -95,7 +92,9 @@ destination. Move or archive an existing artifact deliberately before rebuilding
 it. `build-v3` defaults to the intermediate `dataset-v3-source/`; the partition
 command creates the final artifact atomically.
 Reviewed public PhenoCam additions enter training only through the audited
-`included/reserved/rejected` selection described in `docs/development.md`.
+`included/reserved/rejected` selection described in `docs/development.md` and
+must be requested explicitly with `--include-public-expansion`; they do not
+silently alter the canonical 2,240-image v3 dataset.
 
 Run the tests directly with:
 
@@ -160,15 +159,18 @@ geometry, licenses, and review completeness before accepting data.
 
 ## Documentation
 
-- [`DATASET.md`](DATASET.md): final composition, files, licenses, and limits;
-- [`DATASET_V3.md`](DATASET_V3.md): private v3 composition, provenance, and
-  train/validation/test methodology;
+- [`docs/dataset-v2/README.md`](docs/dataset-v2/README.md) and
+  [`docs/dataset-v2/CREATION.md`](docs/dataset-v2/CREATION.md): public v2
+  composition and construction;
+- [`docs/dataset-v3/README.md`](docs/dataset-v3/README.md) and
+  [`docs/dataset-v3/CREATION.md`](docs/dataset-v3/CREATION.md): canonical v3
+  composition, split methodology, and reproducibility;
 - [`../docs/status/dataset-v3-split-2026-09-02.md`](../docs/status/dataset-v3-split-2026-09-02.md):
   measured split report, evidence, and limitations;
 - [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md): normative build contract;
 - [`docs/dataset-plan-it.md`](docs/dataset-plan-it.md): concise Italian plan;
 - [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
 - [`docs/next-steps-it.md`](docs/next-steps-it.md): completed state and boundary;
-- `docs/status/` and `docs/history/`: preserved development history.
+- `docs/status/` and `docs/history/`: preserved development history;
 - [`../docs/status/training-v3-expansion-review-2026-09-01.md`](../docs/status/training-v3-expansion-review-2026-09-01.md):
   measured pre-expansion audit and quantitative admission policy.

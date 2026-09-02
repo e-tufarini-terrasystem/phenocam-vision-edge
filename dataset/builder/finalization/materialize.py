@@ -191,7 +191,7 @@ def materialize(dataset_root, config):
         names.update({4: "__unused_class_4", 6: "__unused_class_6"})
         yaml_names = ", ".join(f"{class_id}: {names[class_id]}" for class_id in range(8))
         (temporary / "yolo-dataset.yaml").write_text(f"train: images/train\nnames: {{{yaml_names}}}\n", encoding="utf-8")
-        shutil.copyfile(dataset_root / "DATASET.md", temporary / "README.md")
+        shutil.copyfile(dataset_root / "docs/dataset-v2/README.md", temporary / "README.md")
         statistics, acceptance = _write_metadata(temporary, records, manifests, dedup, config, review_audit)
         checksum_paths = sorted(path for path in temporary.rglob("*") if path.is_file())
         checksums = [(sha256_file(path), path.relative_to(temporary)) for path in checksum_paths]

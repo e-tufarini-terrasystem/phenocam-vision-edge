@@ -9,8 +9,15 @@
 /dataset-v3-source/
 /dataset-v3-rebuilt/
 /dataset-v3-candidate/
-/training-dataset-v3-expanded/images/
+/dataset-v3-expanded/images/
 
 # Local interpreter and filesystem artifacts.
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 .DS_Store
+*.bak
+*.log
+*.old
+*.tmp

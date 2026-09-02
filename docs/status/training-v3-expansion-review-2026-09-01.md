@@ -14,7 +14,7 @@ modificato e il Task CVAT 11 non è ancora ground truth.
 
 ## Esito
 
-Il dataset v3 materiale contiene 2.240 immagini e 10.563 annotazioni. Le 2.000
+Il dataset v3 materiale contiene 2.240 immagini e 10.562 annotazioni. Le 2.000
 immagini pubbliche costituiscono l'unico training split; le 240 immagini interne
 sono separate in `operational_dev` e `operational_mining` e non sono usate
 automaticamente per il training.
@@ -63,7 +63,7 @@ di annotazioni sommano invece al 100% per ogni split.
 | `train` | 2.000 | 1.244 | 756 | 4.677 |
 | `operational_dev` | 120 | 114 | 6 | 2.877 |
 | `operational_mining` | 120 | 117 | 3 | 3.009 |
-| **Totale** | **2.240** | **1.475** | **765** | **10.563** |
+| **Totale** | **2.240** | **1.475** | **765** | **10.562** |
 
 Per provenienza, le immagini sono 1.279 Open Images V7, 721 PhenoCam v3 e 240
 interne. Tutte le immagini Open Images e PhenoCam correnti sono nel training
@@ -77,7 +77,7 @@ pubblico. Le immagini interne sono 60 per sito in ciascuno split operativo.
 | `bicycle` | 125 | 5,58% | 200 | 1,89% |
 | `car` | 665 | 29,69% | 6.330 | 59,93% |
 | `motorcycle` | 144 | 6,43% | 241 | 2,28% |
-| `bus` | 127 | 5,67% | 181 | 1,71% |
+| `bus` | 126 | 5,63% | 180 | 1,70% |
 | `truck` | 317 | 14,15% | 380 | 3,60% |
 
 Il totale aggregato è dominato da `car`, ma ciò dipende dagli split operativi e
@@ -107,7 +107,7 @@ operativo è quindi la copertura delle automobili in immagini a camera fissa.
 | `bicycle` | 0 | 0,00% | 0 | 0,00% |
 | `car` | 114 | 95,00% | 2.706 | 94,06% |
 | `motorcycle` | 19 | 15,83% | 25 | 0,87% |
-| `bus` | 1 | 0,83% | 1 | 0,03% |
+| `bus` | 0 | 0,00% | 0 | 0,00% |
 | `truck` | 40 | 33,33% | 47 | 1,63% |
 
 ### Split `operational_mining`
@@ -129,7 +129,7 @@ rimossa dall'ontologia pubblica a sei classi.
 
 Il dataset materiale non contiene directory `val` o `test` e il suo YAML
 dichiara soltanto `train`, `operational_dev` e `operational_mining`. Il notebook
-`training-v2.ipynb` costruisce però un train/validation temporaneo e deterministico
+`notebooks/training-v2.ipynb` costruisce però un train/validation temporaneo e deterministico
 raggruppando per `group_id`.
 
 ### Split derivato usato dal training v2
@@ -319,7 +319,7 @@ revisione CVAT.
 | immagini training | 2.000 | fino a 2.018 | raccomandazione |
 | immagini operative separate | 240 | 240 | invariato |
 | immagini PhenoCam | 721 | fino a 739 | raccomandazione |
-| annotazioni totali | 10.563 | circa 10.640 | stima YOLO26x |
+| annotazioni totali | 10.562 | circa 10.639 | stima YOLO26x |
 | annotazioni training | 4.677 | circa 4.754 | stima YOLO26x |
 
 Se tutte le 77 proposte della selezione conservativa fossero confermate, il
@@ -390,7 +390,8 @@ Incongruenze o limiti da correggere dopo la revisione:
 5. Materializzare il v3 ampliato in una nuova destinazione o tramite identità di
    build nuova, senza sovrascrivere l'artifact corrente.
 6. Rieseguire checksum, validazione label, audit leakage e statistiche complete.
-7. Solo allora aggiornare `DATASET_V3.md`, README materializzato e stato del
+7. Solo allora aggiornare `dataset/docs/dataset-v3/README.md`, README
+   materializzato e stato del
    progetto con i numeri misurati finali.
 
 ## 10. Esito post-review e ampliamento

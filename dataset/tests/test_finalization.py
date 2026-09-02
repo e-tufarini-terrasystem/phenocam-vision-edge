@@ -287,18 +287,31 @@ class FinalizationTests(unittest.TestCase):
         with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1):
             result = materialize_operational(self.root, destination)
             resumed = materialize_operational(self.root, destination)
-        self.assertEqual(result["images"], 4)
-        self.assertEqual(result["public_expansion_images"], 1)
-        self.assertEqual(result["class_instances"], {"car": 3, "truck": 1})
+        self.assertEqual(result["images"], 3)
+        self.assertEqual(result["public_expansion_images"], 0)
+        self.assertEqual(result["class_instances"], {"car": 3})
         self.assertTrue(resumed["resumed"])
         self.assertTrue((destination / "images/operational_dev/site-a--2026-08-01T120000--abc1.jpg").is_file())
         self.assertTrue((destination / "labels/operational_mining/site-b--2026-08-02T120000--abc2.txt").is_file())
-        self.assertTrue((destination / f"images/train/{public_name}").is_file())
+        self.assertFalse((destination / f"images/train/{public_name}").exists())
         self.assertIn("train: images/train", (destination / "yolo-dataset.yaml").read_text())
+
+        expanded = self.root / "dataset-v3-expanded"
+        with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1):
+            expanded_result = materialize_operational(
+                self.root, expanded, include_public_expansion=True
+            )
+        self.assertEqual(expanded_result["images"], 4)
+        self.assertEqual(expanded_result["public_expansion_images"], 1)
+        self.assertEqual(expanded_result["class_instances"], {"car": 3, "truck": 1})
+        self.assertTrue((expanded / f"images/train/{public_name}").is_file())
+
         decision["decision"] = "untracked"
         self.write_csv(selection / "public-teacher-reviewed-decisions.csv", DECISION_FIELDS, [decision])
         with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1), self.assertRaises(DatasetError):
-            materialize_operational(self.root, self.root / "invalid-v3")
+            materialize_operational(
+                self.root, self.root / "invalid-v3", include_public_expansion=True
+            )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # Handoff training v3 — 31 agosto 2026
 
 > Aggiornamento 2 settembre 2026: il task 11 è stato completato, esportato e
-> importato. Il build affiancato `training-dataset-v3-expanded` contiene 18
+> importato. Il build affiancato, ora denominato `dataset-v3-expanded`, contiene 18
 > nuove immagini PhenoCam revisionate. Lo stato corrente e i conteggi verificati
 > sono in `docs/status/training-v3.md`; il testo seguente resta la fotografia
 > storica dell'handoff.

@@ -1,7 +1,7 @@
 """Verify final partition structure, manifests, hashes, and leakage invariants."""
 
 import csv
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 from ..common import DatasetError, sha256_file

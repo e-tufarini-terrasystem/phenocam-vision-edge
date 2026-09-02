@@ -3,6 +3,7 @@
 .venv/
 .venv-export/
 __pycache__/
+.ipynb_checkpoints/
 .DS_Store
 input/
 output/

@@ -16,7 +16,7 @@ Data della misura: 2026-09-02. Stato: split materializzato e verificato.
 | Immagini | 2.240 |
 | Immagini positive | 1.475 |
 | Negative intenzionali senza label | 765 |
-| Annotazioni | 10.563 |
+| Annotazioni | 10.562 |
 | Immagini multi-oggetto | 1.032 |
 | Box medi per immagine | 4,716 |
 | Box medi per positiva | 7,161 |
@@ -32,7 +32,7 @@ un test finale YOLO.
 | `bicycle` | 125 | 5,58% | 200 | 1,89% |
 | `car` | 665 | 29,69% | 6.330 | 59,93% |
 | `motorcycle` | 144 | 6,43% | 241 | 2,28% |
-| `bus` | 127 | 5,67% | 181 | 1,71% |
+| `bus` | 126 | 5,63% | 180 | 1,70% |
 | `truck` | 317 | 14,15% | 380 | 3,60% |
 
 Tutti i 2.240 path immagine e i 1.475 path label sono presenti e listati. Le
@@ -119,7 +119,7 @@ classi rare non giustificano mai la rottura di un gruppo.
 | Train | 1.600 | 3.750 | 995 | 605 | 117 | 117 |
 | Validation | 200 | 464 | 125 | 75 | 23 | 23 |
 | TEST-ID | 200 | 463 | 124 | 76 | 17 | 17 |
-| TEST-OOD | 240 | 5.886 | 231 | 9 | 2 | 2 |
+| TEST-OOD | 240 | 5.885 | 231 | 9 | 2 | 2 |
 
 | Classe | Train | Validation | TEST-ID | TEST-OOD |
 | --- | ---: | ---: | ---: | ---: |
@@ -127,7 +127,7 @@ classi rare non giustificano mai la rottura di un gruppo.
 | `bicycle` | 160 | 20 | 20 | 0 |
 | `car` | 624 | 74 | 74 | 5.558 |
 | `motorcycle` | 163 | 20 | 21 | 37 |
-| `bus` | 144 | 18 | 18 | 1 |
+| `bus` | 144 | 18 | 18 | 0 |
 | `truck` | 217 | 26 | 27 | 110 |
 
 TEST-OOD è volutamente car-heavy e non contiene `bicycle`; descrive i due siti
@@ -143,7 +143,7 @@ pubbliche del training ma usa camere PhenoCam disgiunte.
 
 ## Verifica e modifiche
 
-Il verificatore conferma 2.240 immagini e 10.563 annotazioni, 1.417 gruppi
+Il verificatore conferma 2.240 immagini e 10.562 annotazioni, 1.417 gruppi
 finali, 157 camere PhenoCam, zero hash duplicati e zero coppie pHash≤6
 cross-split. Nessuna immagine o gruppo attraversa split. Tutte le classi sono
 presenti in Train, Validation e TEST-ID. Nessun elemento è escluso.

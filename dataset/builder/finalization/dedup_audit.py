@@ -1,6 +1,5 @@
 """Run exact and SSCD checks over the final accepted composition."""
 
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
