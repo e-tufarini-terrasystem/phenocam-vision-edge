@@ -110,8 +110,8 @@ boxes, and supports filename, positive/negative, and object-class filters with
 image counts without uploading dataset files. V3 filenames can be filtered by
 `raspberrypi2.local` or `sitets02`. Click the selected image name to select it
 for copying; use the left and right arrow keys to move between images. Zoom with
-the controls below the image, the `+`, `-`, and `0` keys, or `Ctrl`/`Command`
-plus the mouse wheel. Images larger than the viewport can be panned by scrolling.
+the mouse wheel, the controls below the image, or the `+`, `-`, and `0` keys.
+Drag an enlarged image with the primary mouse button to pan it.
 
 ## Annotation commands
 
