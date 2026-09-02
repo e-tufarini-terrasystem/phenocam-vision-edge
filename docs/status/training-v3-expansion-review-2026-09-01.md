@@ -9,7 +9,7 @@
 
 Data della misura: 2026-09-01.
 
-Stato: report pre-modifica. `dataset/training-dataset-v3/` non è stato
+Stato: report pre-modifica. L'artifact oggi denominato `dataset/dataset-v3/` non è stato
 modificato e il Task CVAT 11 non è ancora ground truth.
 
 ## Esito
@@ -42,9 +42,9 @@ Le sezioni usano quattro qualificatori:
 
 Fonti locali principali:
 
-- `dataset/training-dataset-v3/metadata/source-images.csv`;
-- `dataset/training-dataset-v3/labels/**`;
-- `dataset/training-dataset-v3/metadata/source-annotations.jsonl`;
+- `dataset/dataset-v3/metadata/source-images.csv`;
+- `dataset/dataset-v3/labels/**`;
+- `dataset/dataset-v3/metadata/source-annotations.jsonl`;
 - `dataset/workspace/sources/phenocam/baseline-screened.csv`;
 - `dataset/workspace/training-v3/screening/public-teacher/`;
 - `dataset/workspace/training-v3/selection/public-teacher-clean.csv`;

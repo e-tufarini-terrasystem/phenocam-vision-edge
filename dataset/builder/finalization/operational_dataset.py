@@ -58,7 +58,7 @@ def materialize_operational(dataset_root, destination=None):
     dataset_root = Path(dataset_root)
     public_root = dataset_root / "training-dataset"
     reviewed_root = dataset_root / "workspace" / "training-v3" / "reviewed"
-    destination = Path(destination) if destination else dataset_root / "training-dataset-v3"
+    destination = Path(destination) if destination else dataset_root / "dataset-v3-source"
     identity = _identity(public_root, reviewed_root)
     if destination.exists():
         try:

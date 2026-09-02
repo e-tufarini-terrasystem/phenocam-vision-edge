@@ -321,7 +321,7 @@ ampliato usa una destinazione affiancata per non sovrascrivere il v3 corrente.
 
 ## 2026-09-01 — Dataset v3 materializzato
 
-`dataset/training-dataset-v3/` conserva senza modifiche le 2.000 immagini e le
+`dataset/dataset-v3/` conserva le 2.000 immagini pubbliche originarie e le
 1.244 label del dataset pubblico v2 e aggiunge le due coorti revisionate come
 split separati, esclusi dalla voce `train` del file YOLO:
 
@@ -342,7 +342,7 @@ diretto per `raspberrypi2.local` e `sitets02`.
 ## 2026-09-02 — Dataset v3 espanso verificato
 
 `dataset/training-dataset-v3-expanded/` è stato materializzato senza modificare
-il precedente `training-dataset-v3/`. Dopo la correzione manuale descritta
+il precedente artifact ora sostituito da `dataset-v3/`. Dopo la correzione manuale descritta
 sotto contiene 2.258 immagini e 10.666 box:
 
 - `train`: 2.018 immagini, 1.262 positive e 4.781 box;

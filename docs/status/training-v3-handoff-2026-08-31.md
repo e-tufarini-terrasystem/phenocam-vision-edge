@@ -199,7 +199,7 @@ entrano nel training del primo ciclo v3.
 
 ### Dataset v3 materializzato — 1 settembre 2026
 
-`dataset/training-dataset-v3/` è apribile con il viewer e contiene 2.240
+L'artifact oggi denominato `dataset/dataset-v3/` è apribile con il viewer e contiene 2.240
 immagini: le 2.000 pubbliche e invariate sotto `train`, più 120
 `operational_dev` e 120 `operational_mining`. Le 240 immagini interne restano
 escluse dalla voce `train` del file YOLO. Il manifest conserva origine e nome

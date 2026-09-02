@@ -5,7 +5,10 @@
 # Generated dataset state and materialized outputs.
 /workspace/
 /training-dataset/
-/training-dataset-v3/
+/dataset-v3/
+/dataset-v3-source/
+/dataset-v3-rebuilt/
+/dataset-v3-candidate/
 /training-dataset-v3-expanded/images/
 
 # Local interpreter and filesystem artifacts.

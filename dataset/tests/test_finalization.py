@@ -283,7 +283,7 @@ class FinalizationTests(unittest.TestCase):
         config.mkdir()
         (config / "training-v3.json").write_text(json.dumps({"public_expansion": {"maximum_images": 18, "maximum_per_site": 8, "maximum_per_group": 1}}), encoding="utf-8")
 
-        destination = self.root / "training-dataset-v3"
+        destination = self.root / "dataset-v3-source"
         with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1):
             result = materialize_operational(self.root, destination)
             resumed = materialize_operational(self.root, destination)

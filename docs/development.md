@@ -143,7 +143,7 @@ dataset/.venv/bin/python -m dataset.builder.mining import-reviewed \
   --task-id 11 --annotator Emanuele --reviewer Emanuele --task-completed
 dataset/.venv/bin/python -m dataset.builder.mining select-reviewed-public \
   --reviewed-dir dataset/workspace/training-v3/reviewed/public-phenocam-teacher \
-  --existing dataset/training-dataset-v3/metadata/source-images.csv \
+  --existing dataset/dataset-v3/metadata/source-images.csv \
   --embeddings dataset/workspace/deduplication/embeddings.npz \
   --output dataset/workspace/training-v3/selection/public-teacher-reviewed-decisions.csv \
   --statistics dataset/workspace/training-v3/selection/public-teacher-reviewed-statistics.json
@@ -191,10 +191,15 @@ viewer-compatible current v3 artifact:
 dataset/commands/dataset-finalization.sh build-v3
 ```
 
-The result is `dataset/training-dataset-v3/`. Its `images/train` and
-`labels/train` directories are byte-for-byte copies of the public v2 artifact;
-the reviewed internal data remains in separate `operational_dev` and
-`operational_mining` splits. Internal filenames include the site, timestamp and
-short source hash, while `metadata/source-images.csv` preserves the complete
-origin. Open `dataset/viewer.html` and select the v3 directory to inspect all
-three splits.
+The command now produces the intermediate `dataset/dataset-v3-source/`. Build
+and verify the final leakage-aware artifact with:
+
+```sh
+cd dataset
+.venv/bin/python -m builder.partition build dataset-v3-source dataset-v3
+.venv/bin/python -m builder.partition verify dataset-v3
+```
+
+The final artifact exposes Train, Validation, TEST-ID and TEST-OOD. Internal
+frames remain TEST-OOD and never enter training. Open `dataset/viewer.html`,
+select `dataset-v3`, and use the split selector to inspect each subset.

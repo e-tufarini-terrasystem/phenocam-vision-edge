@@ -62,15 +62,16 @@
   <main>
     <aside>
       <div class="controls">
+        <label class="control">Dataset split<select id="split" disabled><option value="train">Train</option><option value="val">Validation</option><option value="test">Test</option><option value="test_id">Test ID</option><option value="test_ood">Test OOD</option></select></label>
         <label class="control">Cerca per nome<input id="search" type="search" placeholder="open-images, phenocam…" disabled></label>
         <label class="control">Contenuto<select id="filter" disabled><option id="allCount" value="all">Tutte</option><option id="positiveCount" value="positive">Solo positive</option><option id="negativeCount" value="negative">Solo negative</option></select></label>
         <label class="control">Classe<select id="classFilter" disabled><option value="all">Tutte le classi</option></select></label>
       </div>
-      <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
+      <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="annotations">—</strong><span>annotazioni</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
       <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Usa la rotellina per lo zoom e trascina l’immagine ingrandita per spostarla. Tutto resta nel browser.</p>
     </aside>
     <section class="workspace">
-      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/training-dataset</code> oppure <code>dataset/training-dataset-v3</code>.</div></div></div>
+      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/dataset-v3</code>.</div></div></div>
       <div class="toolbar">
         <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
         <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>
@@ -85,7 +86,7 @@
   <script>
     const elements = Object.fromEntries([...document.querySelectorAll('[id]')].map(node => [node.id, node]));
     const colors = ['#c9f26b','#70d6ff','#ff9770','#ffd670','#e9ff70','#ff70a6','#b8c0ff','#9cfffa'];
-    let images = [], visible = [], labels = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '', zoom = 1, pan = null;
+    let images = [], visible = [], labels = new Map(), metadata = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '', zoom = 1, pan = null;
     const minimumZoom = .5, maximumZoom = 4, zoomStep = .25;
     const thumbnailObserver = new IntersectionObserver(entries => {
       for (const entry of entries) entry.isIntersecting ? loadThumbnail(entry.target) : unloadThumbnail(entry.target);
@@ -93,6 +94,54 @@
 
     function labelPath(file) {
       return file.webkitRelativePath.replace('/images/', '/labels/').replace(/\.[^.]+$/, '.txt');
+    }
+
+    function splitOf(file) {
+      const path = file.webkitRelativePath;
+      if (/\/images\/test\/id\//i.test(path)) return 'test_id';
+      if (/\/images\/test\/ood\//i.test(path)) return 'test_ood';
+      if (/\/images\/val\//i.test(path)) return 'val';
+      if (/\/images\/train\//i.test(path)) return 'train';
+      return '';
+    }
+
+    function selectedSplit(file) {
+      const split = splitOf(file), selected = elements.split.value;
+      return selected === 'test' ? split === 'test_id' || split === 'test_ood' : split === selected;
+    }
+
+    function parseCsv(text) {
+      const rows = []; let row = [], value = '', quoted = false;
+      for (let index=0; index<text.length; index++) {
+        const character = text[index];
+        if (quoted && character === '"' && text[index+1] === '"') { value += '"'; index++; }
+        else if (character === '"') quoted = !quoted;
+        else if (!quoted && character === ',') { row.push(value); value = ''; }
+        else if (!quoted && (character === '\n' || character === '\r')) {
+          if (character === '\r' && text[index+1] === '\n') index++;
+          row.push(value); if (row.some(cell => cell)) rows.push(row); row = []; value = '';
+        } else value += character;
+      }
+      if (value || row.length) { row.push(value); rows.push(row); }
+      if (quoted || rows.length < 2) return [];
+      const headers = rows[0];
+      return rows.slice(1).filter(values => values.length === headers.length).map(values => Object.fromEntries(headers.map((header,index) => [header,values[index]])));
+    }
+
+    function parseClasses(text) {
+      const parsed = {}, inline = text.match(/names:\s*\{([^}]+)\}/);
+      if (inline) for (const item of inline[1].split(',')) {
+        const [rawId,...parts] = item.split(':'), id = Number(rawId.trim()), name = parts.join(':').trim();
+        if (Number.isInteger(id) && id >= 0 && name) parsed[id] = name;
+      }
+      let names = false;
+      for (const line of text.split(/\r?\n/)) {
+        if (/^names:\s*$/.test(line)) { names = true; continue; }
+        if (names && /^\S/.test(line)) break;
+        const match = names && line.match(/^\s+(\d+):\s*(\S.*)$/);
+        if (match) parsed[Number(match[1])] = match[2].trim();
+      }
+      return parsed;
     }
 
     function parseBoxes(text) {
@@ -161,7 +210,8 @@
           context.fillStyle = color; context.fillRect(left,labelTop,textWidth+12,labelHeight); context.fillStyle = '#0c0e0d'; context.fillText(text,left+6,labelTop+labelHeight*.76);
         }
         applyZoom();
-        elements.name.value = file.name; elements.detail.textContent = `${position+1} / ${visible.length} · ${image.naturalWidth}×${image.naturalHeight} · ${boxes.length} box`;
+        const details = metadata.get(file.webkitRelativePath) || {}, source = details.source_dataset || 'sorgente sconosciuta', camera = details.camera_id || details.site_id || '', timestamp = details.timestamp || '';
+        elements.name.value = file.name; elements.detail.textContent = `${elements.split.options[elements.split.selectedIndex].text} · ${position+1} / ${visible.length} · ${image.naturalWidth}×${image.naturalHeight} · ${boxes.length} box · ${source}${source === 'phenocam' ? ' · PhenoCam sì' : ' · PhenoCam no'}${camera ? ` · ${camera}` : ''}${timestamp ? ` · ${timestamp}` : ''}`;
       };
       image.onerror = () => { if (token === renderId) { elements.canvas.style.display = 'none'; elements.empty.style.display = 'block'; elements.empty.textContent = 'Immagine non leggibile'; } };
       image.src = centerUrl;
@@ -169,7 +219,8 @@
 
     function applyFilters() {
       const current = visible[position], query = elements.search.value.trim().toLowerCase(), mode = elements.filter.value, classId = elements.classFilter.value;
-      const named = images.filter(file => file.name.toLowerCase().includes(query)), positives = named.filter(file => labels.has(labelPath(file)));
+      const splitImages = images.filter(selectedSplit), named = splitImages.filter(file => file.name.toLowerCase().includes(query)), positives = named.filter(file => labels.has(labelPath(file)));
+      elements.total.textContent = splitImages.length.toLocaleString('it-IT'); elements.annotations.textContent = splitImages.reduce((count,file) => count+(labels.get(labelPath(file)) || []).length,0).toLocaleString('it-IT');
       elements.allCount.textContent = `Tutte (${named.length.toLocaleString('it-IT')})`; elements.positiveCount.textContent = `Solo positive (${positives.length.toLocaleString('it-IT')})`; elements.negativeCount.textContent = `Solo negative (${(named.length-positives.length).toLocaleString('it-IT')})`;
       const content = named.filter(file => mode === 'all' || (mode === 'positive') === labels.has(labelPath(file)));
       const classCounts = new Map();
@@ -190,15 +241,19 @@
       const files = [...event.target.files], labelFiles = files.filter(file => /\/labels\/.*\.txt$/i.test(file.webkitRelativePath));
       labels = new Map(await Promise.all(labelFiles.map(async file => [file.webkitRelativePath,parseBoxes(await file.text())])));
       images = files.filter(file => /\/images\/.*\.(jpe?g|png|webp)$/i.test(file.webkitRelativePath)).sort((a,b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
-      const yaml = files.find(file => /\/yolo-dataset\.ya?ml$/i.test(file.webkitRelativePath)); classes = {};
-      if (yaml) { const match = (await yaml.text()).match(/names:\s*\{([^}]+)\}/); if (match) for (const item of match[1].split(',')) { const [rawId,...parts] = item.split(':'), id = Number(rawId.trim()), name = parts.join(':').trim(); if (Number.isInteger(id) && id >= 0 && name) classes[id] = name; } }
+      const yaml = files.find(file => /\/(dataset|yolo-dataset)\.ya?ml$/i.test(file.webkitRelativePath)); classes = yaml ? parseClasses(await yaml.text()) : {};
+      metadata = new Map(); const manifest = files.find(file => /\/metadata\/source-images\.csv$/i.test(file.webkitRelativePath));
+      if (manifest) { const prefix = manifest.webkitRelativePath.replace(/metadata\/source-images\.csv$/i,''); for (const row of parseCsv(await manifest.text())) if (row.image_path) metadata.set(prefix+row.image_path,row); }
+      const available = new Set(images.map(splitOf));
+      for (const option of elements.split.options) option.disabled = option.value === 'test' ? !available.has('test_id') && !available.has('test_ood') : !available.has(option.value);
+      elements.split.value = available.has('train') ? 'train' : [...elements.split.options].find(option => !option.disabled)?.value || 'train';
       elements.classFilter.replaceChildren();
       const allClasses = document.createElement('option'); allClasses.value = 'all'; allClasses.textContent = 'Tutte le classi'; elements.classFilter.append(allClasses);
       const usedClassIds = new Set([...labels.values()].flatMap(boxes => boxes.map(box => box.id)));
       for (const [id,name] of Object.entries(classes).filter(([id]) => usedClassIds.has(Number(id))).sort((left,right) => Number(left[0])-Number(right[0]))) { const option = document.createElement('option'); option.value = id; option.textContent = name; elements.classFilter.append(option); }
-      elements.total.textContent = images.length.toLocaleString('it-IT'); elements.search.disabled = elements.filter.disabled = !images.length; elements.classFilter.disabled = !images.length || elements.classFilter.options.length < 2; position = 0; applyFilters();
+      elements.split.disabled = !images.length; elements.search.disabled = elements.filter.disabled = !images.length; elements.classFilter.disabled = !images.length || elements.classFilter.options.length < 2; position = 0; applyFilters();
     });
-    elements.search.addEventListener('input',applyFilters); elements.filter.addEventListener('change',applyFilters); elements.classFilter.addEventListener('change',applyFilters);
+    elements.split.addEventListener('change',() => { if (centerUrl) { URL.revokeObjectURL(centerUrl); centerUrl = ''; } renderId++; position = 0; applyFilters(); }); elements.search.addEventListener('input',applyFilters); elements.filter.addEventListener('change',applyFilters); elements.classFilter.addEventListener('change',applyFilters);
     elements.name.addEventListener('click',() => elements.name.select());
     elements.prev.addEventListener('click',() => { position = (position-1+visible.length)%visible.length; render(true); });
     elements.next.addEventListener('click',() => { position = (position+1)%visible.length; render(true); });

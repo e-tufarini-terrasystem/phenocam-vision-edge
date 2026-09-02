@@ -1,68 +1,98 @@
 # Phenocam Vision dataset v3
 
-Questo artifact mantiene la struttura YOLO del dataset v2, aggiunge una piccola
-espansione pubblica PhenoCam revisionata ed è apribile direttamente con
-`dataset/viewer.html`.
+`dataset-v3/` è l'artifact YOLO leakage-aware pronto per training e valutazione.
+Contiene tutte le 2.240 immagini dell'artifact v3 originario, senza esclusioni.
 
-## Composizione
+## Split
 
-- `images/train` e `labels/train`: 2.018 immagini pubbliche, cioè le 2.000 del
-  dataset v2 conservate senza modifiche e 18 positive PhenoCam revisionate;
-- `images/operational_dev` e `labels/operational_dev`: 120 immagini interne
-  revisionate per development operativo;
-- `images/operational_mining` e `labels/operational_mining`: 120 immagini
-  interne informative revisionate.
+| Split | Immagini | Positive | Negative | Annotazioni | Ruolo |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Train | 1.600 | 995 | 605 | 3.750 | pesi e augmentation |
+| Validation | 200 | 125 | 75 | 464 | tuning, early stopping, scelta modello |
+| TEST-ID | 200 | 124 | 76 | 463 | valutazione finale pubblica |
+| TEST-OOD | 240 | 231 | 9 | 5.886 | valutazione finale operativa |
+| **Totale** | **2.240** | **1.475** | **765** | **10.563** | |
 
-Il file `yolo-dataset.yaml` usa esclusivamente `images/train` per il training.
-Gli split interni sono inclusi nello stesso artifact per consultazione,
-development ed evaluation, ma non entrano automaticamente nel training.
+Il pubblico originario (1.279 Open Images e 721 PhenoCam) è diviso 80/10/10.
+Le 240 immagini delle due camere operative private sono interamente TEST-OOD.
+Sul totale, Train è 71,43%, Validation 8,93%, TEST-ID 8,93% e TEST-OOD 10,71%.
 
-In totale l'artifact contiene 2.258 immagini e 10.666 annotazioni: 4.781 nel
-training e 5.885 nei due split operativi. Le 18 nuove immagini aggiungono 104
-box umane (`car` 90, `truck` 12, `bus` 1, `person` 1). Le altre 22 immagini del
-Task CVAT 11 restano nella riserva revisionata e non sono materializzate.
+| Classe | Train | Validation | TEST-ID | TEST-OOD |
+| --- | ---: | ---: | ---: | ---: |
+| `person` | 2.442 | 306 | 303 | 180 |
+| `bicycle` | 160 | 20 | 20 | 0 |
+| `car` | 624 | 74 | 74 | 5.558 |
+| `motorcycle` | 163 | 20 | 21 | 37 |
+| `bus` | 144 | 18 | 18 | 1 |
+| `truck` | 217 | 26 | 27 | 110 |
 
-## Provenienza
+L'assenza di `bicycle` e la rarità di `bus` in TEST-OOD sono proprietà misurate
+del dominio operativo. Le camere non vengono spostate per correggerle, perché la
+prevenzione del leakage ha priorità sulla stratificazione.
 
-I nomi delle immagini interne espongono sito, timestamp e hash breve, per
-esempio:
+## Regola di assegnazione
+
+- Open Images: il `group_id` di deduplicazione revisionato è indivisibile.
+- PhenoCam: l'intera camera/sito è indivisibile; vengono inoltre uniti i
+  componenti con distanza pHash Hamming ≤ 6. Il pHash raggruppa ma non elimina.
+- Dati interni: l'intera camera/sito resta in TEST-OOD.
+- Seed: `42`.
+- L'ottimizzazione intera preserva i conteggi immagini esatti e minimizza lo
+  scostamento di classi, stagioni e luminosità dopo i vincoli di gruppo.
+
+Le 721 immagini PhenoCam coprono 157 camere/siti e il periodo 2001–2023. La
+divisione finale non condivide camere né coppie pHash≤6 tra split. I due siti
+interni sono successivi (2025–2026), privati e mai usati da Train/Validation.
+
+## Struttura
 
 ```text
-raspberrypi2.local--2025-10-30T121905--f4ab422e2908.jpg
-sitets02--2026-08-08T061104--7f9b7bd389d0.jpg
+dataset-v3/
+├── images/{train,val,test/{id,ood}}/
+├── labels/{train,val,test/{id,ood}}/
+├── manifests/{train,val,test,test-id,test-ood}.csv
+├── metadata/
+├── reports/{dataset-analysis.md,verification.json}
+├── dataset.yaml
+├── dataset-test-id.yaml
+└── dataset-test-ood.yaml
 ```
 
-Anche i nuovi nomi PhenoCam espongono sito e timestamp. Le 18 immagini
-provengono da `bitterootvalley` (8), `nationalcapital` (8),
-`borgocioffinorth` (1) e `snodgrass5` (1).
+`dataset.yaml` dichiara il test combinato; i due YAML aggiuntivi permettono di
+misurare ID e OOD separatamente. Le negative omettono intenzionalmente il file
+label, come previsto dal formato detection di Ultralytics.
 
-`metadata/source-images.csv` è il manifest canonico. Per ogni immagine conserva
-identità e nome originali, sito, timestamp, gruppo, split, coorte, task CVAT,
-revisori e checksum. I path assoluti della workstation non sono inclusi.
+Ogni manifest conserva path, split, sorgente, sito, camera, timestamp,
+`partition_group_id` e i conteggi ricostruibili dalle label. Il manifest
+canonico completo è `metadata/source-images.csv`.
+
+## Riproducibilità
+
+Dalla directory `dataset/`:
+
+```sh
+.venv/bin/python -m builder.partition build dataset-v3 dataset-v3-rebuilt
+.venv/bin/python -m builder.partition verify dataset-v3
+```
+
+Il build usa hard link sullo stesso filesystem e non duplica i byte delle grandi
+immagini. Rifiuta una destinazione già esistente e verifica conteggi, path,
+label, classi, checksum, duplicati, gruppi, camere e pHash prima della promozione.
 
 ## Viewer
 
-Aprire `dataset/viewer.html` e selezionare l'intera cartella dell'artifact v3.
-Il viewer associa automaticamente ogni immagine alla label nello stesso split.
-La ricerca per nome consente di filtrare
-immediatamente `raspberrypi2.local`, `sitets02`, `open-images` o `phenocam`.
+Aprire `dataset/viewer.html`, scegliere `dataset-v3/` e usare **Dataset split**.
+Sono disponibili Train, Validation, Test combinato, Test ID e Test OOD. Il
+cambio split aggiorna immagini, annotazioni, navigazione, filtri e metadati
+visibili, senza conservare immagini del subset precedente.
 
-## Metadata
+## Protocollo
 
-- `source-images.csv`: una riga per ciascun frame;
-- `source-annotations.jsonl`: annotazioni sorgente e compilate;
-- `dataset-statistics.json`: conteggi complessivi e per split;
-- `acceptance-audit.json`: confini fra training e dati operativi;
-- `build.json`: hash degli input usati dal materializzatore;
-- `*-images.txt`: liste deterministiche per split;
-- `checksums.sha256`: integrità di ogni file distribuito, escluso se stesso.
+Train può ricevere in futuro nuovi dati e augmentation. Validation può guidare
+gli esperimenti. TEST-ID e TEST-OOD sono congelati: non devono guidare tuning,
+model selection, mining o selezione di nuove immagini. Le immagini `internal`
+sono private e non devono essere redistribuite.
 
-## Integrità
-
-Dalla cartella dell'artifact eseguire:
-
-```sh
-shasum -a 256 -c metadata/checksums.sha256
-```
-
-Le immagini operative sono dati privati e non devono essere redistribuite.
+Metodologia, misure di ridondanza, confronto delle alternative e fonti sono in
+`reports/dataset-analysis.md` e nel report versionato
+`docs/status/dataset-v3-split-2026-09-02.md`.

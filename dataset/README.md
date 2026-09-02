@@ -2,10 +2,9 @@
 
 This directory owns both the completed public training dataset and the local,
 reproducible construction pipeline. The distributable `training-dataset/` never
-contains internal operational imagery. The private v3 artifact adds reviewed
-operational splits without adding them to training. Its verified expanded build
-also adds 18 human-reviewed public PhenoCam positives to the public training
-split.
+contains internal operational imagery. The private `dataset-v3/` artifact
+partitions public data into train, validation, and TEST-ID, and reserves
+reviewed operational imagery as TEST-OOD.
 Unreviewed V3 mining data and local paths remain under the ignored `workspace/`
 boundary.
 
@@ -26,10 +25,10 @@ The 2,000-frame YOLO dataset is complete with status
   unavailable;
 - operational validation on internal imagery remains `pending`.
 
-The adjacent `training-dataset-v3-expanded/` build contains 2,258 images:
-2,018 public training images and 240 reviewed operational images. The public
-expansion contributes 18 images and 104 human annotations from CVAT Task 11;
-22 additional reviewed images remain reserved for a later cycle.
+The leakage-aware v3 artifact contains 2,240 images and 10,563 annotations:
+1,600 train images, 200 validation images, 200 TEST-ID images, and 240 TEST-OOD
+images. Public splits keep PhenoCam cameras and pHash-near components disjoint;
+TEST-OOD contains the two later private operational cameras.
 
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
@@ -37,7 +36,8 @@ not evidence of production accuracy on internal camera imagery.
 ## Directory layout
 
 - `training-dataset/`: ignored, materialized YOLO dataset ready for training;
-- `training-dataset-v3/`: ignored, preserved pre-expansion v3 artifact;
+- `dataset-v3/`: ignored, final leakage-aware YOLO v3 artifact;
+- `dataset-v3-source/`: optional ignored unsplit v3 build input;
 - `training-dataset-v3-expanded/`: ignored, viewer-compatible expanded v3 with
   the reviewed public addition and separate operational splits;
 - `DATASET.md`: versioned description copied into the materialized dataset;
@@ -87,11 +87,13 @@ then materialized with:
 dataset/commands/dataset-finalization.sh build
 dataset/commands/dataset-finalization.sh build-v3
 dataset/commands/dataset-finalization.sh build-v3 dataset/training-dataset-v3-expanded
+cd dataset && .venv/bin/python -m builder.partition build dataset-v3-source dataset-v3
 ```
 
-The builder refuses to overwrite an existing `training-dataset/`. Move or
-archive an existing artifact deliberately before rebuilding it.
-The optional v3 destination supports an adjacent, reversible verification build.
+The builder refuses to overwrite an existing `training-dataset/` or partition
+destination. Move or archive an existing artifact deliberately before rebuilding
+it. `build-v3` defaults to the intermediate `dataset-v3-source/`; the partition
+command creates the final artifact atomically.
 Reviewed public PhenoCam additions enter training only through the audited
 `included/reserved/rejected` selection described in `docs/development.md`.
 
@@ -103,11 +105,13 @@ dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 
 ## Dataset viewer
 
-Open [`viewer.html`](viewer.html) in a browser and select either the complete
-`dataset/training-dataset/` or `dataset/training-dataset-v3/` directory. The
+Open [`viewer.html`](viewer.html) in a browser and select
+`dataset/dataset-v3/`. The Train, Validation, Test, Test ID, and Test OOD
+selector reloads only the chosen subset. The
 local-only viewer associates each YOLO label with its image, draws the bounding
-boxes, and supports filename, positive/negative, and object-class filters with
-image counts without uploading dataset files. V3 filenames can be filtered by
+boxes, shows image/annotation counts and available provenance, and supports
+filename, positive/negative, and object-class filters without uploading files.
+V3 filenames can be filtered by
 `raspberrypi2.local` or `sitets02`. Click the selected image name to select it
 for copying; use the left and right arrow keys to move between images. Zoom with
 the mouse wheel, the controls below the image, or the `+`, `-`, and `0` keys.
@@ -158,7 +162,9 @@ geometry, licenses, and review completeness before accepting data.
 
 - [`DATASET.md`](DATASET.md): final composition, files, licenses, and limits;
 - [`DATASET_V3.md`](DATASET_V3.md): private v3 composition, provenance, and
-  training boundary;
+  train/validation/test methodology;
+- [`../docs/status/dataset-v3-split-2026-09-02.md`](../docs/status/dataset-v3-split-2026-09-02.md):
+  measured split report, evidence, and limitations;
 - [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md): normative build contract;
 - [`docs/dataset-plan-it.md`](docs/dataset-plan-it.md): concise Italian plan;
 - [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
