@@ -24,14 +24,19 @@
     .stat span,.help { color:var(--muted); font-size:10px; text-transform:uppercase; }
     .help { font-size:12px; text-transform:none; }
     .workspace { display:grid; grid-template-rows:minmax(0,1fr) auto; min-width:0; min-height:0; }
-    .stage { display:grid; place-items:center; min-height:0; padding:24px; overflow:hidden; background-color:#101311; background-image:linear-gradient(45deg,#151815 25%,transparent 25%),linear-gradient(-45deg,#151815 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#151815 75%),linear-gradient(-45deg,transparent 75%,#151815 75%); background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0; }
-    canvas { display:block; max-width:100%; max-height:calc(100vh - 190px); width:auto; height:auto; box-shadow:0 20px 60px #0008; }
+    .stage { min-height:0; overflow:auto; background-color:#101311; background-image:linear-gradient(45deg,#151815 25%,transparent 25%),linear-gradient(-45deg,#151815 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#151815 75%),linear-gradient(-45deg,transparent 75%,#151815 75%); background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0; }
+    .image-frame { display:grid; place-items:center; width:max-content; min-width:100%; height:max-content; min-height:100%; padding:24px; }
+    .image-frame > * { grid-area:1 / 1; }
+    canvas { display:block; width:auto; height:auto; box-shadow:0 20px 60px #0008; }
     .empty { max-width:390px; text-align:center; color:var(--muted); }
     .empty strong { display:block; margin-bottom:8px; color:var(--ink); font:650 22px system-ui,sans-serif; }
     .toolbar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; padding:13px 18px; border-top:1px solid var(--line); background:var(--panel); }
     button { padding:8px 11px; border:1px solid var(--line); border-radius:7px; background:#252925; color:var(--ink); font:inherit; cursor:pointer; }
     button:disabled { cursor:not-allowed; opacity:.35; }
     .nav { display:flex; gap:7px; }
+    .actions,.zoom { display:flex; align-items:center; gap:7px; }
+    .zoom button { min-width:38px; }
+    #zoomReset { min-width:62px; color:var(--accent); }
     .identity { min-width:0; }
     #name { width:100%; padding:0; overflow:hidden; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; text-overflow:ellipsis; white-space:nowrap; cursor:text; }
     #detail { color:var(--muted); font-size:11px; }
@@ -44,7 +49,7 @@
     .thumb img { width:78px; height:58px; object-fit:cover; border-radius:4px; background:#252925; }
     .thumb span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
     .thumb small { display:block; color:var(--muted); font-size:10px; }
-    @media (max-width:900px) { body { height:auto; overflow:auto; } header { height:auto; } main { display:block; height:auto; } aside { border-right:0; border-bottom:1px solid var(--line); } .controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; } label.control { margin:0; } .stats,.help { display:none; } .workspace { height:62vh; } .rail { height:45vh; border-top:1px solid var(--line); border-left:0; } .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px; } .thumb { margin:0; } }
+    @media (max-width:900px) { body { height:auto; overflow:auto; } header { height:auto; } main { display:block; height:auto; } aside { border-right:0; border-bottom:1px solid var(--line); } .controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; } label.control { margin:0; } .stats,.help { display:none; } .workspace { height:62vh; } .toolbar { grid-template-columns:auto minmax(0,1fr); } .actions { grid-column:1 / -1; justify-self:center; } .rail { height:45vh; border-top:1px solid var(--line); border-left:0; } .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px; } .thumb { margin:0; } }
   </style>
 </head>
 <body>
@@ -60,14 +65,17 @@
         <label class="control">Classe<select id="classFilter" disabled><option value="all">Tutte le classi</option></select></label>
       </div>
       <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
-      <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Tutto resta nel browser.</p>
+      <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Usa i controlli sotto l’immagine oppure Ctrl/⌘ + rotellina per lo zoom. Tutto resta nel browser.</p>
     </aside>
     <section class="workspace">
-      <div class="stage"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/training-dataset</code> oppure <code>dataset/training-dataset-v3</code>.</div></div>
+      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/training-dataset</code> oppure <code>dataset/training-dataset-v3</code>.</div></div></div>
       <div class="toolbar">
         <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
         <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>
-        <button id="random" disabled>Casuale</button>
+        <div class="actions">
+          <div class="zoom" aria-label="Controlli zoom"><button id="zoomOut" aria-label="Riduci zoom" title="Riduci zoom (−)" disabled>−</button><button id="zoomReset" aria-label="Adatta immagine" title="Adatta immagine (0)" disabled>100%</button><button id="zoomIn" aria-label="Aumenta zoom" title="Aumenta zoom (+)" disabled>+</button></div>
+          <button id="random" disabled>Casuale</button>
+        </div>
       </div>
     </section>
     <section class="rail"><h2>Immagini</h2><div id="gallery" class="gallery" aria-label="Elenco immagini"></div></section>
@@ -75,7 +83,8 @@
   <script>
     const elements = Object.fromEntries([...document.querySelectorAll('[id]')].map(node => [node.id, node]));
     const colors = ['#c9f26b','#70d6ff','#ff9770','#ffd670','#e9ff70','#ff70a6','#b8c0ff','#9cfffa'];
-    let images = [], visible = [], labels = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '';
+    let images = [], visible = [], labels = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '', zoom = 1;
+    const minimumZoom = .5, maximumZoom = 4, zoomStep = .25;
     const thumbnailObserver = new IntersectionObserver(entries => {
       for (const entry of entries) entry.isIntersecting ? loadThumbnail(entry.target) : unloadThumbnail(entry.target);
     }, {root:elements.gallery, rootMargin:'180px 0px'});
@@ -104,9 +113,27 @@
       URL.revokeObjectURL(button._url); button._url = ''; button.querySelector('img').removeAttribute('src');
     }
 
+    function applyZoom(center = true) {
+      const canvas = elements.canvas, hasImage = canvas.style.display !== 'none' && canvas.width;
+      elements.zoomOut.disabled = !hasImage || zoom <= minimumZoom; elements.zoomIn.disabled = !hasImage || zoom >= maximumZoom; elements.zoomReset.disabled = !hasImage || zoom === 1;
+      elements.zoomReset.textContent = `${Math.round(zoom*100)}%`;
+      if (!hasImage) return;
+      // 100% means fitted to the stage without enlarging small source images.
+      const fit = Math.min(1,Math.max(1,elements.stage.clientWidth-48)/canvas.width,Math.max(1,elements.stage.clientHeight-48)/canvas.height);
+      canvas.style.width = `${Math.max(1,Math.round(canvas.width*fit*zoom))}px`; canvas.style.height = 'auto';
+      if (center) requestAnimationFrame(() => elements.stage.scrollTo({left:(elements.stage.scrollWidth-elements.stage.clientWidth)/2,top:(elements.stage.scrollHeight-elements.stage.clientHeight)/2}));
+    }
+
+    function setZoom(value) {
+      const next = Math.min(maximumZoom,Math.max(minimumZoom,value));
+      if (next === zoom) return;
+      zoom = next; applyZoom();
+    }
+
     function render(scrollToSelection = false) {
       const token = ++renderId, file = visible[position];
       elements.canvas.style.display = file ? 'block' : 'none'; elements.empty.style.display = file ? 'none' : 'block';
+      zoom = 1; elements.zoomOut.disabled = elements.zoomIn.disabled = elements.zoomReset.disabled = true; elements.zoomReset.textContent = '100%';
       elements.prev.disabled = elements.next.disabled = elements.random.disabled = visible.length < 2;
       for (const button of elements.gallery.children) button.classList.toggle('selected', Number(button.dataset.index) === position);
       const selected = elements.gallery.querySelector('.selected'); if (scrollToSelection && selected) selected.scrollIntoView({block:'nearest'});
@@ -124,6 +151,7 @@
           const labelHeight = Math.max(18,image.naturalWidth/45), labelTop = Math.max(0,top-labelHeight), textWidth = context.measureText(text).width;
           context.fillStyle = color; context.fillRect(left,labelTop,textWidth+12,labelHeight); context.fillStyle = '#0c0e0d'; context.fillText(text,left+6,labelTop+labelHeight*.76);
         }
+        applyZoom();
         elements.name.value = file.name; elements.detail.textContent = `${position+1} / ${visible.length} · ${image.naturalWidth}×${image.naturalHeight} · ${boxes.length} box`;
       };
       image.onerror = () => { if (token === renderId) { elements.canvas.style.display = 'none'; elements.empty.style.display = 'block'; elements.empty.textContent = 'Immagine non leggibile'; } };
@@ -166,11 +194,16 @@
     elements.prev.addEventListener('click',() => { position = (position-1+visible.length)%visible.length; render(true); });
     elements.next.addEventListener('click',() => { position = (position+1)%visible.length; render(true); });
     elements.random.addEventListener('click',() => { position = Math.floor(Math.random()*visible.length); render(true); });
+    elements.zoomOut.addEventListener('click',() => setZoom(zoom-zoomStep)); elements.zoomIn.addEventListener('click',() => setZoom(zoom+zoomStep)); elements.zoomReset.addEventListener('click',() => setZoom(1));
+    elements.stage.addEventListener('wheel',event => { if (event.ctrlKey || event.metaKey) { event.preventDefault(); setZoom(zoom+(event.deltaY < 0 ? zoomStep : -zoomStep)); } },{passive:false});
     addEventListener('keydown',event => {
       if (event.target.matches('input[type="search"],select')) return;
       const button = event.key === 'ArrowLeft' ? elements.prev : event.key === 'ArrowRight' ? elements.next : null;
       if (button && !button.disabled) { event.preventDefault(); button.click(); }
+      const zoomButton = event.key === '0' ? elements.zoomReset : event.key === '+' || event.key === '=' ? elements.zoomIn : event.key === '-' ? elements.zoomOut : null;
+      if (zoomButton && !zoomButton.disabled) { event.preventDefault(); zoomButton.click(); }
     });
+    addEventListener('resize',() => applyZoom(false));
     addEventListener('beforeunload',() => { if (centerUrl) URL.revokeObjectURL(centerUrl); for (const button of elements.gallery.children) unloadThumbnail(button); });
   </script>
 </body>
