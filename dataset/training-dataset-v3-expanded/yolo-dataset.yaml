@@ -1,0 +1,5 @@
+path: .
+train: images/train
+operational_dev: images/operational_dev
+operational_mining: images/operational_mining
+names: {0: person, 1: bicycle, 2: car, 3: motorcycle, 4: __unused_class_4, 5: bus, 6: __unused_class_6, 7: truck}

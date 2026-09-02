@@ -1,8 +1,13 @@
 # Phenocam Vision training data
 
 This directory owns both the completed public training dataset and the local,
-reproducible construction pipeline. It never reads or writes internal
-operational imagery.
+reproducible construction pipeline. The distributable `training-dataset/` never
+contains internal operational imagery. The private v3 artifact adds reviewed
+operational splits without adding them to training. Its verified expanded build
+also adds 18 human-reviewed public PhenoCam positives to the public training
+split.
+Unreviewed V3 mining data and local paths remain under the ignored `workspace/`
+boundary.
 
 The canonical training artifact is [`training-dataset/`](training-dataset/).
 Its versioned composition and limitations are documented in
@@ -21,12 +26,20 @@ The 2,000-frame YOLO dataset is complete with status
   unavailable;
 - operational validation on internal imagery remains `pending`.
 
+The adjacent `training-dataset-v3-expanded/` build contains 2,258 images:
+2,018 public training images and 240 reviewed operational images. The public
+expansion contributes 18 images and 104 human annotations from CVAT Task 11;
+22 additional reviewed images remain reserved for a later cycle.
+
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
 
 ## Directory layout
 
 - `training-dataset/`: ignored, materialized YOLO dataset ready for training;
+- `training-dataset-v3/`: ignored, preserved pre-expansion v3 artifact;
+- `training-dataset-v3-expanded/`: ignored, viewer-compatible expanded v3 with
+  the reviewed public addition and separate operational splits;
 - `DATASET.md`: versioned description copied into the materialized dataset;
 - `builder/`: deterministic dataset-construction package;
 - `commands/`: shell entry points for building, review, CVAT, and finalization;
@@ -72,10 +85,15 @@ then materialized with:
 
 ```sh
 dataset/commands/dataset-finalization.sh build
+dataset/commands/dataset-finalization.sh build-v3
+dataset/commands/dataset-finalization.sh build-v3 dataset/training-dataset-v3-expanded
 ```
 
 The builder refuses to overwrite an existing `training-dataset/`. Move or
 archive an existing artifact deliberately before rebuilding it.
+The optional v3 destination supports an adjacent, reversible verification build.
+Reviewed public PhenoCam additions enter training only through the audited
+`included/reserved/rejected` selection described in `docs/development.md`.
 
 Run the tests directly with:
 
@@ -85,12 +103,13 @@ dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 
 ## Dataset viewer
 
-Open [`viewer.html`](viewer.html) in a browser and select the complete
-`dataset/training-dataset/` directory. The local-only viewer associates each
-YOLO label with its image, draws the bounding boxes, and supports filename,
-positive/negative, and object-class filters with image counts without uploading
-dataset files. Click the selected image name to select it for copying; use the
-left and right arrow keys to move between images.
+Open [`viewer.html`](viewer.html) in a browser and select either the complete
+`dataset/training-dataset/` or `dataset/training-dataset-v3/` directory. The
+local-only viewer associates each YOLO label with its image, draws the bounding
+boxes, and supports filename, positive/negative, and object-class filters with
+image counts without uploading dataset files. V3 filenames can be filtered by
+`raspberrypi2.local` or `sitets02`. Click the selected image name to select it
+for copying; use the left and right arrow keys to move between images.
 
 ## Annotation commands
 
@@ -112,6 +131,7 @@ dataset/commands/cvat-tasks.sh list
 dataset/commands/cvat-tasks.sh upload-open-images
 dataset/commands/cvat-tasks.sh upload-phenocam
 dataset/commands/cvat-tasks.sh upload-open-images-supplement
+dataset/commands/cvat-tasks.sh upload-v3-public-teacher
 ```
 
 The complete historical annotation procedure remains in
@@ -135,8 +155,12 @@ geometry, licenses, and review completeness before accepting data.
 ## Documentation
 
 - [`DATASET.md`](DATASET.md): final composition, files, licenses, and limits;
+- [`DATASET_V3.md`](DATASET_V3.md): private v3 composition, provenance, and
+  training boundary;
 - [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md): normative build contract;
 - [`docs/dataset-plan-it.md`](docs/dataset-plan-it.md): concise Italian plan;
 - [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
 - [`docs/next-steps-it.md`](docs/next-steps-it.md): completed state and boundary;
 - `docs/status/` and `docs/history/`: preserved development history.
+- [`../docs/status/training-v3-expansion-review-2026-09-01.md`](../docs/status/training-v3-expansion-review-2026-09-01.md):
+  measured pre-expansion audit and quantitative admission policy.

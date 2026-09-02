@@ -1,0 +1,76 @@
+{
+  "identity": {
+    "operational-dev-representative": {
+      "annotations_sha256": "5e25cf4a4f9a505e45fb138911ca184e8b2cde857c46a4b8d602a5917854f6a7",
+      "manifest_sha256": "274e973025b9ed30c6401d2da94615f12d3e807e6d263f012219bcaa407cf45b"
+    },
+    "operational-mining-informative": {
+      "annotations_sha256": "98ae8f80d88f349dbec0b5588612f63298ef7793a65bbfabdb352148aa43640e",
+      "manifest_sha256": "c3f0378aa7f86c1823f62790fc66b0b3e30da4db0883320f0cc0a3e7130fa336"
+    },
+    "public-phenocam-expansion": {
+      "annotations.coco.zip": "63ed16a3cccd74146f6c2d5f7473c15192e12d206ccb71a2541f415581417463",
+      "instances_default.json": "f0eb0ac2ded94de9e1a66ea6a6a1f5d43235fd7bbc0a583aced739818f9987d5",
+      "manifest.csv": "241c2043178f422805f97d5cfc7b24f213673ddc5ce8f0c55213a2bfbb25a1c8",
+      "public-teacher-reviewed-decisions.csv": "7667c3cf637b1a17afe63422d115e5284bdbe77e7aa5130e2de52045db627281",
+      "public-teacher-reviewed-statistics.json": "bdedcdeb396e0ac737a39114a4d716cf665bade5ffbfded1e113b647ea2ad731",
+      "training-v3.json": "5603d5eb3ae33f0933a102339ae4c8e06314cb8b8c562aa9fa5b2c377a638ede"
+    },
+    "public_v2_checksums_sha256": "9cc4c9fada22a9c92df007994b663f8768e37d1df2fc393f67616e35addd2ab0",
+    "schema_version": 1
+  },
+  "statistics": {
+    "class_instances": {
+      "bicycle": 200,
+      "bus": 182,
+      "car": 6420,
+      "motorcycle": 241,
+      "person": 3232,
+      "truck": 392
+    },
+    "images": 2258,
+    "operational_class_instances": {
+      "bus": 1,
+      "car": 5558,
+      "motorcycle": 37,
+      "person": 180,
+      "truck": 110
+    },
+    "operational_images": 240,
+    "public_expansion_images": 18,
+    "split_class_instances": {
+      "operational_dev": {
+        "bus": 1,
+        "car": 2706,
+        "motorcycle": 25,
+        "person": 98,
+        "truck": 47
+      },
+      "operational_mining": {
+        "car": 2852,
+        "motorcycle": 12,
+        "person": 82,
+        "truck": 63
+      },
+      "train": {
+        "bicycle": 200,
+        "bus": 181,
+        "car": 862,
+        "motorcycle": 204,
+        "person": 3052,
+        "truck": 282
+      }
+    },
+    "split_images": {
+      "operational_dev": 120,
+      "operational_mining": 120,
+      "train": 2018
+    },
+    "split_positive_images": {
+      "operational_dev": 114,
+      "operational_mining": 117,
+      "train": 1262
+    },
+    "training_images": 2018
+  }
+}

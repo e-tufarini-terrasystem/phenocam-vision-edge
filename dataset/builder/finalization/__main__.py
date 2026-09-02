@@ -16,6 +16,7 @@ from .review_queue import import_negative_reviews, prepare_negative_reviews
 from .reconcile import reconcile_positive_floors
 from .resolution import prepare_replacements
 from .materialize import materialize
+from .operational_dataset import materialize_operational
 
 
 DATASET_ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +37,8 @@ def _parser():
     final_import.add_argument("--phenocam-second", type=Path, required=True)
     commands.add_parser("accept-single-review")
     commands.add_parser("build")
+    build_v3 = commands.add_parser("build-v3")
+    build_v3.add_argument("--destination", type=Path)
     retry = commands.add_parser("complete-retry")
     retry.add_argument("--openimages", type=Path, required=True)
     importer = commands.add_parser("import-negatives")
@@ -96,6 +99,8 @@ def main(argv=None):
         )
     elif arguments.command == "build":
         result = materialize(DATASET_ROOT, config)
+    elif arguments.command == "build-v3":
+        result = materialize_operational(DATASET_ROOT, arguments.destination)
     else:
         result = import_negative_reviews(
             DATASET_ROOT / "workspace" / "annotation" / "final-negative-review",

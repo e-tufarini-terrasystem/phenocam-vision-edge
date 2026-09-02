@@ -9,9 +9,18 @@ def _iou(left, right):
     return area / union
 
 
-def _union(baseline, candidate, class_ids):
+def _coverage(left, right):
+    area = max(0, min(left["x2"], right["x2"]) - max(left["x1"], right["x1"])) * max(0, min(left["y2"], right["y2"]) - max(left["y1"], right["y1"]))
+    if not area:
+        return 0.0
+    left_area = (left["x2"] - left["x1"]) * (left["y2"] - left["y1"])
+    right_area = (right["x2"] - right["x1"]) * (right["y2"] - right["y1"])
+    return area / min(left_area, right_area)
+
+
+def _union(baseline, candidate, class_ids, model_names=("baseline", "v2")):
     accepted = []
-    for model, detections in (("baseline", baseline), ("v2", candidate)):
+    for model, detections in zip(model_names, (baseline, candidate)):
         for detection in detections:
             if detection["class_id"] not in class_ids:
                 continue
@@ -28,9 +37,9 @@ def _union(baseline, candidate, class_ids):
     return accepted
 
 
-def suggestions(baseline, candidate, class_ids, policy=None):
+def suggestions(baseline, candidate, class_ids, policy=None, model_names=("baseline", "v2")):
     if policy is None:
-        return _union(baseline, candidate, class_ids)
+        return _union(baseline, candidate, class_ids, model_names)
     if policy.get("require_both_models") is not True or policy.get("require_same_class") is not True:
         raise ValueError("clean suggestion policy must require both models and the same class")
     confidence, overlap = float(policy["minimum_confidence"]), float(policy["minimum_iou"])
@@ -46,3 +55,35 @@ def suggestions(baseline, candidate, class_ids, policy=None):
         winner = detection if detection["confidence"] >= match["confidence"] else match
         accepted.append({**winner, "models": {"baseline", "v2"}})
     return accepted
+
+
+def novel_instances(existing, candidates, minimum_iou=0.5, class_names=None):
+    """Return candidate instances that do not duplicate same-class boxes."""
+    if not 0 < minimum_iou <= 1:
+        raise ValueError("minimum IoU must be in (0, 1]")
+    occupied, novel = list(existing), []
+    ordered = sorted(
+        candidates,
+        key=lambda item: (
+            -item["confidence"], item["class_id"], item["x1"], item["y1"],
+            item["x2"], item["y2"],
+        ),
+    )
+    road_vehicles = {"car", "bus", "truck"}
+
+    def domain(item):
+        if class_names is None:
+            return ("class", item["class_id"])
+        name = class_names[item["class_id"]]
+        return ("road_vehicle",) if name in road_vehicles else ("class", item["class_id"])
+
+    for candidate in ordered:
+        duplicate = any(
+            domain(item) == domain(candidate)
+            and (_iou(item, candidate) >= minimum_iou or _coverage(item, candidate) >= minimum_iou)
+            for item in occupied
+        )
+        if not duplicate:
+            occupied.append(candidate)
+            novel.append(candidate)
+    return novel

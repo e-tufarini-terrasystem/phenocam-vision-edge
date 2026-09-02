@@ -63,7 +63,7 @@ def _archive(annotation_path, archive_path):
     os.replace(temporary, archive_path)
 
 
-def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, suggestion_policy=None):
+def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, suggestion_policy=None, model_names=("baseline", "v2"), minimum_confidence=None):
     selection_path, output_dir = Path(selection_path), Path(output_dir)
     with selection_path.open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
@@ -76,6 +76,10 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, s
     }
     if suggestion_policy is not None:
         identity["suggestion_policy"] = suggestion_policy
+    if model_names != ("baseline", "v2"):
+        identity["suggestion_models"] = list(model_names)
+    if minimum_confidence is not None:
+        identity["minimum_confidence"] = float(minimum_confidence)
     receipt = output_dir / "bundle.json"
     if receipt.exists():
         existing = json.loads(receipt.read_text(encoding="utf-8"))
@@ -100,7 +104,9 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, s
             image_name = f"{image_id:04d}-{row['source_sha256'][:16]}{suffix}"
             _copy(row["local_path"], image_dir / image_name)
             images.append({"id": image_id, "file_name": image_name, "width": int(row["width"]), "height": int(row["height"])})
-            proposed = suggestions(baseline[row["source_identity"]], v2[row["source_identity"]], set(category_by_class), suggestion_policy)
+            proposed = suggestions(baseline[row["source_identity"]], v2[row["source_identity"]], set(category_by_class), suggestion_policy, model_names)
+            if minimum_confidence is not None:
+                proposed = [item for item in proposed if item["confidence"] >= minimum_confidence]
             for suggestion in proposed:
                 width, height = suggestion["x2"] - suggestion["x1"], suggestion["y2"] - suggestion["y1"]
                 annotations.append({"id": len(annotations) + 1, "image_id": image_id, "category_id": category_by_class[suggestion["class_id"]], "bbox": [suggestion["x1"], suggestion["y1"], width, height], "area": width * height, "iscrowd": 0})

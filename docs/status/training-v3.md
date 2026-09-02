@@ -165,10 +165,10 @@ mantenere l'orchestrazione CVAT sotto 200 linee produttive:
 
 Bundle e task verificati:
 
-| Task attivo | ID | Immagini | Job | Box iniziali |
+| Task attivo | ID | Immagini | Job | Box correnti |
 |---|---:|---:|---|---:|
-| V3 internal operational dev - representative 120 - clean | 9 | 120 | 30-32 | 1.019 |
-| V3 internal operational mining - informative 120 - clean | 10 | 120 | 33-35 | 1.115 |
+| V3 internal operational dev - representative 120 - clean | 9 | 120 | 30-32 | 2.877 |
+| V3 internal operational mining - informative 120 - clean | 10 | 120 | 33-35 | 3.009 |
 
 - Receipt SHA-256: rappresentativo
   `8f5a20d585b5e7bc6f2846c5065e45a2963718190f9d5ead630239b97e12e324`;
@@ -178,8 +178,83 @@ Bundle e task verificati:
   `2d034684876f1b66044c4c31ae54eed8d5c1c1b81db24cb43170232dc7363ba5`;
   informativo
   `1af9434a0c5639ffae48e63d4ca67645ced48ee9b5fee3996877d2dbd0921a59`.
-- Le 1.019 e 1.115 box sono proposte, non ground truth: vanno eliminate quando
-  errate e integrate quando manca un target reale.
+- Dopo la pulizia manuale delle box di gruppo restavano 1.134 e 1.115 box. Un
+  passaggio YOLO26x ha aggiunto rispettivamente 483 e 655 istanze non duplicate.
+  Un successivo passaggio tiled limitato a `raspberrypi2.local` ha aggiunto 487
+  e 453 istanze. Un ultimo passaggio a confidenza `0,30`, limitato ai sei crop
+  della zona destra di `raspberrypi2.local`, ha aggiunto altre 317 e 316
+  istanze. La successiva revisione umana ha portato i task a 2.915 e 3.075 box.
+
+Il teacher usa il checkpoint YOLO26x con SHA-256
+`9fdd44a31c504547ffb81d2c6d9e6dac3493c8eaa8b0398d3f43bae6c7003e92`, input
+1.280, confidenza `0,50`, MPS e deduplicazione per stessa classe a IoU `0,50`.
+Il readback dopo l'import CVAT conferma i conteggi e tutte le geometrie con un
+arrotondamento massimo inferiore a `0,01` pixel. La regola operativa richiede una
+box stretta per ogni istanza e vieta le box che racchiudono gruppi.
+
+Il recupero tiled usa 15 crop 5×3 sovrapposti al 20%, scarta le detection
+tagliate sui bordi interni e fonde congiuntamente `car`, `bus` e `truck`. Ha
+elaborato 60 immagini per task e lasciato tutte le immagini `sitets02`
+invariate. Il controllo visuale dei 24 frame più modificati è positivo; il
+readback CVAT ha IoU minima `0,99909` rispetto agli export generati.
+
+Il recupero finale della zona destra mantiene modello e input a 1.280, seleziona
+solo crop con origine oltre il 55% della larghezza e non scende sotto confidenza
+`0,30`. Il controllo visuale dei 24 frame più modificati è positivo; il readback
+CVAT finale ha IoU minima `0,99874`. Le immagini `sitets02` sono rimaste
+invariate.
+
+### Audit finale delle annotazioni — 1 settembre 2026
+
+Dopo la revisione umana sono state controllate tutte le coppie della famiglia
+veicoli con IoU `>=0,50` o copertura della box minore `>=0,80`. Le
+sovrapposizioni fra auto distinte, frequenti nei parcheggi in prospettiva, sono
+state conservate. Sono stati rimossi soltanto duplicati riferiti allo stesso
+oggetto, un box di gruppo residuo e tre piccole box spurie interne a veicoli già
+annotati. Due furgoni sono stati riclassificati da `truck` a `car`, come richiesto
+dalla guida.
+
+- task 9: 38 box rimosse, totale finale 2.877 (`car` 2.706, `truck` 47,
+  `person` 98, `motorcycle` 25, `bus` 1);
+- task 10: 66 box rimosse e 2 riclassificate, totale finale 3.009 (`car` 2.852,
+  `truck` 63, `person` 82, `motorcycle` 12).
+
+Il readback COCO da CVAT coincide esattamente con geometrie e classi degli
+export corretti. Non restano coppie della stessa classe con IoU `>=0,50`,
+duplicati `car`/`truck` con IoU `>=0,79` o box che contengono almeno due box
+individuali della stessa classe.
+
+I backup completi precedenti all'audit hanno suffisso
+`human-final-20260901T133323Z`; SHA-256 task 9
+`0fbe3147dfd9579e78fae599cde9993cbbd6a6a2b589ac8c128dc4647a71455e` e task 10
+`9e19ee2186b30c030c6737a35bc5948ecb6741e4a7edbb3ea4b87e3adf7f52d3`.
+I backup completi dello stato corretto hanno suffisso
+`human-final-cleanup-20260901T134246Z`; SHA-256 task 9
+`ed8331fddb930e84353aced74728686f1672a296d672c35296dce0a2808b1dd8` e task 10
+`5fa5d1f75b8348157dd05c520491e7b359208f604be0d9a3ed6d96cb11c3ad05`.
+
+### Import operativo con provenienza — 1 settembre 2026
+
+Gli export finali dei task 9 e 10 sono stati importati negli artifact locali
+`operational-dev-representative` e `operational-mining-informative`. Ogni copia
+usa il formato `sito--timestamp--sha12.jpg`; il manifest conserva inoltre
+identita, nome sorgente, sito, gruppo, split, coorte, checksum, revisori ed export
+CVAT. Esempio:
+`raspberrypi2.local--2025-10-30T121905--f4ab422e2908.jpg`.
+
+- operational dev: 120 immagini, 114 positive, 6 negative confermate e 2.877
+  box; rispetto alle 1.019 preannotazioni, 991 corrispondono al ground truth,
+  28 sono state rimosse e 1.886 aggiunte;
+- operational mining: 120 immagini, 117 positive, 3 negative confermate e
+  3.009 box; rispetto alle 1.115 preannotazioni, 1.094 corrispondono al ground
+  truth, 21 sono state rimosse e 1.915 aggiunte.
+
+Entrambi gli artifact contengono 60 immagini per sito, zero ambigue e nessuna
+collisione fra i 240 nomi. Tutti i file copiano esattamente lo SHA-256 della
+sorgente; COCO, manifest e conteggi coincidono e non contengono path locali.
+L'import e idempotente per task, export, bundle e revisori. Le immagini interne
+restano dati operativi di development/mining e non entrano nel training del
+primo ciclo v3.
 
 ## Pulizia dei task CVAT
 
@@ -216,8 +291,77 @@ resa esplicita la regola sui target piccoli/lontani. Un nuovo pilot avrebbe
 altrimenti ground truth incoerente e aggiungerebbe lavoro manuale senza una
 decisione utilizzabile.
 
+## 2026-09-01 — Screening pubblico YOLO26x e task 11
+
+YOLO26x ha elaborato tutti i 3.059 frame pubblici ancora eleggibili dopo
+l'esclusione del dataset v2 e del pilot negativo: 3.059 completati, zero errori.
+A soglia `0,50` ha trovato 48 immagini e 201 box su 8 siti e 39 gruppi. Il
+controllo visuale completo ha escluso 8 immagini e 9 box false causate da
+cespugli sulla neve, involucri o pali della camera e ombre in primo piano.
+
+Il bundle pulito contiene 40 immagini, 192 proposte (`car` 178, `truck` 12,
+`bus` 1, `person` 1), distribuite su 4 siti e 33 gruppi. È stato creato il task
+CVAT `V3 public PhenoCam YOLO26x mining - high-confidence 40`, ID 11, con un
+job. Il readback COCO conferma immagini, classi e box; lo scarto massimo di
+serializzazione è `0,0093` pixel.
+
+Il Task 11 è stato completato e importato il 2026-09-01. Il job 36 è
+`stage=annotation`, `state=completed`: `annotation` descrive la fase di lavoro,
+non un task incompleto. L'export umano contiene 206 box contro le 192 proposte
+iniziali, con 14 aggiunte e nessuna rimozione: 188 `car`, 16 `truck`, 1 `bus` e
+1 `person`.
+
+Il report pre-modifica completo è
+`docs/status/training-v3-expansion-review-2026-09-01.md`. La pipeline post-review
+ha conservato tutte le 40 decisioni umane e selezionato 18 immagini
+con tetto di 8 per sito, una per camera-day e SSCD `<0,95`, quindi materializza
+solo le righe `included`. Le altre restano `reserved` o `rejected` con una
+motivazione riproducibile. La selezione ammessa contiene 104 box; il build
+ampliato usa una destinazione affiancata per non sovrascrivere il v3 corrente.
+
+## 2026-09-01 — Dataset v3 materializzato
+
+`dataset/training-dataset-v3/` conserva senza modifiche le 2.000 immagini e le
+1.244 label del dataset pubblico v2 e aggiunge le due coorti revisionate come
+split separati, esclusi dalla voce `train` del file YOLO:
+
+- `operational_dev`: 120 immagini, 114 positive e 2.877 box;
+- `operational_mining`: 120 immagini, 117 positive e 3.009 box;
+- totale consultabile nel viewer: 2.240 immagini.
+
+I 240 nomi operativi includono sito, timestamp e hash breve. Il manifest
+canonico conserva anche nome originale, identita sorgente, coorte, task CVAT,
+revisori e checksum. L'artifact è locale e ignorato da Git perché contiene dati
+operativi privati.
+
+La verifica finale conferma 3.244 file pubblici di immagini/label identici
+byte-per-byte alla v2, 2.240 identità e path unici, tutti i checksum validi e 43
+test dataset passati. Il viewer riconosce i tre split e consente il filtro
+diretto per `raspberrypi2.local` e `sitets02`.
+
+## 2026-09-02 — Dataset v3 espanso verificato
+
+`dataset/training-dataset-v3-expanded/` è stato materializzato senza modificare
+il precedente `training-dataset-v3/`. Contiene 2.258 immagini e 10.667 box:
+
+- `train`: 2.018 immagini, 1.262 positive e 4.781 box;
+- `operational_dev`: 120 immagini, 114 positive e 2.877 box;
+- `operational_mining`: 120 immagini, 117 positive e 3.009 box.
+
+Le 18 aggiunte pubbliche PhenoCam provengono da quattro siti e contengono 104
+box umane. Le altre 22 immagini revisionate sono conservate come `reserved` e
+non compaiono nell'artifact. Il manifest conta 1.279 immagini Open Images, 739
+PhenoCam e 240 interne; non contiene identità, path, SHA-256 o gruppi duplicati
+fra split.
+
+Tutti i checksum sono validi, i 3.244 file immagine/label del training v2 sono
+byte-identici e i 43 test dataset passano. Il file di acceptance dichiara
+`reviewed_public_expansion_ready`; gli split operativi restano esclusi dal
+training e il test operativo resta sigillato.
+
 ## Prossima azione
 
-Completare i task clean 9 e 10. Prima di riaprire il mining pubblico, decidere
-se i veicoli riconoscibili ma molto lontani devono essere target privacy oppure
-negativi operativi; solo dopo creare un eventuale pilot stretto da 20 immagini.
+Usare l'artifact espanso per il prossimo ciclo di training mantenendo il report
+e i file di selezione come receipt. Un eventuale secondo ciclo PhenoCam deve
+ripartire dalle 22 immagini revisionate in riserva o da nuove candidate, senza
+riammettere automaticamente le predizioni YOLO26x.

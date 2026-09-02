@@ -40,6 +40,21 @@
     "threads": 4,
     "checkpoint_every": 25
   },
+  "teacher_screening": {
+    "model_sha256": "9fdd44a31c504547ffb81d2c6d9e6dac3493c8eaa8b0398d3f43bae6c7003e92",
+    "confidence_floor": 0.30,
+    "selection_confidence": 0.50,
+    "image_size": 1280,
+    "device": "mps",
+    "maximum_task_images": 200
+  },
+  "public_expansion": {
+    "maximum_images": 18,
+    "maximum_per_site": 8,
+    "maximum_per_group": 1,
+    "sscd_cosine_max": 0.95,
+    "class_priority": ["bus", "motorcycle", "truck", "car", "person"]
+  },
   "split": {
     "test_fraction_per_site": 0.20,
     "minimum_test_days_per_site": 3,
@@ -82,6 +97,7 @@
     },
     "tasks": {
       "public": "V3 public PhenoCam mining - pilot 200",
+      "public_teacher": "V3 public PhenoCam YOLO26x mining - high-confidence 40",
       "label_audit": "V3 public dataset label audit - reported 22",
       "representative": "V3 internal operational dev - representative 120",
       "informative": "V3 internal operational mining - informative 120",

@@ -50,7 +50,7 @@
 <body>
   <header>
     <div><p class="eyebrow">YOLO inspection tool</p><h1>Phenocam Dataset Viewer</h1></div>
-    <label class="load">Scegli training-dataset<input id="folder" type="file" webkitdirectory multiple></label>
+    <label class="load">Scegli dataset v2/v3<input id="folder" type="file" webkitdirectory multiple></label>
   </header>
   <main>
     <aside>
@@ -63,7 +63,7 @@
       <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Tutto resta nel browser.</p>
     </aside>
     <section class="workspace">
-      <div class="stage"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri la cartella <code>dataset/training-dataset</code> per iniziare.</div></div>
+      <div class="stage"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/training-dataset</code> oppure <code>dataset/training-dataset-v3</code>.</div></div>
       <div class="toolbar">
         <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
         <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>

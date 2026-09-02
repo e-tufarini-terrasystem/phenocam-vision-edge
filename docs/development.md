@@ -105,5 +105,96 @@ The screening command writes one atomic JSON record per image. Pass only
 `sealed_test` before thresholds and rules are frozen. Matching run/model hashes
 make `--resume` idempotent and reject stale checkpoints.
 
+Public PhenoCam recovery uses the separate YOLO26x workstation environment and
+excludes both the existing public dataset and the completed negative pilot:
+
+```sh
+.venv-export/bin/python -m dataset.builder.mining teacher-screen \
+  --candidates dataset/workspace/sources/phenocam/baseline-screened.csv \
+  --existing dataset/training-dataset/metadata/source-images.csv \
+  --reviewed dataset/workspace/training-v3/selection/public-pilot.csv \
+  --model dataset/workspace/models/yolo26x.pt \
+  --output-dir dataset/workspace/training-v3/screening/public-teacher \
+  --resume
+```
+
+The acquisition floor is `0.30`, while selection and CVAT suggestions require
+`0.50`. Selection is confidence-first, limited to five frames per camera-day
+group, and remains subject to visual false-positive review. The clean task is
+uploaded idempotently with:
+
+```sh
+dataset/commands/cvat-tasks.sh upload-v3-public-teacher
+```
+
+Teacher boxes are proposals only. They become dataset labels only after task
+completion, verified export and attributed import.
+
+Task 11 was completed with `stage=annotation`, `state=completed`. Reproduce its
+export, attributed import and admission decision with:
+
+```sh
+dataset/commands/cvat-tasks.sh export 11 v3-public-teacher
+dataset/.venv/bin/python -m dataset.builder.mining import-reviewed \
+  --selection dataset/workspace/training-v3/selection/public-teacher-clean.csv \
+  --bundle-dir dataset/workspace/annotation/cvat/v3-public-teacher \
+  --export dataset/workspace/annotation/exports/v3-public-teacher-reviewed.coco.zip \
+  --output-dir dataset/workspace/training-v3/reviewed/public-phenocam-teacher \
+  --task-id 11 --annotator Emanuele --reviewer Emanuele --task-completed
+dataset/.venv/bin/python -m dataset.builder.mining select-reviewed-public \
+  --reviewed-dir dataset/workspace/training-v3/reviewed/public-phenocam-teacher \
+  --existing dataset/training-dataset-v3/metadata/source-images.csv \
+  --embeddings dataset/workspace/deduplication/embeddings.npz \
+  --output dataset/workspace/training-v3/selection/public-teacher-reviewed-decisions.csv \
+  --statistics dataset/workspace/training-v3/selection/public-teacher-reviewed-statistics.json
+```
+
+The decision CSV preserves every image as `included`, `reserved`, or
+`rejected`. Admission is capped at 18 images, eight per site and one per
+camera-day; SSCD similarity `>=0.95` prevents internal near-duplicates. Human
+annotation content is ranked before deterministic tie-breaking. Build the first
+expanded artifact beside the current v3 so it can be verified without an
+overwrite:
+
+```sh
+dataset/commands/dataset-finalization.sh build-v3 \
+  dataset/training-dataset-v3-expanded
+```
+
 Generated inventories, predictions, selections, copied CVAT images and exports
 remain under ignored `dataset/workspace/`. They must not be added to Git.
+
+After human completion and a verified final COCO export, import each operational
+task with its selection and original bundle:
+
+```sh
+dataset/.venv/bin/python -m dataset.builder.mining import-reviewed \
+  --selection dataset/workspace/training-v3/selection/internal-representative.csv \
+  --bundle-dir dataset/workspace/annotation/cvat/v3-internal-representative-clean \
+  --export /path/to/task-9-final.coco.zip \
+  --output-dir dataset/workspace/training-v3/reviewed/operational-dev-representative \
+  --task-id 9 --annotator Emanuele --reviewer Emanuele --task-completed
+```
+
+The import validates identities, source hashes, dimensions, classes, boxes and
+task completeness. It writes an attributed manifest, a preannotation/ground
+truth report, a COCO archive, and verified image copies. Image names expose the
+site without relying on local paths, for example
+`raspberrypi2.local--2025-10-30T121905--f4ab422e2908.jpg`. Internal reviewed
+images remain operational development/mining data and do not enter first-cycle
+v3 training.
+
+After both reviewed operational tasks have been imported, materialize the
+viewer-compatible current v3 artifact:
+
+```sh
+dataset/commands/dataset-finalization.sh build-v3
+```
+
+The result is `dataset/training-dataset-v3/`. Its `images/train` and
+`labels/train` directories are byte-for-byte copies of the public v2 artifact;
+the reviewed internal data remains in separate `operational_dev` and
+`operational_mining` splits. Internal filenames include the site, timestamp and
+short source hash, while `metadata/source-images.csv` preserves the complete
+origin. Open `dataset/viewer.html` and select the v3 directory to inspect all
+three splits.

@@ -5,6 +5,8 @@
 # Generated dataset state and materialized outputs.
 /workspace/
 /training-dataset/
+/training-dataset-v3/
+/training-dataset-v3-expanded/images/
 
 # Local interpreter and filesystem artifacts.
 __pycache__/

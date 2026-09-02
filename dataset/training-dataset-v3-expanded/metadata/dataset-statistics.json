@@ -1,0 +1,54 @@
+{
+  "class_instances": {
+    "bicycle": 200,
+    "bus": 182,
+    "car": 6420,
+    "motorcycle": 241,
+    "person": 3232,
+    "truck": 392
+  },
+  "images": 2258,
+  "operational_class_instances": {
+    "bus": 1,
+    "car": 5558,
+    "motorcycle": 37,
+    "person": 180,
+    "truck": 110
+  },
+  "operational_images": 240,
+  "public_expansion_images": 18,
+  "split_class_instances": {
+    "operational_dev": {
+      "bus": 1,
+      "car": 2706,
+      "motorcycle": 25,
+      "person": 98,
+      "truck": 47
+    },
+    "operational_mining": {
+      "car": 2852,
+      "motorcycle": 12,
+      "person": 82,
+      "truck": 63
+    },
+    "train": {
+      "bicycle": 200,
+      "bus": 181,
+      "car": 862,
+      "motorcycle": 204,
+      "person": 3052,
+      "truck": 282
+    }
+  },
+  "split_images": {
+    "operational_dev": 120,
+    "operational_mining": 120,
+    "train": 2018
+  },
+  "split_positive_images": {
+    "operational_dev": 114,
+    "operational_mining": 117,
+    "train": 1262
+  },
+  "training_images": 2018
+}

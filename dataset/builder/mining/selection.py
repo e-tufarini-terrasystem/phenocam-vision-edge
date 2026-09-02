@@ -22,6 +22,16 @@ def _rows(path, *, require_local=True):
         return list(reader)
 
 
+def eligible_public(candidates_path, *exclusion_paths):
+    """Exclude previously used public identities, hashes, and camera-day groups."""
+    rows = _rows(candidates_path)
+    excluded = [row for path in exclusion_paths for row in _rows(path, require_local=False)]
+    used_ids = {row["source_id"] for row in excluded}
+    used_hashes = {value for row in excluded for value in (row.get("source_sha256", ""), row.get("decoded_sha256", "")) if value}
+    used_groups = {row.get("group_id", "") for row in excluded}
+    return [row for row in rows if row["source_id"] not in used_ids and row["source_sha256"] not in used_hashes and row.get("decoded_sha256", "") not in used_hashes and row.get("group_id", "") not in used_groups]
+
+
 def load_predictions(index_path):
     values = {}
     with Path(index_path).open(newline="", encoding="utf-8") as source:
@@ -94,11 +104,8 @@ def _diverse(rows, vectors, eligible, count, seed, group_limit, initial=None, ex
 
 
 def select_public(candidates_path, existing_path, baseline_index, v2_index, embeddings_path, output_path, statistics_path, config):
-    rows, existing = _rows(candidates_path), _rows(existing_path, require_local=False)
-    used_ids = {row["source_id"] for row in existing}
-    used_hashes = {row["source_sha256"] for row in existing} | {row.get("decoded_sha256", "") for row in existing}
-    used_groups = {row.get("group_id", "") for row in existing}
-    rows = [row for row in rows if row["source_id"] not in used_ids and row["source_sha256"] not in used_hashes and row.get("decoded_sha256", "") not in used_hashes and row.get("group_id", "") not in used_groups]
+    existing = _rows(existing_path, require_local=False)
+    rows = eligible_public(candidates_path, existing_path)
     base, v2, embedding_map = load_predictions(baseline_index), load_predictions(v2_index), _embeddings(embeddings_path)
     identities = [f"phenocam::{row['source_id']}" for row in rows]
     rows = [row for row, identity in zip(rows, identities) if identity in base and identity in v2 and identity in embedding_map]
@@ -127,6 +134,48 @@ def select_public(candidates_path, existing_path, baseline_index, v2_index, embe
     output.extend(_output_row(rows[index], "hard_negative_fill", signals[index], "public_mining") for index in indexes)
     write_csv(output_path, SELECTION_FIELDS, output)
     stats = {"selected": len(output), "eligible_after_exclusions": len(rows), "category_counts": dict(Counter(row["selection_category"] for row in output)), "sscd_existing_threshold": 0.95}
+    _write_audit(statistics_path, stats)
+    return stats
+
+
+def select_teacher_public(candidates_path, existing_path, reviewed_path, teacher_index, embeddings_path, output_path, statistics_path, config):
+    """Select the strongest diverse YOLO26x public candidates before CVAT review."""
+    rows = eligible_public(candidates_path, existing_path, reviewed_path)
+    predictions, embedding_map = load_predictions(teacher_index), _embeddings(embeddings_path)
+    existing = _rows(existing_path, require_local=False) + _rows(reviewed_path, require_local=False)
+    initial_ids = [row.get("source_identity", "") for row in existing if row.get("source_identity", "") in embedding_map]
+    initial = np.stack([embedding_map[identity] for identity in initial_ids]) if initial_ids else None
+    threshold = float(config["teacher_screening"]["selection_confidence"])
+    target_ids = set(config["classes"].values())
+    candidates = []
+    for row in rows:
+        identity = f"phenocam::{row['source_id']}"
+        detections = [item for item in predictions.get(identity, ()) if item["class_id"] in target_ids]
+        if identity not in embedding_map or not detections:
+            continue
+        score = max(item["confidence"] for item in detections)
+        if score >= threshold:
+            candidates.append((row, identity, score, detections))
+    if initial is not None:
+        candidates = [item for item in candidates if float(np.max(embedding_map[item[1]] @ initial.T)) < 0.95]
+    candidates.sort(key=lambda item: (-item[2], stable_rank(config["selection_seed"], item[0]["source_id"])))
+    selected, groups = [], Counter()
+    for row, identity, score, detections in candidates:
+        group = row.get("group_id", "")
+        if groups[group] >= int(config["selection"]["maximum_per_group"]):
+            continue
+        groups[group] += 1
+        selected.append(_output_row(row, "yolo26x_high_confidence", {f"confidence={score:.4f}"}, "public_teacher_mining"))
+        if len(selected) == int(config["teacher_screening"]["maximum_task_images"]):
+            break
+    if not selected:
+        raise DatasetError("YOLO26x public selection contains no candidates")
+    write_csv(output_path, SELECTION_FIELDS, selected)
+    stats = {
+        "selected": len(selected), "eligible_after_exclusions": len(rows),
+        "teacher_positive_candidates": len(candidates), "selection_confidence": threshold,
+        "selected_groups": len(groups), "maximum_per_group": int(config["selection"]["maximum_per_group"]),
+    }
     _write_audit(statistics_path, stats)
     return stats
 
