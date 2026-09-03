@@ -42,7 +42,7 @@ class InstallerTests(unittest.TestCase):
             ROOT / "requirements/runtime.txt",
             self.package / "requirements/runtime.txt",
         )
-        (self.package / "models/yolo26n-v3-extended.onnx").write_bytes(b"model")
+        (self.package / "models/yolo26n-v4.onnx").write_bytes(b"model")
         self.pip_log = self.root / "pip.log"
         self.venv_python = self.root / "venv-python"
         self._write_executable(
@@ -129,10 +129,37 @@ exit 1
 
     def release_assets(self):
         assets = self.root / "release assets"
+        source = self.root / "release source"
         assets.mkdir()
+        for relative in (
+            "README.md",
+            "assets/logo.svg",
+            "docs/cli.md",
+            "docs/development.md",
+            "docs/manual.md",
+            "models/yolo26n-v4.onnx",
+            "requirements/runtime.txt",
+            "scripts/batch.sh",
+            "scripts/installer.sh",
+        ):
+            destination = source / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, destination)
+        shutil.copytree(ROOT / "phenocam", source / "phenocam")
+        subprocess.run(["git", "init", "-q"], cwd=source, check=True)
+        subprocess.run(["git", "add", "."], cwd=source, check=True)
+        subprocess.run(
+            [
+                "git", "-c", "user.name=Release Test",
+                "-c", "user.email=release@example.invalid",
+                "commit", "-q", "-m", "release source",
+            ],
+            cwd=source,
+            check=True,
+        )
         result = subprocess.run(
             ["python3", str(PACKAGER), "0.1.0", "HEAD", str(assets)],
-            cwd=ROOT,
+            cwd=source,
             capture_output=True,
             text=True,
         )
@@ -213,7 +240,7 @@ exit 1
         self.assertFalse((self.package / ".venv").exists())
 
     def test_missing_or_symlinked_runtime_model_is_rejected(self):
-        model = self.package / "models/yolo26n-v3-extended.onnx"
+        model = self.package / "models/yolo26n-v4.onnx"
         model.unlink()
         self.assert_failure("error: runtime model does not exist")
         model.symlink_to(self.root / "outside-model.onnx")
@@ -267,7 +294,7 @@ exit 1
         self.assertEqual(result.returncode, 0, result.stderr)
         installed = destination / "phenocam-vision-edge-0.1.0"
         self.assertTrue((installed / "README.md").is_file())
-        self.assertTrue((installed / "models/yolo26n-v3-extended.onnx").is_file())
+        self.assertTrue((installed / "models/yolo26n-v4.onnx").is_file())
         self.assertTrue(os.access(installed / ".venv/bin/python", os.X_OK))
         self.assertTrue((installed / "input").is_dir())
         self.assertTrue((installed / "output").is_dir())

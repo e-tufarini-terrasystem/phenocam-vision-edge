@@ -10,6 +10,8 @@
 /dataset-v3-rebuilt/
 /dataset-v3-candidate/
 /dataset-v3-expanded/images/
+/dataset-v4/images/
+/dataset-v5/images/
 
 # Local interpreter and filesystem artifacts.
 __pycache__/

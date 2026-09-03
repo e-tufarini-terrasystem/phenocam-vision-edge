@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 
 
-_CONFIDENCE_THRESHOLD = 0.30
+_CONFIDENCE_THRESHOLD = 0.45
 _OVERLAP_THRESHOLD = 0.50
 _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
@@ -26,7 +26,10 @@ class Detection:
     row_priority: int
 
 
-def normalize_rows(rows, view, image_width, image_height, model_names):
+def normalize_rows(
+    rows, view, image_width, image_height, model_names,
+    confidence_threshold=_CONFIDENCE_THRESHOLD,
+):
     detections = []
     maximum_x = image_width - 1.0
     maximum_y = image_height - 1.0
@@ -39,7 +42,9 @@ def normalize_rows(rows, view, image_width, image_height, model_names):
             class_id = int(class_value)
             if class_value != class_id or class_id not in model_names:
                 continue
-            if confidence < _CONFIDENCE_THRESHOLD:
+            # ONNX confidence values are float32: keep the threshold inclusive
+            # after their conversion to Python floats.
+            if confidence + 1e-7 < confidence_threshold:
                 continue
 
             # Global coordinates are clipped before the positive-area invariant.

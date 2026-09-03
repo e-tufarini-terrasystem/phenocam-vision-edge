@@ -7,9 +7,10 @@ local verification procedure, and optional model-export workflow.
 
 ## Inference architecture
 
-Inference uses the validation-selected `models/yolo26n-v3-extended.onnx` and
-its end-to-end ONNX graph. The original and v2 models remain available for
-comparisons. The runtime calls the selected model directly through ONNX Runtime.
+Inference uses the validation-selected `models/yolo26n-v4.onnx` and its
+end-to-end ONNX graph. The v4 selection retains the original pretrained weights
+after fine-tuning and interpolation failed the declared validation gain. Older
+models remain available for comparisons.
 
 Each image is processed sequentially in one ONNX session using one full-image
 view plus fifteen adaptive overlapping crops. Horizontal and square images use
@@ -18,7 +19,7 @@ overlap. The EXIF-normalized RGB source supplies all sixteen views and remains
 the final rendering background.
 
 Crop detections are converted to global image coordinates, all model classes
-are merged, and all rows require confidence greater than or equal to 0.30.
+are merged, and all rows require confidence greater than or equal to 0.45.
 Duplicates are suppressed when IoU or smaller-box coverage reaches 0.50.
 `car`, `bus`, and `truck` compete across labels, while other classes compete
 only with themselves. `phenocam/classes/configuration.py` selects the final
@@ -58,9 +59,10 @@ python3 -m venv .venv-export
 .venv-export/bin/python scripts/export/fp32.py
 ```
 
-The included and tested `models/yolo26n-v3-extended.onnx` does not need to be
-exported on the Raspberry Pi. Test evaluation and operational validation on
-deployment imagery remain pending.
+The included and tested `models/yolo26n-v4.onnx` does not need to be exported
+on the Raspberry Pi. The frozen evaluation is documented in
+`docs/status/training-v4-experiment-2026-09-03.md`; target-device latency remains
+pending because a Raspberry Pi was not reachable during the cycle.
 
 ## Optional v2 training on Apple Silicon
 

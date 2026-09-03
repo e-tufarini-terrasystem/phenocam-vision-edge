@@ -1,0 +1,19 @@
+{
+  "pklot_license": {
+    "attribution": "Almeida et al., PKLot \u2013 A robust dataset for parking lot classification, 2015",
+    "expected_allocation": {
+      "pklot_holdout": 6,
+      "train": 18,
+      "val": 3
+    },
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "task_id": 17
+  },
+  "source_manifest_sha256": {
+    "pklot": "9d761af18b1fe8ea37ad2328af575f90ee2e705dd5744d955ae36dacaa993324",
+    "pklot_review": "77a0d889e8261964e4772cb43c72497ae73e04907a0b907313a493b27c102fa1",
+    "v4": "4e652ff5413364cf349efeea5c775435c3334d02206867a7d416c13acdc94523"
+  },
+  "test_policy": "Canonical v3 test identities and image hashes are excluded. The 240 reviewed operational images remain test-only; no test image or label is read while building v5."
+}

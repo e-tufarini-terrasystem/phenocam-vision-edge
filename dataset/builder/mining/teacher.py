@@ -7,6 +7,7 @@ import os
 import shutil
 import tempfile
 import zipfile
+from collections import Counter
 from pathlib import Path
 
 from PIL import Image
@@ -14,6 +15,7 @@ from PIL import Image
 from ..common import DatasetError, atomic_text, require_columns, sha256_file
 from .suggestions import novel_instances
 from .teacher_views import predict_image
+from .preview import write_preview
 
 
 COCO_MEMBER = "annotations/instances_default.json"
@@ -109,7 +111,7 @@ def augment_coco(current_export, image_dir, model_path, output_dir, confidence=0
         raise DatasetError("teacher input is missing")
     if output_dir.exists():
         raise DatasetError("teacher output directory already exists")
-    if not 0 < confidence <= 1 or image_size <= 0 or not 0 < minimum_iou <= 1 or bool(manifest_path) != bool(site) or (tiled and not site) or crop_region not in {"all", "right"} or (crop_region != "all" and not tiled):
+    if not 0 < confidence <= 1 or image_size <= 0 or not 0 < minimum_iou <= 1 or bool(manifest_path) != bool(site) or crop_region not in {"all", "right"} or (crop_region != "all" and not tiled):
         raise DatasetError("invalid teacher inference parameters")
     coco = _load_coco(current_export)
     categories, images, paths, existing = _validate(coco, image_dir)
@@ -145,6 +147,14 @@ def augment_coco(current_export, image_dir, model_path, output_dir, confidence=0
     try:
         archive = temporary / "annotations.coco.zip"
         _write_archive(coco, archive)
+        write_preview(temporary / "preview.html", coco["images"], coco["annotations"], coco["categories"], image_dir.as_uri() + "/")
+        class_counts, size_counts = Counter(), Counter()
+        for annotation in coco["annotations"]:
+            image = images[annotation["image_id"]]
+            scale = min(640 / image["width"], 640 / image["height"])
+            area = annotation["bbox"][2] * annotation["bbox"][3] * scale * scale
+            class_counts[categories[annotation["category_id"]]] += 1
+            size_counts["small" if area < 32**2 else "medium" if area < 96**2 else "large"] += 1
         receipt = {
             "schema_version": 1,
             "source_sha256": sha256_file(current_export),
@@ -167,6 +177,8 @@ def augment_coco(current_export, image_dir, model_path, output_dir, confidence=0
             "rejected_crop_edges": rejected_edges,
             "teacher_added": added,
             "final_annotations": len(coco["annotations"]),
+            "final_class_instances": dict(sorted(class_counts.items())),
+            "final_sizes_at_640": dict(sorted(size_counts.items())),
             "archive_sha256": sha256_file(archive),
         }
         with atomic_text(temporary / "teacher.json") as output:

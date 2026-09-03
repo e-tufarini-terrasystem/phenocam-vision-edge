@@ -34,7 +34,7 @@ for image in "$input_dir"/*; do
     annotated="$output_dir/${stem}_annotated.${extension}"
     privacy="$output_dir/${stem}_privacy.${extension}"
     metadata="$input_dir/${stem}.meta"
-    set -- "$python" -m phenocam --input "$image" --model "$root/models/yolo26n-v3-extended.onnx" --annotated-output "$annotated"
+    set -- "$python" -m phenocam --input "$image" --model "$root/models/yolo26n-v4.onnx" --annotated-output "$annotated"
     if [ -f "$metadata" ] && [ ! -L "$metadata" ]; then
         set -- "$@" --meta "$metadata"
     fi

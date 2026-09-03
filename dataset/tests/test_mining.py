@@ -16,6 +16,7 @@ from PIL import Image
 
 from dataset.builder.common import DatasetError, write_csv
 from dataset.builder.mining.inventory import INVENTORY_FIELDS, inventory
+from dataset.builder.mining.multisite_selection import select_multisite_public
 from dataset.builder.mining.review import REVIEW_FIELDS, import_reviewed
 from dataset.builder.mining.reviewed_selection import DECISION_FIELDS, select_reviewed_public
 from dataset.builder.mining.cvat import BUNDLE_FIELDS, build_bundle, build_label_audit_bundle
@@ -24,8 +25,11 @@ from dataset.builder.mining.screening import INDEX_FIELDS, screen
 from dataset.builder.mining.split import create_split
 from dataset.builder.mining.suggestions import novel_instances, suggestions
 from dataset.builder.mining.teacher import _site_image_ids
+from dataset.builder.mining.teacher_bundle import build_teacher_gate
 from dataset.builder.mining.teacher_screening import screen_public_teacher
 from dataset.builder.mining.teacher_views import _internal_edge, _selected_crops
+from dataset.builder.mining.training_pool import build_training_pool
+from dataset.builder.mining.validation_selection import select_validation_public
 
 
 CONFIG = {
@@ -238,6 +242,173 @@ class MiningTests(unittest.TestCase):
         build_bundle(selection, self.root / "teacher-screen/index.csv", self.root / "teacher-screen/index.csv", bundle, bundle_config, model_names=("teacher", "teacher"), minimum_confidence=0.5)
         with (bundle / "manifest.csv").open(newline="", encoding="utf-8") as source:
             self.assertEqual(next(csv.DictReader(source))["suggestion_models"], "teacher")
+        preview = (bundle / "preview.html").read_text(encoding="utf-8")
+        self.assertIn("mandatory human review", preview)
+        self.assertNotIn('src="http', preview)
+        self.assertNotIn("fetch(", preview)
+        teacher = self.root / "teacher"
+        teacher.mkdir()
+        archive = (bundle / "annotations.coco.zip").read_bytes()
+        (teacher / "annotations.coco.zip").write_bytes(archive)
+        (teacher / "teacher.json").write_text(json.dumps({
+            "source_sha256": hashlib.sha256(archive).hexdigest(),
+            "final_annotations": 1,
+        }), encoding="utf-8")
+        gate = self.root / "gate"
+        result = build_teacher_gate(bundle, teacher, gate)
+        self.assertEqual(result["images"], 1)
+        self.assertEqual(result["annotations"], 1)
+        self.assertTrue((gate / "images/default").is_dir())
+
+    def test_training_pool_excludes_held_out_sites_and_used_camera_days(self):
+        fields = (
+            "source_dataset", "source_id", "site_id", "group_id", "local_path",
+            "source_sha256", "decoded_sha256", "width", "height",
+        )
+        candidates = self.root / "candidates.csv"
+        write_csv(candidates, fields, [
+            {"source_dataset": "phenocam", "source_id": "keep", "site_id": "train-site", "group_id": "train-site:day-2", "local_path": "keep", "source_sha256": "keep-hash", "decoded_sha256": "keep-decoded", "width": 16, "height": 12},
+            {"source_dataset": "phenocam", "source_id": "keep-b", "site_id": "train-b", "group_id": "train-b:day-2", "local_path": "keep-b", "source_sha256": "keep-b-hash", "decoded_sha256": "keep-b-decoded", "width": 16, "height": 12},
+            {"source_dataset": "phenocam", "source_id": "used-day", "site_id": "train-site", "group_id": "train-site:day-1", "local_path": "used", "source_sha256": "new-hash", "decoded_sha256": "new-decoded", "width": 16, "height": 12},
+            {"source_dataset": "phenocam", "source_id": "held-out", "site_id": "test-site", "group_id": "test-site:day-2", "local_path": "test", "source_sha256": "test-hash", "decoded_sha256": "test-decoded", "width": 16, "height": 12},
+        ])
+        dataset_fields = (
+            "source_identity", "source_dataset", "source_id", "site_id", "group_id",
+            "split", "source_sha256", "decoded_sha256",
+        )
+        dataset = self.root / "dataset.csv"
+        write_csv(dataset, dataset_fields, [
+            {"source_identity": "phenocam::old", "source_dataset": "phenocam", "source_id": "old", "site_id": "train-site", "group_id": "train-site:day-1", "split": "train", "source_sha256": "old-hash", "decoded_sha256": "old-decoded"},
+            {"source_identity": "phenocam::old-b", "source_dataset": "phenocam", "source_id": "old-b", "site_id": "train-b", "group_id": "train-b:day-1", "split": "train", "source_sha256": "old-b-hash", "decoded_sha256": "old-b-decoded"},
+            {"source_identity": "phenocam::test", "source_dataset": "phenocam", "source_id": "test", "site_id": "test-site", "group_id": "test-site:day-1", "split": "test_id", "source_sha256": "sealed-hash", "decoded_sha256": "sealed-decoded"},
+            {"source_identity": "phenocam::val", "source_dataset": "phenocam", "source_id": "val", "site_id": "val-site", "group_id": "val-site:day-1", "split": "val", "source_sha256": "val-hash", "decoded_sha256": "val-decoded"},
+        ])
+        output, audit = self.root / "pool.csv", self.root / "pool.json"
+        result = build_training_pool(candidates, dataset, (), output, audit)
+        with output.open(newline="", encoding="utf-8") as source:
+            rows = list(csv.DictReader(source))
+        self.assertEqual([row["source_id"] for row in rows], ["keep", "keep-b"])
+        self.assertEqual(result["sealed_images_read"], 0)
+        self.assertEqual(result["decisions"]["held_out_site"], 1)
+        self.assertEqual(result["decisions"]["used_camera_day"], 1)
+
+    def test_training_pool_can_select_validation_sites(self):
+        fields = (
+            "source_dataset", "source_id", "site_id", "group_id", "local_path",
+            "source_sha256", "decoded_sha256", "width", "height",
+        )
+        candidates = self.root / "candidates.csv"
+        write_csv(candidates, fields, [
+            {"source_dataset": "phenocam", "source_id": "val-new", "site_id": "val-site", "group_id": "val-site:day-2", "local_path": "val", "source_sha256": "val-new-hash", "decoded_sha256": "val-new-decoded", "width": 16, "height": 12},
+            {"source_dataset": "phenocam", "source_id": "val-b-new", "site_id": "val-b-site", "group_id": "val-b-site:day-2", "local_path": "val-b", "source_sha256": "val-b-new-hash", "decoded_sha256": "val-b-new-decoded", "width": 16, "height": 12},
+            {"source_dataset": "phenocam", "source_id": "train-new", "site_id": "train-site", "group_id": "train-site:day-2", "local_path": "train", "source_sha256": "train-new-hash", "decoded_sha256": "train-new-decoded", "width": 16, "height": 12},
+        ])
+        dataset = self.root / "dataset.csv"
+        dataset_fields = (
+            "source_identity", "source_dataset", "source_id", "site_id", "group_id",
+            "split", "source_sha256", "decoded_sha256",
+        )
+        write_csv(dataset, dataset_fields, [
+            {"source_identity": "phenocam::train", "source_dataset": "phenocam", "source_id": "train", "site_id": "train-site", "group_id": "train-site:day-1", "split": "train", "source_sha256": "train-hash", "decoded_sha256": "train-decoded"},
+            {"source_identity": "phenocam::val", "source_dataset": "phenocam", "source_id": "val", "site_id": "val-site", "group_id": "val-site:day-1", "split": "val", "source_sha256": "val-hash", "decoded_sha256": "val-decoded"},
+            {"source_identity": "phenocam::val-b", "source_dataset": "phenocam", "source_id": "val-b", "site_id": "val-b-site", "group_id": "val-b-site:day-1", "split": "val", "source_sha256": "val-b-hash", "decoded_sha256": "val-b-decoded"},
+            {"source_identity": "phenocam::test", "source_dataset": "phenocam", "source_id": "test", "site_id": "test-site", "group_id": "test-site:day-1", "split": "test_id", "source_sha256": "test-hash", "decoded_sha256": "test-decoded"},
+        ])
+        output, audit = self.root / "val-pool.csv", self.root / "val-pool.json"
+        result = build_training_pool(candidates, dataset, (), output, audit, "val")
+        with output.open(newline="", encoding="utf-8") as source:
+            rows = list(csv.DictReader(source))
+        self.assertEqual([row["source_id"] for row in rows], ["val-new", "val-b-new"])
+        self.assertEqual(result["partition"], "val")
+        self.assertEqual(result["eligible_sites"], 2)
+
+    def test_validation_selection_stays_on_validation_sites(self):
+        pool_rows = [
+            {"source_dataset": "phenocam", "source_subset": "", "source_id": "a", "site_id": "val-a", "group_id": "val-a:day-1", "timestamp": "", "local_path": "a", "width": 640, "height": 480, "source_sha256": "a" * 64, "decoded_sha256": "", "phash": "0000000000000000"},
+            {"source_dataset": "phenocam", "source_subset": "", "source_id": "b", "site_id": "val-b", "group_id": "val-b:day-1", "timestamp": "", "local_path": "b", "width": 640, "height": 480, "source_sha256": "b" * 64, "decoded_sha256": "", "phash": "ffffffffffffffff"},
+        ]
+        pool = self.root / "pool.csv"
+        write_csv(pool, tuple(pool_rows[0]), pool_rows)
+        dataset = self.root / "dataset.csv"
+        write_csv(dataset, ("source_dataset", "site_id", "split"), [
+            {"source_dataset": "phenocam", "site_id": "val-a", "split": "val"},
+            {"source_dataset": "phenocam", "site_id": "val-b", "split": "val"},
+            {"source_dataset": "phenocam", "site_id": "train", "split": "train"},
+            {"source_dataset": "phenocam", "site_id": "test", "split": "test_id"},
+        ])
+        screen = self.root / "screen"
+        (screen / "records").mkdir(parents=True)
+        index_rows = []
+        for index, row in enumerate(pool_rows):
+            record = screen / "records" / f"{index}.json"
+            record.write_text(json.dumps({"detections_after_dedup": [{"class_id": 2, "class_name": "car", "confidence": 0.2, "x1": 1, "y1": 1, "x2": 20, "y2": 20}]}), encoding="utf-8")
+            index_rows.append({"source_identity": f"phenocam::{row['source_id']}", "record_path": f"records/{index}.json", "status": "completed"})
+        index_path = screen / "index.csv"
+        write_csv(index_path, ("source_identity", "record_path", "status"), index_rows)
+        output, audit = self.root / "selected.csv", self.root / "selected.json"
+        config = {**CONFIG, "selection_seed": 17, "classes": {"car": 2}, "validation_selection": {"minimum_confidence": 0.1, "maximum_images": 2, "maximum_per_site": 1, "maximum_per_group": 1, "minimum_sites": 2, "phash_hamming_maximum": 4, "runtime_size": 640, "small_area": 1024, "medium_area": 9216}}
+        result = select_validation_public(pool, index_path, dataset, output, audit, config)
+        with output.open(newline="", encoding="utf-8") as source:
+            selected = list(csv.DictReader(source))
+        self.assertEqual({row["site_id"] for row in selected}, {"val-a", "val-b"})
+        self.assertEqual({row["split"] for row in selected}, {"val"})
+        self.assertEqual(result["sealed_images_read"], 0)
+
+    def test_multisite_selection_gives_sites_a_first_turn(self):
+        pool_rows = []
+        identities = []
+        for site in ("a", "b", "c"):
+            for index, confidence in enumerate((0.8, 0.7)):
+                source_id = f"{site}-{index}"
+                identities.append(f"phenocam::{source_id}")
+                pool_rows.append({
+                    "source_dataset": "phenocam", "source_subset": "", "source_id": source_id,
+                    "site_id": site, "group_id": f"{site}:day-{index}", "timestamp": "",
+                    "local_path": source_id, "width": 640, "height": 480,
+                    "source_sha256": source_id * 4, "decoded_sha256": "", "phash": "",
+                })
+        pool = self.root / "pool.csv"
+        write_csv(pool, tuple(pool_rows[0]), pool_rows)
+        screen = self.root / "screen"
+        records = screen / "records"
+        records.mkdir(parents=True)
+        index_rows = []
+        for position, (row, identity) in enumerate(zip(pool_rows, identities)):
+            record = records / f"{position}.json"
+            confidence = 0.8 if position % 2 == 0 else 0.7
+            record.write_text(json.dumps({"detections_after_dedup": [{
+                "class_id": 2, "class_name": "car", "confidence": confidence,
+                "x1": 1, "y1": 1, "x2": 20, "y2": 20,
+            }]}), encoding="utf-8")
+            index_rows.append({
+                "source_identity": identity, "record_path": f"records/{position}.json",
+                "status": "completed",
+            })
+        write_csv(screen / "index.csv", tuple(index_rows[0]), index_rows)
+        dataset = self.root / "dataset.csv"
+        write_csv(dataset, ("source_identity", "split"), [
+            {"source_identity": "phenocam::existing", "split": "train"},
+            {"source_identity": "phenocam::validation", "split": "val"},
+            {"source_identity": "phenocam::test", "split": "test_id"},
+        ])
+        vectors = np.eye(len(identities) + 1, dtype=np.float32)
+        embeddings = self.root / "embeddings.npz"
+        np.savez(embeddings, identities=np.asarray([*identities, "phenocam::existing"]), embeddings=vectors)
+        config = {
+            "selection_seed": 1,
+            "classes": {"car": 2},
+            "teacher_screening": {"selection_confidence": 0.2},
+            "multisite_selection": {
+                "maximum_images": 3, "maximum_per_site": 2, "maximum_per_group": 1,
+                "minimum_sites": 3, "sscd_cosine_max": 0.95, "runtime_size": 640,
+                "small_area": 1024, "medium_area": 9216,
+            },
+        }
+        output, audit = self.root / "selection.csv", self.root / "selection.json"
+        result = select_multisite_public(pool, screen / "index.csv", embeddings, dataset, (), output, audit, config)
+        self.assertEqual(result["selected_images"], 3)
+        self.assertEqual(set(result["selected_sites"]), {"a", "b", "c"})
+        self.assertEqual(result["proposed_sizes_at_640"], {"small": 3})
 
     def test_selection_signals_and_group_limit_are_explicit(self):
         box = {"class_id": 0, "confidence": 0.31, "x1": 0, "y1": 0, "x2": 10, "y2": 10, "view_priority": 1}

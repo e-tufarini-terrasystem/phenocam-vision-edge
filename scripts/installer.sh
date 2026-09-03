@@ -8,7 +8,7 @@ set -u
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 requirements="$root/requirements/runtime.txt"
-model="$root/models/yolo26n-v3-extended.onnx"
+model="$root/models/yolo26n-v4.onnx"
 environment="$root/.venv"
 
 if [ "$(uname -m 2>/dev/null)" != "aarch64" ]; then

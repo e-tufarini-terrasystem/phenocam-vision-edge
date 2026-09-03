@@ -6,13 +6,17 @@ from pathlib import Path
 
 from .cvat import build_bundle, build_label_audit_bundle
 from .inventory import inventory
+from .multisite_selection import select_multisite_public
 from .review import import_reviewed
 from .reviewed_selection import select_reviewed_public
 from .screening import screen
 from .selection import select_internal, select_public, select_teacher_public
 from .split import create_embedding_manifest, create_split
 from .teacher import augment_coco
+from .teacher_bundle import build_teacher_gate
 from .teacher_screening import screen_public_teacher
+from .training_pool import build_training_pool
+from .validation_selection import select_validation_public
 
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "training-v3.json"
@@ -50,6 +54,18 @@ def _parser():
     for option in ("candidates", "existing", "reviewed", "model", "output-dir"):
         teacher_screen.add_argument(f"--{option}", type=Path, required=True)
     teacher_screen.add_argument("--resume", action="store_true")
+    pool = commands.add_parser("training-pool")
+    for option in ("candidates", "dataset", "output", "audit"):
+        pool.add_argument(f"--{option}", type=Path, required=True)
+    pool.add_argument("--exclude", type=Path, action="append", default=[])
+    pool.add_argument("--partition", choices=("train", "val"), default="train")
+    multisite = commands.add_parser("select-multisite-public")
+    for option in ("pool", "teacher-index", "embeddings", "dataset", "output", "audit"):
+        multisite.add_argument(f"--{option}", type=Path, required=True)
+    multisite.add_argument("--exclude", type=Path, action="append", default=[])
+    validation = commands.add_parser("select-validation-public")
+    for option in ("pool", "teacher-index", "dataset", "output", "audit"):
+        validation.add_argument(f"--{option}", type=Path, required=True)
     public = commands.add_parser("select-public")
     for option in ("candidates", "existing", "baseline-index", "v2-index", "embeddings", "output", "statistics"):
         public.add_argument(f"--{option}", type=Path, required=True)
@@ -66,6 +82,7 @@ def _parser():
     teacher_bundle = commands.add_parser("teacher-bundle")
     for option in ("selection", "teacher-index", "output-dir"):
         teacher_bundle.add_argument(f"--{option}", type=Path, required=True)
+    teacher_bundle.add_argument("--minimum-confidence", type=float)
     audit = commands.add_parser("cvat-label-audit")
     for option in ("audit", "dataset-root", "manifest", "output-dir"):
         audit.add_argument(f"--{option}", type=Path, required=True)
@@ -80,6 +97,9 @@ def _parser():
     teacher.add_argument("--site")
     teacher.add_argument("--tiled", action="store_true")
     teacher.add_argument("--crop-region", choices=("all", "right"), default="all")
+    teacher_gate = commands.add_parser("teacher-gate")
+    for option in ("base-dir", "teacher-dir", "output-dir"):
+        teacher_gate.add_argument(f"--{option}", type=Path, required=True)
     review = commands.add_parser("import-reviewed")
     for option in ("selection", "bundle-dir", "export", "output-dir"):
         review.add_argument(f"--{option}", type=Path, required=True)
@@ -112,6 +132,22 @@ def main(argv=None):
             arguments.candidates, arguments.existing, arguments.reviewed,
             arguments.model, arguments.output_dir, config, resume=arguments.resume,
         )
+    elif arguments.command == "training-pool":
+        result = build_training_pool(
+            arguments.candidates, arguments.dataset, arguments.exclude,
+            arguments.output, arguments.audit, arguments.partition,
+        )
+    elif arguments.command == "select-multisite-public":
+        result = select_multisite_public(
+            arguments.pool, arguments.teacher_index, arguments.embeddings,
+            arguments.dataset, arguments.exclude, arguments.output,
+            arguments.audit, config,
+        )
+    elif arguments.command == "select-validation-public":
+        result = select_validation_public(
+            arguments.pool, arguments.teacher_index, arguments.dataset,
+            arguments.output, arguments.audit, config,
+        )
     elif arguments.command == "select-public":
         result = select_public(arguments.candidates, arguments.existing, arguments.baseline_index, arguments.v2_index, arguments.embeddings, arguments.output, arguments.statistics, config)
     elif arguments.command == "select-teacher-public":
@@ -122,10 +158,13 @@ def main(argv=None):
         policy = config["cvat"]["clean_suggestions"] if arguments.clean_suggestions else None
         result = build_bundle(arguments.selection, arguments.baseline_index, arguments.v2_index, arguments.output_dir, config, policy)
     elif arguments.command == "teacher-bundle":
+        minimum_confidence = arguments.minimum_confidence
+        if minimum_confidence is None:
+            minimum_confidence = float(config["teacher_screening"]["selection_confidence"])
         result = build_bundle(
             arguments.selection, arguments.teacher_index, arguments.teacher_index,
             arguments.output_dir, config, model_names=("teacher", "teacher"),
-            minimum_confidence=float(config["teacher_screening"]["selection_confidence"]),
+            minimum_confidence=minimum_confidence,
         )
     elif arguments.command == "cvat-label-audit":
         result = build_label_audit_bundle(arguments.audit, arguments.dataset_root, arguments.manifest, arguments.output_dir, config)
@@ -136,6 +175,10 @@ def main(argv=None):
             arguments.device, arguments.minimum_iou,
             manifest_path=arguments.manifest, site=arguments.site,
             tiled=arguments.tiled, crop_region=arguments.crop_region,
+        )
+    elif arguments.command == "teacher-gate":
+        result = build_teacher_gate(
+            arguments.base_dir, arguments.teacher_dir, arguments.output_dir,
         )
     elif arguments.command == "import-reviewed":
         result = import_reviewed(

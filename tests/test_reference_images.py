@@ -97,7 +97,7 @@ class ReferenceImageTests(unittest.TestCase):
         model_names = captured["model_names"]
         for detection in detections:
             self.assertGreaterEqual(
-                detection.confidence, 0.30, (name, detection)
+                detection.confidence, 0.45, (name, detection)
             )
         for index, left in enumerate(detections):
             for right in detections[index + 1 :]:

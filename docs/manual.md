@@ -33,7 +33,7 @@ working copy about 187 MiB.
 
 A minimal source copy may omit the PT checkpoints, the original
 `models/yolo26n.onnx`, the export scripts, and `requirements/export.txt`, but
-must retain the packaged model `models/yolo26n-v3-extended.onnx`.
+must retain the packaged model `models/yolo26n-v4.onnx`.
 
 ### macOS
 
@@ -83,8 +83,9 @@ non-symlink
 not created and does not fail that image.
 
 The batch script and installer use the validation-selected
-`models/yolo26n-v3-extended.onnx`. Test evaluation and validation on operational
-deployment images remain pending.
+`models/yolo26n-v4.onnx`. Its frozen TEST-ID and TEST-OOD evaluation is recorded
+in `docs/status/training-v4-experiment-2026-09-03.md`; Raspberry Pi timing still
+requires a target-device run.
 
 Existing files are overwritten. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is

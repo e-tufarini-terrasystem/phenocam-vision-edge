@@ -12,6 +12,7 @@ from PIL import Image
 
 from ..common import DatasetError, atomic_text, require_columns, sha256_file, write_csv
 from .selection import SELECTION_FIELDS, load_predictions
+from .preview import write_preview
 from .suggestions import suggestions
 
 
@@ -125,6 +126,7 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, s
             json.dump(_labels(config), output, indent=2)
             output.write("\n")
         write_csv(temporary / "manifest.csv", BUNDLE_FIELDS, manifest)
+        write_preview(temporary / "preview.html", images, annotations, categories)
         _archive(annotation_path, temporary / "annotations.coco.zip")
         identity.update({"images": len(images), "annotations": len(annotations), "single_reviewer_waiver": config["single_reviewer_waiver"]})
         with atomic_text(temporary / "bundle.json") as output:

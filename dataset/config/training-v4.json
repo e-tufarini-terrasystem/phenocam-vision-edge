@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "selection_seed": 20260903,
+  "single_reviewer_waiver": true,
+  "test_status": "sealed",
+  "classes": {
+    "person": 0,
+    "car": 2,
+    "motorcycle": 3,
+    "bus": 5,
+    "truck": 7
+  },
+  "screening": {
+    "checkpoint_every": 25
+  },
+  "teacher_screening": {
+    "model_sha256": "9fdd44a31c504547ffb81d2c6d9e6dac3493c8eaa8b0398d3f43bae6c7003e92",
+    "confidence_floor": 0.10,
+    "selection_confidence": 0.20,
+    "image_size": 1280,
+    "device": "mps",
+    "maximum_task_images": 72
+  },
+  "multisite_selection": {
+    "maximum_images": 72,
+    "maximum_per_site": 3,
+    "maximum_per_group": 1,
+    "minimum_sites": 12,
+    "sscd_cosine_max": 0.95,
+    "runtime_size": 640,
+    "small_area": 1024,
+    "medium_area": 9216
+  },
+  "validation_selection": {
+    "minimum_confidence": 0.10,
+    "maximum_images": 12,
+    "maximum_per_site": 4,
+    "maximum_per_group": 1,
+    "minimum_sites": 2,
+    "phash_hamming_maximum": 4,
+    "runtime_size": 640,
+    "small_area": 1024,
+    "medium_area": 9216
+  },
+  "public_expansion": {
+    "maximum_images": 72,
+    "maximum_per_site": 3,
+    "maximum_per_group": 1,
+    "sscd_cosine_max": 0.95,
+    "class_priority": ["bus", "motorcycle", "truck", "person", "car"]
+  },
+  "cvat": {
+    "task": "V4 public PhenoCam multi-site positives - review gate",
+    "validation_task": "V4 public PhenoCam validation positives - review gate"
+  }
+}

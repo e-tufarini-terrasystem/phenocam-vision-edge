@@ -30,6 +30,12 @@ The leakage-aware v3 artifact contains 2,240 images and 10,562 annotations:
 images. Public splits keep PhenoCam cameras and pHash-near components disjoint;
 TEST-OOD contains the two later private operational cameras.
 
+The local `dataset-v5/` experiment artifact preserves v4, adds the completed
+27-image PKLot review, and aligns selected training crops with the runtime
+geometry. Its measured composition, leakage boundary, and training protocol are
+recorded in
+[`../docs/status/training-v5-design-2026-09-03.md`](../docs/status/training-v5-design-2026-09-03.md).
+
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
 
@@ -143,6 +149,11 @@ The complete historical annotation procedure remains in
 [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md). Human decisions
 remain authoritative; baseline detections may prioritize review but cannot
 establish ground truth or verify a negative.
+
+The first parking-lot source evaluation is recorded in
+[`../docs/status/parking-lot-source-evaluation-2026-09-03.md`](../docs/status/parking-lot-source-evaluation-2026-09-03.md).
+Only the completed official-PKLot task 17 is admitted to `dataset-v5`; the open
+task 13 and its automatic suggestions remain outside every training artifact.
 
 ## Data sources and security boundary
 
