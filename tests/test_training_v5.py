@@ -4,10 +4,36 @@ from pathlib import Path
 import unittest
 
 from phenocam.inference.views import _crop_rectangles
+from scripts.training_v5.selection import eligible
 from scripts.training_v5.tiles import remap_boxes, selected_rectangles
 
 
 class TrainingV5Tests(unittest.TestCase):
+    def test_selection_requires_pipeline_gain_and_domain_floors(self):
+        baseline = {
+            "pipeline_f1": 0.43,
+            "open_images_map50_95": 0.53,
+            "phenocam_recall": 1.0,
+            "pklot_recall": 0.31,
+        }
+        candidate = {
+            "pipeline_f1": 0.44,
+            "open_images_map50_95": 0.52,
+            "phenocam_recall": 1.0,
+            "pklot_recall": 0.32,
+        }
+
+        self.assertTrue(eligible(candidate, baseline))
+        for field, value in (
+            ("pipeline_f1", 0.43),
+            ("open_images_map50_95", 0.519),
+            ("phenocam_recall", 0.5),
+            ("pklot_recall", 0.30),
+        ):
+            changed = dict(candidate)
+            changed[field] = value
+            self.assertFalse(eligible(changed, baseline))
+
     def test_experiment_grid_matches_official_small_dataset_recipe(self):
         path = Path(__file__).parents[1] / "scripts/training_v5/experiments.json"
         experiments = json.loads(path.read_text(encoding="utf-8"))
