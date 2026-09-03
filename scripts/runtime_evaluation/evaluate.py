@@ -30,7 +30,7 @@ def _arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--dataset", type=Path, required=True)
-    parser.add_argument("--split", choices=("val", "test_id", "test_ood"), default="val")
+    parser.add_argument("--split", choices=("val", "pklot_holdout", "test_id", "test_ood"), default="val")
     parser.add_argument("--site")
     parser.add_argument("--threshold", type=float, action="append", required=True)
     parser.add_argument("--device", default="mps")

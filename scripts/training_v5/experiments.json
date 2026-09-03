@@ -1,0 +1,27 @@
+{
+  "adamw-full": {
+    "epochs": 50,
+    "patience": 20,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "lrf": 0.01,
+    "warmup_epochs": 3.0,
+    "mosaic": 0.5,
+    "mixup": 0.0,
+    "copy_paste": 0.0,
+    "close_mosaic": 10
+  },
+  "adamw-freeze10": {
+    "epochs": 50,
+    "patience": 20,
+    "optimizer": "AdamW",
+    "lr0": 0.001,
+    "lrf": 0.01,
+    "warmup_epochs": 3.0,
+    "mosaic": 0.5,
+    "mixup": 0.0,
+    "copy_paste": 0.0,
+    "close_mosaic": 10,
+    "freeze": 10
+  }
+}

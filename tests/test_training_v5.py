@@ -1,4 +1,6 @@
 import collections
+import json
+from pathlib import Path
 import unittest
 
 from phenocam.inference.views import _crop_rectangles
@@ -6,6 +8,22 @@ from scripts.training_v5.tiles import remap_boxes, selected_rectangles
 
 
 class TrainingV5Tests(unittest.TestCase):
+    def test_experiment_grid_matches_official_small_dataset_recipe(self):
+        path = Path(__file__).parents[1] / "scripts/training_v5/experiments.json"
+        experiments = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(set(experiments), {"adamw-full", "adamw-freeze10"})
+        for values in experiments.values():
+            self.assertEqual(values["optimizer"], "AdamW")
+            self.assertEqual(values["lr0"], 0.001)
+            self.assertEqual(values["epochs"], 50)
+            self.assertEqual(values["patience"], 20)
+            self.assertEqual(values["mosaic"], 0.5)
+            self.assertEqual(values["mixup"], 0.0)
+            self.assertEqual(values["copy_paste"], 0.0)
+        self.assertNotIn("freeze", experiments["adamw-full"])
+        self.assertEqual(experiments["adamw-freeze10"]["freeze"], 10)
+
     def test_selected_crops_are_exact_runtime_geometry_and_balanced(self):
         runtime = _crop_rectangles(4608, 2592)
         counts = collections.Counter()
