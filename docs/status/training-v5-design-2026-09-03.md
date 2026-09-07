@@ -1,7 +1,8 @@
 # Dataset e training v5 — decisione misurata
 
-Stato: dataset materializzato e verificato. Nessun modello v5 è stato ancora
-addestrato; il dataset da solo non costituisce evidenza di miglioramento.
+Stato: dataset materializzato e verificato; training, test ed export conclusi.
+L'esito misurato è in
+[`training-v5-experiment-2026-09-07.md`](training-v5-experiment-2026-09-07.md).
 
 ## Risultato
 

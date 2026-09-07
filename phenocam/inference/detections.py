@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 
 
-_CONFIDENCE_THRESHOLD = 0.45
+_CONFIDENCE_THRESHOLD = 0.47
 _OVERLAP_THRESHOLD = 0.50
 _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 

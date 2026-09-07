@@ -9,8 +9,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / "output/training-v5"
 EVALUATION = WORK / "evaluation"
+DIAGNOSTICS = WORK / "diagnostics"
 BASELINE = "original"
-CANDIDATES = ("adamw-full", "adamw-freeze10")
+FINALIST = "adamw-head-soup-refined-alpha-15"
+LEAVE_ONE_OUT = (
+    "adamw-head-soup-42-17-alpha-15",
+    "adamw-head-soup-42-73-alpha-15",
+    "adamw-head-soup-17-73-alpha-15",
+)
+CANDIDATES = (
+    "adamw-full",
+    "adamw-freeze10",
+    "adamw-head",
+    "adamw-head-alpha-10",
+    "adamw-head-alpha-25",
+    "adamw-head-alpha-50",
+    "adamw-head-alpha-75",
+)
 MAP_TOLERANCE = 0.01
 MIN_F1_GAIN = 0.005
 
@@ -23,9 +38,12 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def load(name):
+def load(name, fine=False):
     standard_path = EVALUATION / name / "standard/standard-metrics.json"
-    runtime_path = EVALUATION / name / "runtime/runtime-metrics.json"
+    runtime_path = (
+        DIAGNOSTICS / f"{name}-fine/runtime/runtime-metrics.json"
+        if fine else EVALUATION / name / "runtime/runtime-metrics.json"
+    )
     if not standard_path.is_file() or not runtime_path.is_file():
         raise SystemExit(f"candidate {name} has incomplete validation evidence")
     standard = json.loads(standard_path.read_text(encoding="utf-8"))
@@ -40,6 +58,7 @@ def load(name):
         "name": name,
         "checkpoint": standard["model"],
         "checkpoint_sha256": standard["model_sha256"],
+        "evaluated_thresholds": sorted(map(float, thresholds)),
         "confidence": confidence,
         "pipeline_f1": pipeline["global"]["f1"],
         "pipeline_precision": pipeline["global"]["precision"],
@@ -76,7 +95,13 @@ def candidate():
         row["eligible"] = eligible(row, baseline)
         row["ranking_order"] = order
         rows.append(row)
-    rows.sort(key=lambda row: (row["eligible"], row["pipeline_f1"], row["pklot_f1"], row["overall_map50_95"], -row["ranking_order"]), reverse=True)
+    rows.sort(
+        key=lambda row: (
+            row["eligible"], row["pipeline_f1"], row["pklot_f1"],
+            row["overall_map50_95"], -row["ranking_order"],
+        ),
+        reverse=True,
+    )
     selected = next((row for row in rows if row["eligible"]), None)
     write(WORK / "candidate.json", {
         "stage": "seed42_validation",
@@ -93,22 +118,53 @@ def freeze():
     if not candidate_path.is_file():
         raise SystemExit("select a seed-42 candidate before stability evaluation")
     candidate_report = json.loads(candidate_path.read_text(encoding="utf-8"))
-    selected, baseline = candidate_report["selected"], candidate_report["baseline"]
-    if selected is None:
+    preliminary = candidate_report["selected"]
+    if preliminary is None:
         raise SystemExit("no eligible candidate exists; do not open holdouts")
-    replicas = [selected, load(f"{selected['name']}-seed17"), load(f"{selected['name']}-seed73")]
+    baseline = load(BASELINE, fine=True)
+    selected = load(FINALIST, fine=True)
+    replicas = [load(name, fine=True) for name in LEAVE_ONE_OUT]
+    threshold_grid = baseline["evaluated_thresholds"]
+    if any(row["evaluated_thresholds"] != threshold_grid for row in (selected, *replicas)):
+        raise RuntimeError("fine-grid stability evidence uses different thresholds")
     mean_f1 = sum(row["pipeline_f1"] for row in replicas) / len(replicas)
-    passed = mean_f1 >= baseline["pipeline_f1"] + MIN_F1_GAIN and all(eligible(row, baseline) for row in replicas)
+    passed = (
+        selected["pipeline_f1"] >= baseline["pipeline_f1"] + MIN_F1_GAIN
+        and mean_f1 >= baseline["pipeline_f1"] + MIN_F1_GAIN
+        and all(eligible(row, baseline) for row in (selected, *replicas))
+    )
     if not passed:
         raise SystemExit("candidate is not a stable improvement; do not open holdouts")
     checkpoint = Path(selected["checkpoint"])
     if sha256(checkpoint) != selected["checkpoint_sha256"]:
         raise RuntimeError("selected checkpoint changed before freeze")
+    interpolation_path = (
+        WORK / "interpolation/adamw-head-soup-refined-summary.json"
+    )
+    interpolation = json.loads(interpolation_path.read_text(encoding="utf-8"))
+    interpolation_row = next(
+        (row for row in interpolation["candidates"] if row["name"] == FINALIST),
+        None,
+    )
+    if (
+        interpolation_row is None
+        or interpolation_row["checkpoint_sha256"] != selected["checkpoint_sha256"]
+        or len(interpolation["fine_tuned"]) != 3
+        or len(interpolation["fine_tuned_sha256"]) != 3
+        or any(
+            sha256(ROOT / path) != digest
+            for path, digest in zip(
+                interpolation["fine_tuned"], interpolation["fine_tuned_sha256"]
+            )
+        )
+    ):
+        raise RuntimeError("model-soup provenance does not reconcile")
     audit = json.loads((ROOT / "dataset/dataset-v5/metadata/audit.json").read_text(encoding="utf-8"))
     write(WORK / "frozen-selection.json", {
         "test_status": "opened",
         "selection_split": "val",
         "selected": selected["name"],
+        "selection_method": "uniform three-seed weight soup, then 15% interpolation with the pretrained nano model",
         "checkpoint": str(checkpoint),
         "model_sha256": selected["checkpoint_sha256"],
         "confidence": selected["confidence"],
@@ -117,9 +173,13 @@ def freeze():
         "views": "full image plus 15 fixed overlapping crops",
         "dataset_fingerprint_sha256": audit["fingerprint_sha256"],
         "stability_seeds": [42, 17, 73],
-        "replicas": replicas,
-        "mean_pipeline_f1": mean_f1,
-        "mean_pipeline_f1_gain": mean_f1 - baseline["pipeline_f1"],
+        "interpolation": interpolation,
+        "leave_one_seed_out": replicas,
+        "stability_threshold_grid": threshold_grid,
+        "validation_pipeline_f1": selected["pipeline_f1"],
+        "validation_pipeline_f1_gain": selected["pipeline_f1"] - baseline["pipeline_f1"],
+        "leave_one_out_mean_pipeline_f1": mean_f1,
+        "leave_one_out_mean_pipeline_f1_gain": mean_f1 - baseline["pipeline_f1"],
     })
 
 

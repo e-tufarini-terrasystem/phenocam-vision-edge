@@ -36,7 +36,7 @@ class DetectionTests(unittest.TestCase):
         return SimpleNamespace(**values)
 
     def test_inverse_letterbox_crop_origin_and_row_priority(self):
-        rows = np.array([[20, 40, 60, 100, 0.45, 42]], dtype=np.float32)
+        rows = np.array([[20, 40, 60, 100, 0.47, 42]], dtype=np.float32)
         detection = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)[0]
         self.assertEqual(
             (detection.x1, detection.y1, detection.x2, detection.y2),
@@ -49,9 +49,9 @@ class DetectionTests(unittest.TestCase):
         rows = np.array(
             [
                 [10, 20, 30, 40, 0.44, 42],
-                [10, 20, 30, 40, 0.45, 42],
+                [10, 20, 30, 40, 0.47, 42],
                 [10, 20, 30, 40, 0.40, 17],
-                [10, 20, 30, 40, 0.45, 17],
+                [10, 20, 30, 40, 0.47, 17],
             ],
             dtype=np.float32,
         )
@@ -60,8 +60,8 @@ class DetectionTests(unittest.TestCase):
 
         self.assertEqual(tuple(item.class_id for item in detections), (42, 17))
         self.assertEqual(tuple(item.row_priority for item in detections), (1, 3))
-        self.assertAlmostEqual(detections[0].confidence, 0.45)
-        self.assertAlmostEqual(detections[1].confidence, 0.45)
+        self.assertAlmostEqual(detections[0].confidence, 0.47)
+        self.assertAlmostEqual(detections[1].confidence, 0.47)
 
     def test_evaluator_can_lower_threshold_without_changing_runtime_default(self):
         rows = np.array([[10, 20, 30, 40, 0.10, 42]], dtype=np.float32)

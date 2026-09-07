@@ -1,0 +1,217 @@
+{
+  "benchmark": "20 zero-tensor ONNX CPU runs after 3 warmups on the recorded development host; not a Raspberry Pi benchmark",
+  "class_count": 80,
+  "cpu_latency_ms": {
+    "maximum": 25.636916048824787,
+    "mean": 21.784089651191607,
+    "median": 21.468520979397,
+    "minimum": 20.324791956227273,
+    "p95": 24.41402946715243
+  },
+  "created_unix_seconds": 1788789251.839582,
+  "input": {
+    "name": "images",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ]
+  },
+  "onnx": "models/yolo26n-v5.onnx",
+  "onnx_bytes": 9941955,
+  "onnx_sha256": "252f302257759cae6d40579fb76b74d66f87bdce2997d44f89dba85d03420379",
+  "opset": 20,
+  "output": {
+    "name": "output0",
+    "shape": [
+      1,
+      300,
+      6
+    ]
+  },
+  "pt": "models/yolo26n-v5.pt",
+  "pt_bytes": 5542277,
+  "pt_sha256": "93cca0065d9d06da5c78edadb388967a88b32fc2f0557a09fa82e1fcf8a638a3",
+  "selection": {
+    "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-15/weights/best.pt",
+    "confidence": 0.47,
+    "dataset_fingerprint_sha256": "406a4c3d12b1e69e5c5a807fa9dcd154ba352256a6b710bb49960a018d5acd13",
+    "imgsz": 640,
+    "interpolation": {
+      "alphas": [
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.5,
+        0.75
+      ],
+      "base": "models/yolo26n.pt",
+      "base_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "candidates": [
+        {
+          "alpha": 0.1,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-10/weights/best.pt",
+          "checkpoint_sha256": "16b107f5a1b8359a10feaf3728cf341d3e645ada5a5d49d1f41ae0b0b97a3f02",
+          "name": "adamw-head-soup-refined-alpha-10"
+        },
+        {
+          "alpha": 0.15,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-15/weights/best.pt",
+          "checkpoint_sha256": "93cca0065d9d06da5c78edadb388967a88b32fc2f0557a09fa82e1fcf8a638a3",
+          "name": "adamw-head-soup-refined-alpha-15"
+        },
+        {
+          "alpha": 0.2,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-20/weights/best.pt",
+          "checkpoint_sha256": "642262caa35acb22f5326af317302c56488501e067067ce2a6604d77cde59faf",
+          "name": "adamw-head-soup-refined-alpha-20"
+        },
+        {
+          "alpha": 0.25,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-25/weights/best.pt",
+          "checkpoint_sha256": "7fb6911ed17b8d485118dd94ab893f9693e18cd4fd0b8d8fd210cd2586b6e0b9",
+          "name": "adamw-head-soup-refined-alpha-25"
+        },
+        {
+          "alpha": 0.5,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-50/weights/best.pt",
+          "checkpoint_sha256": "54c33913a205fd82e69bb2683bf669568b85a5631ccb7b893d0f31afd6f9bdbc",
+          "name": "adamw-head-soup-refined-alpha-50"
+        },
+        {
+          "alpha": 0.75,
+          "checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-75/weights/best.pt",
+          "checkpoint_sha256": "9230139d9ab08876720523b0bd9631407fe66750cda1c9e81d9ce9a40f3d9381",
+          "name": "adamw-head-soup-refined-alpha-75"
+        }
+      ],
+      "fine_tuned": [
+        "output/training-v5/runs/adamw-head/weights/best.pt",
+        "output/training-v5/runs/adamw-head-seed17/weights/best.pt",
+        "output/training-v5/runs/adamw-head-seed73/weights/best.pt"
+      ],
+      "fine_tuned_sha256": [
+        "2deaae6b48b4784acf684fac8fe74b91cde92772bd2d7b2898dc458ae3c51320",
+        "aaafc2af4047a424d16166cad6b9166c4d98d265b589805188ccd7b1679797ad",
+        "b186c771f4aeaed5afba4dc0ffbfbc1e6fa90425a64c2159a4ebded2489bb561"
+      ],
+      "method": "linear weight interpolation",
+      "selection_split": "val"
+    },
+    "leave_one_out_mean_pipeline_f1": 0.439154247158455,
+    "leave_one_out_mean_pipeline_f1_gain": 0.006083381016722733,
+    "leave_one_seed_out": [
+      {
+        "checkpoint": "output/training-v5/interpolation/adamw-head-soup-42-17-alpha-15/weights/best.pt",
+        "checkpoint_sha256": "fb23a4b1b8caecaba8212943263f143b02d500524f40f9db9ae1d2c456708a3c",
+        "confidence": 0.5,
+        "evaluated_thresholds": [
+          0.4,
+          0.41,
+          0.42,
+          0.43,
+          0.44,
+          0.45,
+          0.46,
+          0.47,
+          0.48,
+          0.49,
+          0.5
+        ],
+        "name": "adamw-head-soup-42-17-alpha-15",
+        "open_images_map50_95": 0.5369109151537541,
+        "overall_map50_95": 0.530131157743401,
+        "phenocam_recall": 1.0,
+        "pipeline_f1": 0.43922369765066394,
+        "pipeline_precision": 0.4387755102040816,
+        "pipeline_recall": 0.4396728016359918,
+        "pklot_f1": 0.5079365079365079,
+        "pklot_recall": 0.35555555555555557
+      },
+      {
+        "checkpoint": "output/training-v5/interpolation/adamw-head-soup-42-73-alpha-15/weights/best.pt",
+        "checkpoint_sha256": "9d8fd3631e409ae08ec3cf7cc79f8a95e5f3eb3f67d128a3db024a9c24eb5674",
+        "confidence": 0.47,
+        "evaluated_thresholds": [
+          0.4,
+          0.41,
+          0.42,
+          0.43,
+          0.44,
+          0.45,
+          0.46,
+          0.47,
+          0.48,
+          0.49,
+          0.5
+        ],
+        "name": "adamw-head-soup-42-73-alpha-15",
+        "open_images_map50_95": 0.5378770075130658,
+        "overall_map50_95": 0.5313664380651403,
+        "phenocam_recall": 1.0,
+        "pipeline_f1": 0.4402390438247012,
+        "pipeline_precision": 0.429126213592233,
+        "pipeline_recall": 0.45194274028629855,
+        "pklot_f1": 0.5,
+        "pklot_recall": 0.35555555555555557
+      },
+      {
+        "checkpoint": "output/training-v5/interpolation/adamw-head-soup-17-73-alpha-15/weights/best.pt",
+        "checkpoint_sha256": "ada66b8bcaf13a294063d6b079e6a44d3d8ffeb9784c593306b0441881a7a139",
+        "confidence": 0.48,
+        "evaluated_thresholds": [
+          0.4,
+          0.41,
+          0.42,
+          0.43,
+          0.44,
+          0.45,
+          0.46,
+          0.47,
+          0.48,
+          0.49,
+          0.5
+        ],
+        "name": "adamw-head-soup-17-73-alpha-15",
+        "open_images_map50_95": 0.5398130459837878,
+        "overall_map50_95": 0.5332960384822335,
+        "phenocam_recall": 1.0,
+        "pipeline_f1": 0.43799999999999994,
+        "pipeline_precision": 0.42857142857142855,
+        "pipeline_recall": 0.44785276073619634,
+        "pklot_f1": 0.5079365079365079,
+        "pklot_recall": 0.35555555555555557
+      }
+    ],
+    "matching_iou": 0.5,
+    "model_sha256": "93cca0065d9d06da5c78edadb388967a88b32fc2f0557a09fa82e1fcf8a638a3",
+    "selected": "adamw-head-soup-refined-alpha-15",
+    "selection_method": "uniform three-seed weight soup, then 15% interpolation with the pretrained nano model",
+    "selection_split": "val",
+    "stability_seeds": [
+      42,
+      17,
+      73
+    ],
+    "stability_threshold_grid": [
+      0.4,
+      0.41,
+      0.42,
+      0.43,
+      0.44,
+      0.45,
+      0.46,
+      0.47,
+      0.48,
+      0.49,
+      0.5
+    ],
+    "test_status": "opened",
+    "validation_pipeline_f1": 0.43824701195219123,
+    "validation_pipeline_f1_gain": 0.005176145810458943,
+    "views": "full image plus 15 fixed overlapping crops"
+  },
+  "source_checkpoint": "output/training-v5/interpolation/adamw-head-soup-refined-alpha-15/weights/best.pt"
+}
