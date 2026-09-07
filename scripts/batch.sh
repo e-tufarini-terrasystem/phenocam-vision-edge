@@ -14,7 +14,9 @@ model="$root/models/yolo26n-v5.onnx"
 input_dir="$root/input"
 output_dir="$root/output"
 confidence=0.47  # Range 0..1; higher filters more boxes, including false positives.
-# Try 0.55 or 0.60 for stricter filtering; true objects may also be lost.
+# Suggested trials: 0.47 = v5 reference; 0.55 = moderate; 0.65 = strict filtering.
+# Higher thresholds may lose real objects, especially distant ones. Compare the
+# same images and use a different output_dir per trial to avoid overwriting.
 threads=${YOLO_NUM_THREADS:-4}  # 1..4; an environment override is also accepted.
 
 python="$root/.venv/bin/python"
