@@ -26,6 +26,11 @@ migrated image and label to its original path and unchanged SHA-256.
 Source `decoded_sha256` remains historical provenance; `compiled_decoded_sha256`
 identifies the actual compiled image pixels, which may differ after JPEG encoding.
 
+Ultralytics creates local `labels/<split>.cache` files even with image caching
+disabled. Verification permits these regular files only for configured splits;
+it still rejects cache symlinks, unexpected files, and changed images or labels.
+Caches are ignored by Git and are not copied into rebuilt artifacts.
+
 The approved local pool stores each compiled JPEG as `<sha256>.jpg`, including
 frozen derived crops. Preserve this pool or restore it from an authorized backup.
 The acquisition tools can download public originals and prepare review tasks;
@@ -239,8 +244,9 @@ training artifact.
 
 External images, archives, metadata, CVAT exports, and review CSVs are treated
 as untrusted input. The builder validates size limits, archive membership,
-image decoding, dimensions, checksums, required columns, source identity, box
-geometry, licenses, and review completeness before accepting data.
+image decoding, dimensions, checksums, required columns, source identity, unique
+integer COCO image IDs, box geometry, licenses, and review completeness before
+accepting data.
 
 ## Documentation
 

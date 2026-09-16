@@ -57,11 +57,17 @@ def import_positive_coco(bundle_dir, export_path, output_path, annotator, review
         raise DatasetError("CVAT export categories do not match the dataset contract")
     categories = dict(zip(category_ids, category_names))
     images = {}
+    image_ids = set()
     for image in coco.get("images", []):
         try:
             name = Path(image["file_name"]).name
         except (KeyError, TypeError) as error:
             raise DatasetError("CVAT export contains a malformed image") from error
+        image_id = image.get("id")
+        # COCO references must identify exactly one image, without int coercion.
+        if type(image_id) is not int or image_id in image_ids:
+            raise DatasetError("CVAT export contains an invalid or duplicate image ID")
+        image_ids.add(image_id)
         if name in images or name not in by_file:
             raise DatasetError("CVAT export contains an unknown or duplicate image")
         mapping = by_file[name]
@@ -73,21 +79,21 @@ def import_positive_coco(bundle_dir, export_path, output_path, annotator, review
         images[name] = image
     if set(images) != set(by_file):
         raise DatasetError("CVAT export does not contain every bundle image")
-    annotations_by_image = {int(image["id"]): [] for image in images.values()}
+    annotations_by_image = {image_id: [] for image_id in image_ids}
     seen_boxes = set()
     for annotation in coco.get("annotations", []):
         try:
-            image_id = int(annotation["image_id"])
+            image_id = annotation["image_id"]
             category_id = int(annotation["category_id"])
             values = tuple(float(value) for value in annotation["bbox"])
         except (KeyError, TypeError, ValueError) as error:
             raise DatasetError("CVAT export contains a malformed box") from error
-        if image_id not in annotations_by_image or category_id not in categories:
+        if type(image_id) is not int or image_id not in annotations_by_image or category_id not in categories:
             raise DatasetError("CVAT export annotation references an unknown image or category")
         if len(values) != 4 or not all(math.isfinite(value) for value in values):
             raise DatasetError("CVAT export contains a malformed box")
         left, top, width, height = values
-        image = next(item for item in images.values() if int(item["id"]) == image_id)
+        image = next(item for item in images.values() if item["id"] == image_id)
         mapping = by_file[Path(image["file_name"]).name]
         if (
             left < 0
@@ -115,7 +121,7 @@ def import_positive_coco(bundle_dir, export_path, output_path, annotator, review
     output_rows = []
     for file_name, image in sorted(images.items()):
         mapping = by_file[file_name]
-        annotations = annotations_by_image[int(image["id"])]
+        annotations = annotations_by_image[image["id"]]
         output_rows.append(
             {
                 "source_identity": mapping["source_identity"],

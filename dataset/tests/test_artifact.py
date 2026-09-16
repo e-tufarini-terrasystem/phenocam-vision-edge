@@ -102,6 +102,39 @@ class ArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(DatasetError, 'separation'):
             verify(self.catalog, self.config)
 
+    def test_ultralytics_split_caches_do_not_change_catalog_verification(self):
+        for split in ('train', 'val'):
+            (self.catalog / f'labels/{split}.cache').write_bytes(b'local label cache')
+        for images, decode in ((True, True), (True, False), (False, False)):
+            with self.subTest(images=images, decode=decode):
+                self.assertEqual(verify(self.catalog, self.config, images=images, decode=decode)['status'], 'passed')
+        output = self.root / 'rebuilt'
+        materialize(output, self.pool, self.catalog, self.config)
+        self.assertEqual(list(output.rglob('*.cache')), [])
+        label = self.catalog / self.rows[0]['label_path']
+        label.write_text('0 0.5 0.5 0.5 0.5\n')
+        with self.assertRaisesRegex(DatasetError, 'checksum'):
+            verify(self.catalog, self.config, decode=False)
+
+    def test_cache_exception_rejects_other_paths_and_symlinks(self):
+        for name in ('labels/unknown.cache', 'labels/train/extra.cache', 'images/train.cache'):
+            with self.subTest(name=name):
+                path = self.catalog / name
+                path.write_bytes(b'unlisted file')
+                with self.assertRaisesRegex(DatasetError, 'Unlisted'):
+                    verify(self.catalog, self.config)
+                path.unlink()
+        cache = self.catalog / 'labels/train.cache'
+        for target in (self.catalog / self.rows[0]['label_path'], self.root / 'missing.cache'):
+            with self.subTest(target=target):
+                cache.symlink_to(target)
+                with self.assertRaises(DatasetError):
+                    verify(self.catalog, self.config)
+                cache.unlink()
+        cache.mkdir()
+        with self.assertRaises(DatasetError):
+            verify(self.catalog, self.config)
+
     def test_site_day_cannot_cross_splits(self):
         self.rows[1]['group_id'] = self.rows[0]['group_id']
         self.freeze()

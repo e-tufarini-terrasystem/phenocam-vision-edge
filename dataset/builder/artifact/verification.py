@@ -65,9 +65,16 @@ def verify(root=CATALOG, config=CONFIG, images=True, decode=True):
         labels += len(lines)
     if set(listed) != expected or any(len(splits) != 1 for splits in separation.values()):
         raise DatasetError('Checksum inventory or split separation differs')
+    # Ultralytics writes label caches even with image caching disabled. Only
+    # regular split caches are disposable; image and label inventories stay exact.
+    caches = {f'labels/{split}.cache' for split in settings['splits']}
+    for name in caches:
+        path = local_path(root, name)
+        if path.exists() and not path.is_file():
+            raise DatasetError('Invalid dataset cache file')
     for prefix in ('labels', 'images') if images else ('labels',):
         actual = {p.relative_to(root).as_posix() for p in (root / prefix).rglob('*') if p.is_file()}
-        if actual != {p for p in expected if p.startswith(prefix + '/')}:
+        if actual - caches != {p for p in expected if p.startswith(prefix + '/')}:
             raise DatasetError('Unlisted or missing dataset files')
     counts = dict(Counter(r['split'] for r in rows))
     if counts != settings['splits'] or labels != settings['annotations']:

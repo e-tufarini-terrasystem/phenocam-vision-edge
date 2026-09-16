@@ -7,6 +7,7 @@ import tempfile
 from pathlib import PurePosixPath
 from pathlib import Path
 from ..common import DatasetError, inspect_image, require_columns, stable_rank, write_csv
+from ..openimages.schema import REJECTION_FIELDS
 from .schema import ARCHIVE_DOWNLOAD_FIELDS, FRAME_FIELDS, _FRAME_NAME
 
 
@@ -166,8 +167,6 @@ def sample_archives(download_manifest, frame_dir, output_path, rejection_path, c
                 }
             )
     write_csv(output_path, FRAME_FIELDS, accepted)
-    from .openimages import REJECTION_FIELDS
-
     write_csv(rejection_path, REJECTION_FIELDS, rejections)
     return {
         "candidate_frames": len(accepted),

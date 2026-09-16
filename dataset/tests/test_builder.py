@@ -5,6 +5,7 @@ import csv
 import hashlib
 import io
 import json
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,6 +32,7 @@ from dataset.builder.embeddings import DUPLICATE_PAIR_FIELDS, combine_manifests
 from dataset.builder.openimages import _rotate_box, index_metadata
 from dataset.builder.phenocam import GRANULE_FIELDS, index_granules, plan_archives
 from dataset.builder.phenocam import FRAME_FIELDS
+from dataset.builder.phenocam import ARCHIVE_DOWNLOAD_FIELDS, PLAN_FIELDS, download_archives, sample_archives
 from dataset.builder.phenocam_review import select_phenocam
 from dataset.builder.review import create_openimages_review_packet
 from dataset.builder.selection import SELECTION_FIELDS, supplemental_selection
@@ -316,6 +318,57 @@ class DatasetBuilderTests(unittest.TestCase):
             result["season_counts"],
             {"winter": 1, "spring": 1, "summer": 1, "autumn": 1},
         )
+
+    def test_phenocam_download_writes_success_and_rejection_manifests(self):
+        rows = [
+            {**dict.fromkeys(PLAN_FIELDS, ''),
+             'granule_id': f'Phenocam_Images_V3.site{index}_2020_04.tar.gz',
+             'download_url': f'https://example.invalid/{index}.tar.gz',
+             'size_bytes': '123', 'sha256': 'a' * 64}
+            for index in (1, 2)
+        ]
+        plan, manifest, rejections = (self.root / name for name in ('plan.csv', 'downloads.csv', 'rejections.csv'))
+        self.write_csv(plan, PLAN_FIELDS, rows)
+        with patch('dataset.builder.phenocam.download.authenticated_opener'), \
+                patch('dataset.builder.phenocam.download.retrieve', side_effect=['downloaded', DatasetError('checksum mismatch')]):
+            result = download_archives(plan, self.root / 'archives', manifest, rejections, self.config)
+        self.assertEqual(result, {'downloaded_or_cached': 1, 'rejected': 1})
+        with manifest.open() as source:
+            completed = list(csv.DictReader(source))
+        with rejections.open() as source:
+            rejected = list(csv.DictReader(source))
+        self.assertEqual(completed[0]['granule_id'], rows[0]['granule_id'])
+        self.assertEqual(completed[0]['download_status'], 'downloaded')
+        self.assertEqual(rejected[0]['source_id'], rows[1]['granule_id'])
+        self.assertEqual(rejected[0]['reason_code'], 'checksum mismatch')
+
+    def test_phenocam_sampling_writes_frames_and_archive_rejections(self):
+        image = io.BytesIO()
+        Image.new('RGB', (640, 480), (20, 40, 60)).save(image, format='JPEG')
+        archive_path = self.root / 'site_2020_04.tar.gz'
+        with tarfile.open(archive_path, 'w:gz') as archive:
+            member = tarfile.TarInfo('site_2020_04_01_120000.jpg')
+            member.size = len(image.getvalue())
+            archive.addfile(member, io.BytesIO(image.getvalue()))
+        broken = self.root / 'broken.tar.gz'
+        broken.write_bytes(b'invalid archive')
+        rows = [
+            {**dict.fromkeys(ARCHIVE_DOWNLOAD_FIELDS, ''), 'site_id': 'site',
+             'granule_id': path.name, 'local_path': str(path), 'assigned_season': 'spring'}
+            for path in (archive_path, broken)
+        ]
+        manifest, frames, rejections = (self.root / name for name in ('downloads.csv', 'frames.csv', 'rejections.csv'))
+        self.write_csv(manifest, ARCHIVE_DOWNLOAD_FIELDS, rows)
+        result = sample_archives(manifest, self.root / 'images', frames, rejections, self.config)
+        self.assertEqual(result, {'candidate_frames': 1, 'sites': 1, 'rejections': 1})
+        with frames.open() as source:
+            accepted = list(csv.DictReader(source))
+        with rejections.open() as source:
+            rejected = list(csv.DictReader(source))
+        self.assertEqual(accepted[0]['source_id'], 'site_2020_04_01_120000')
+        self.assertEqual(Path(accepted[0]['local_path']).read_bytes(), image.getvalue())
+        self.assertEqual(rejected[0]['source_id'], broken.name)
+        self.assertEqual(rejected[0]['reason_code'], 'archive_read_failed')
 
     def test_phenocam_selection_balances_small_fixture_and_preserves_site_limit(self):
         config = copy.deepcopy(self.config)
@@ -816,6 +869,43 @@ class DatasetBuilderTests(unittest.TestCase):
             bundle, export, self.root / "import.csv", "annotator", "reviewer", self.config
         )
         self.assertEqual(result, {"images": 1, "accepted": 1, "rejected_no_targets": 0, "annotations": 1})
+
+    def test_positive_coco_import_requires_unique_integer_image_ids(self):
+        self.write_csv(self.root / 'mapping.csv', MAPPING_FIELDS, [
+            {'source_identity': f'source:{index}', 'bundle_file_name': f'image{index}.jpg',
+             'width': '640', 'height': '480'}
+            for index in (1, 2)
+        ])
+        document = {
+            'categories': _categories(self.config),
+            'images': [{'id': index, 'file_name': f'image{index}.jpg', 'width': 640, 'height': 480}
+                       for index in (1, 2)],
+            'annotations': [{'id': 1, 'image_id': 1, 'category_id': 1, 'bbox': [10, 20, 30, 40]}],
+        }
+        export, output = self.root / 'export.json', self.root / 'import.csv'
+        for invalid_id in (1, 1.5, '1', True, None):
+            with self.subTest(image_id=invalid_id):
+                document['images'][1]['id'] = invalid_id
+                export.write_text(json.dumps(document))
+                with self.assertRaises(DatasetError):
+                    import_positive_coco(self.root, export, output, 'annotator', 'reviewer', self.config)
+                self.assertFalse(output.exists())
+        document['images'][1]['id'] = 2
+        for invalid_id in (1.5, '1', True, None):
+            with self.subTest(annotation_image_id=invalid_id):
+                document['annotations'][0]['image_id'] = invalid_id
+                export.write_text(json.dumps(document))
+                with self.assertRaises(DatasetError):
+                    import_positive_coco(self.root, export, output, 'annotator', 'reviewer', self.config)
+                self.assertFalse(output.exists())
+        document['annotations'][0]['image_id'] = 1
+        export.write_text(json.dumps(document))
+        result = import_positive_coco(self.root, export, output, 'annotator', 'reviewer', self.config)
+        self.assertEqual(result, {'images': 2, 'accepted': 1, 'rejected_no_targets': 1, 'annotations': 1})
+        with output.open() as source:
+            imported = list(csv.DictReader(source))
+        self.assertEqual([(row['source_identity'], row['annotation_count']) for row in imported],
+                         [('source:1', '1'), ('source:2', '0')])
 
 
 if __name__ == "__main__":

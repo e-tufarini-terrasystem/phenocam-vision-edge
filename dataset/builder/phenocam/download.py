@@ -3,6 +3,7 @@
 import csv
 from pathlib import Path
 from ..common import DatasetError, require_columns, write_csv
+from ..openimages.schema import REJECTION_FIELDS
 from .authentication import authenticated_opener, retrieve
 from .schema import ARCHIVE_DOWNLOAD_FIELDS, PLAN_FIELDS, _ARCHIVE_NAME
 
@@ -52,7 +53,5 @@ def download_archives(plan_path, archive_dir, manifest_path, rejection_path, con
                 }
             )
     write_csv(manifest_path, ARCHIVE_DOWNLOAD_FIELDS, completed)
-    from .openimages import REJECTION_FIELDS
-
     write_csv(rejection_path, REJECTION_FIELDS, rejections)
     return {"downloaded_or_cached": len(completed), "rejected": len(rejections)}
