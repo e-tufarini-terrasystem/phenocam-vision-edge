@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phenocam Dataset Viewer</title>
+  <style>
+    :root { color-scheme:dark; --ink:#f4f2eb; --muted:#9ea39d; --panel:#171a18; --line:#303530; --accent:#c9f26b; }
+    * { box-sizing:border-box; }
+    body { margin:0; height:100vh; overflow:hidden; background:#0c0e0d; color:var(--ink); font:15px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:24px; height:86px; padding:18px 24px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font:700 clamp(20px,3vw,30px)/1.1 system-ui,sans-serif; letter-spacing:-.04em; }
+    .eyebrow { margin:0 0 5px; color:var(--accent); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+    .load { display:inline-flex; padding:10px 14px; border:1px solid var(--accent); border-radius:8px; color:#0c0e0d; background:var(--accent); font-weight:700; cursor:pointer; white-space:nowrap; }
+    .load:focus-within { outline:3px solid #fff4; outline-offset:3px; }
+    .load input { position:absolute; width:1px; height:1px; opacity:0; }
+    main { display:grid; grid-template-columns:250px minmax(0,1fr) 290px; height:calc(100vh - 86px); }
+    aside { padding:22px; border-right:1px solid var(--line); background:var(--panel); }
+    label.control { display:block; margin:0 0 18px; color:var(--muted); font-size:12px; }
+    input[type="search"], select { width:100%; margin-top:6px; padding:10px; border:1px solid var(--line); border-radius:7px; background:#0c0e0d; color:var(--ink); font:inherit; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:24px 0; }
+    .stat { padding:11px; border:1px solid var(--line); border-radius:7px; }
+    .stat strong { display:block; color:var(--accent); font-size:18px; }
+    .stat span,.help { color:var(--muted); font-size:10px; text-transform:uppercase; }
+    .help { font-size:12px; text-transform:none; }
+    .workspace { display:grid; grid-template-rows:minmax(0,1fr) auto; min-width:0; min-height:0; }
+    .stage { min-height:0; overflow:auto; background-color:#101311; background-image:linear-gradient(45deg,#151815 25%,transparent 25%),linear-gradient(-45deg,#151815 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#151815 75%),linear-gradient(-45deg,transparent 75%,#151815 75%); background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0; }
+    .image-frame { display:grid; place-items:center; width:max-content; min-width:100%; height:max-content; min-height:100%; padding:24px; }
+    .image-frame > * { grid-area:1 / 1; }
+    canvas { display:block; width:auto; height:auto; box-shadow:0 20px 60px #0008; touch-action:none; }
+    .stage.pannable canvas { cursor:grab; }
+    .stage.dragging canvas { cursor:grabbing; }
+    .empty { max-width:390px; text-align:center; color:var(--muted); }
+    .empty strong { display:block; margin-bottom:8px; color:var(--ink); font:650 22px system-ui,sans-serif; }
+    .toolbar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; padding:13px 18px; border-top:1px solid var(--line); background:var(--panel); }
+    button { padding:8px 11px; border:1px solid var(--line); border-radius:7px; background:#252925; color:var(--ink); font:inherit; cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.35; }
+    .nav { display:flex; gap:7px; }
+    .actions,.zoom { display:flex; align-items:center; gap:7px; }
+    .zoom button { min-width:38px; }
+    #zoomReset { min-width:62px; color:var(--accent); }
+    .identity { min-width:0; }
+    #name { width:100%; padding:0; overflow:hidden; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; text-overflow:ellipsis; white-space:nowrap; cursor:text; }
+    #detail { color:var(--muted); font-size:11px; }
+    .rail { display:grid; grid-template-rows:auto minmax(0,1fr); min-width:0; min-height:0; overflow:hidden; border-left:1px solid var(--line); background:var(--panel); }
+    .rail h2 { margin:0; padding:17px; border-bottom:1px solid var(--line); font:650 14px system-ui,sans-serif; }
+    .gallery { min-height:0; overflow-y:auto; padding:10px; }
+    .thumb { display:grid; grid-template-columns:78px minmax(0,1fr); align-items:center; gap:10px; width:100%; margin-bottom:8px; padding:6px; text-align:left; background:#111412; }
+    .thumb:hover { border-color:#626a62; }
+    .thumb.selected { border-color:var(--accent); box-shadow:inset 3px 0 var(--accent); }
+    .thumb img { width:78px; height:58px; object-fit:cover; border-radius:4px; background:#252925; }
+    .thumb span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .thumb small { display:block; color:var(--muted); font-size:10px; }
+    @media (max-width:900px) { body { height:auto; overflow:auto; } header { height:auto; } main { display:block; height:auto; } aside { border-right:0; border-bottom:1px solid var(--line); } .controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; } label.control { margin:0; } .stats,.help { display:none; } .workspace { height:62vh; } .toolbar { grid-template-columns:auto minmax(0,1fr); } .actions { grid-column:1 / -1; justify-self:center; } .rail { height:45vh; border-top:1px solid var(--line); border-left:0; } .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px; } .thumb { margin:0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">YOLO inspection tool</p><h1>Phenocam Dataset Viewer</h1></div>
+    <label class="load">Scegli dataset<input id="folder" type="file" webkitdirectory multiple></label>
+  </header>
+  <main>
+    <aside>
+      <div class="controls">
+        <label class="control">Dataset split<select id="split" disabled><option value="train">Train</option><option value="val">Validation</option><option value="pklot_holdout">PKLot holdout</option><option value="test">Test</option><option value="test_id">Test ID</option><option value="test_ood">Test OOD</option></select></label>
+        <label class="control">Cerca per nome<input id="search" type="search" placeholder="open-images, phenocam…" disabled></label>
+        <label class="control">Contenuto<select id="filter" disabled><option id="allCount" value="all">Tutte</option><option id="positiveCount" value="positive">Solo positive</option><option id="negativeCount" value="negative">Solo negative</option></select></label>
+        <label class="control">Classe<select id="classFilter" disabled><option value="all">Tutte le classi</option></select></label>
+      </div>
+      <div class="stats"><div class="stat"><strong id="total">—</strong><span>immagini</span></div><div class="stat"><strong id="annotations">—</strong><span>annotazioni</span></div><div class="stat"><strong id="shown">—</strong><span>visibili</span></div></div>
+      <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Usa la rotellina per lo zoom e trascina l’immagine ingrandita per spostarla. Tutto resta nel browser.</p>
+    </aside>
+    <section class="workspace">
+      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/data</code>.</div></div></div>
+      <div class="toolbar">
+        <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
+        <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>
+        <div class="actions">
+          <div class="zoom" aria-label="Controlli zoom"><button id="zoomOut" aria-label="Riduci zoom" title="Riduci zoom (−)" disabled>−</button><button id="zoomReset" aria-label="Adatta immagine" title="Adatta immagine (0)" disabled>100%</button><button id="zoomIn" aria-label="Aumenta zoom" title="Aumenta zoom (+)" disabled>+</button></div>
+          <button id="random" disabled>Casuale</button>
+        </div>
+      </div>
+    </section>
+    <section class="rail"><h2>Immagini</h2><div id="gallery" class="gallery" aria-label="Elenco immagini"></div></section>
+  </main>
+  <script>
+    const elements = Object.fromEntries([...document.querySelectorAll('[id]')].map(node => [node.id, node]));
+    const colors = ['#c9f26b','#70d6ff','#ff9770','#ffd670','#e9ff70','#ff70a6','#b8c0ff','#9cfffa'];
+    let images = [], visible = [], labels = new Map(), metadata = new Map(), classes = {}, position = 0, renderId = 0, centerUrl = '', zoom = 1, pan = null;
+    const minimumZoom = .5, maximumZoom = 4, zoomStep = .25;
+    const thumbnailObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) entry.isIntersecting ? loadThumbnail(entry.target) : unloadThumbnail(entry.target);
+    }, {root:elements.gallery, rootMargin:'180px 0px'});
+
+    function labelPath(file) {
+      return file.webkitRelativePath.replace('/images/', '/labels/').replace(/\.[^.]+$/, '.txt');
+    }
+
+    function splitOf(file) {
+      const path = file.webkitRelativePath;
+      if (/\/images\/test\/id\//i.test(path)) return 'test_id';
+      if (/\/images\/test\/ood\//i.test(path)) return 'test_ood';
+      if (/\/images\/test_id\//i.test(path)) return 'test_id';
+      if (/\/images\/test_ood\//i.test(path)) return 'test_ood';
+      if (/\/images\/pklot_holdout\//i.test(path)) return 'pklot_holdout';
+      if (/\/images\/val\//i.test(path)) return 'val';
+      if (/\/images\/train\//i.test(path)) return 'train';
+      return '';
+    }
+
+    function selectedSplit(file) {
+      const split = splitOf(file), selected = elements.split.value;
+      return selected === 'test' ? split === 'test_id' || split === 'test_ood' : split === selected;
+    }
+
+    function parseCsv(text) {
+      const rows = []; let row = [], value = '', quoted = false;
+      for (let index=0; index<text.length; index++) {
+        const character = text[index];
+        if (quoted && character === '"' && text[index+1] === '"') { value += '"'; index++; }
+        else if (character === '"') quoted = !quoted;
+        else if (!quoted && character === ',') { row.push(value); value = ''; }
+        else if (!quoted && (character === '\n' || character === '\r')) {
+          if (character === '\r' && text[index+1] === '\n') index++;
+          row.push(value); if (row.some(cell => cell)) rows.push(row); row = []; value = '';
+        } else value += character;
+      }
+      if (value || row.length) { row.push(value); rows.push(row); }
+      if (quoted || rows.length < 2) return [];
+      const headers = rows[0];
+      return rows.slice(1).filter(values => values.length === headers.length).map(values => Object.fromEntries(headers.map((header,index) => [header,values[index]])));
+    }
+
+    function parseClasses(text) {
+      // The canonical catalog writes JSON, which is also valid YAML.
+      if (text.trimStart().startsWith('{')) {
+        try {
+          const names = JSON.parse(text).names;
+          return Object.fromEntries(Object.entries(names || {}).filter(([id, name]) => /^\d+$/.test(id) && typeof name === 'string'));
+        } catch { return {}; }
+      }
+      const parsed = {}, inline = text.match(/names:\s*\{([^}]+)\}/);
+      if (inline) for (const item of inline[1].split(',')) {
+        const [rawId,...parts] = item.split(':'), id = Number(rawId.trim()), name = parts.join(':').trim();
+        if (Number.isInteger(id) && id >= 0 && name) parsed[id] = name;
+      }
+      let names = false;
+      for (const line of text.split(/\r?\n/)) {
+        if (/^names:\s*$/.test(line)) { names = true; continue; }
+        if (names && /^\S/.test(line)) break;
+        const match = names && line.match(/^\s+(\d+):\s*(\S.*)$/);
+        if (match) parsed[Number(match[1])] = match[2].trim();
+      }
+      return parsed;
+    }
+
+    function parseBoxes(text) {
+      return text.split(/\r?\n/).filter(Boolean).flatMap(line => {
+        const values = line.trim().split(/\s+/).map(Number);
+        if (values.length !== 5 || !values.every(Number.isFinite)) return [];
+        const [id, x, y, width, height] = values;
+        if (!Number.isInteger(id) || id < 0 || [x,y,width,height].some(value => value < 0 || value > 1) || !width || !height) return [];
+        return [{id, x, y, width, height}];
+      });
+    }
+
+    function loadThumbnail(button) {
+      if (button._url) return;
+      button._url = URL.createObjectURL(button._file); button.querySelector('img').src = button._url;
+    }
+
+    function unloadThumbnail(button) {
+      if (!button._url) return;
+      URL.revokeObjectURL(button._url); button._url = ''; button.querySelector('img').removeAttribute('src');
+    }
+
+    function applyZoom(center = true) {
+      const canvas = elements.canvas, hasImage = canvas.style.display !== 'none' && canvas.width;
+      elements.zoomOut.disabled = !hasImage || zoom <= minimumZoom; elements.zoomIn.disabled = !hasImage || zoom >= maximumZoom; elements.zoomReset.disabled = !hasImage || zoom === 1;
+      elements.zoomReset.textContent = `${Math.round(zoom*100)}%`;
+      if (!hasImage) return;
+      // 100% means fitted to the stage without enlarging small source images.
+      const fit = Math.min(1,Math.max(1,elements.stage.clientWidth-48)/canvas.width,Math.max(1,elements.stage.clientHeight-48)/canvas.height);
+      canvas.style.width = `${Math.max(1,Math.round(canvas.width*fit*zoom))}px`; canvas.style.height = 'auto';
+      requestAnimationFrame(() => {
+        elements.stage.classList.toggle('pannable',elements.stage.scrollWidth > elements.stage.clientWidth || elements.stage.scrollHeight > elements.stage.clientHeight);
+        if (center) elements.stage.scrollTo({left:(elements.stage.scrollWidth-elements.stage.clientWidth)/2,top:(elements.stage.scrollHeight-elements.stage.clientHeight)/2});
+      });
+    }
+
+    function setZoom(value, focus) {
+      const next = Math.min(maximumZoom,Math.max(minimumZoom,value));
+      if (next === zoom) return;
+      const before = elements.canvas.getBoundingClientRect();
+      const anchor = focus && before.width && before.height ? {x:Math.min(1,Math.max(0,(focus.x-before.left)/before.width)),y:Math.min(1,Math.max(0,(focus.y-before.top)/before.height)),clientX:focus.x,clientY:focus.y} : null;
+      zoom = next; applyZoom(!anchor);
+      // Keep the image point below the wheel cursor fixed while its CSS size changes.
+      if (anchor) { const after = elements.canvas.getBoundingClientRect(); elements.stage.scrollBy({left:after.left+anchor.x*after.width-anchor.clientX,top:after.top+anchor.y*after.height-anchor.clientY}); }
+    }
+
+    function render(scrollToSelection = false) {
+      const token = ++renderId, file = visible[position];
+      elements.canvas.style.display = file ? 'block' : 'none'; elements.empty.style.display = file ? 'none' : 'block';
+      zoom = 1; pan = null; elements.stage.classList.remove('pannable','dragging'); elements.zoomOut.disabled = elements.zoomIn.disabled = elements.zoomReset.disabled = true; elements.zoomReset.textContent = '100%';
+      elements.prev.disabled = elements.next.disabled = elements.random.disabled = visible.length < 2;
+      for (const button of elements.gallery.children) button.classList.toggle('selected', Number(button.dataset.index) === position);
+      const selected = elements.gallery.querySelector('.selected'); if (scrollToSelection && selected) selected.scrollIntoView({block:'nearest'});
+      if (!file) { elements.name.value = images.length ? 'Nessun risultato' : '—'; elements.detail.textContent = '0 / 0'; return; }
+      const boxes = labels.get(labelPath(file)) || [];
+      if (centerUrl) URL.revokeObjectURL(centerUrl); centerUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        if (token !== renderId) return;
+        const canvas = elements.canvas, context = canvas.getContext('2d'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+        context.drawImage(image,0,0); context.font = `600 ${Math.max(13,image.naturalWidth/65)}px ui-monospace,monospace`; context.lineWidth = Math.max(2,image.naturalWidth/450);
+        for (const box of boxes) {
+          const color = colors[box.id%colors.length], left = (box.x-box.width/2)*canvas.width, top = (box.y-box.height/2)*canvas.height, width = box.width*canvas.width, height = box.height*canvas.height, text = classes[box.id] || `classe ${box.id}`;
+          context.strokeStyle = color; context.strokeRect(left,top,width,height);
+          const labelHeight = Math.max(18,image.naturalWidth/45), labelTop = Math.max(0,top-labelHeight), textWidth = context.measureText(text).width;
+          context.fillStyle = color; context.fillRect(left,labelTop,textWidth+12,labelHeight); context.fillStyle = '#0c0e0d'; context.fillText(text,left+6,labelTop+labelHeight*.76);
+        }
+        applyZoom();
+        const details = metadata.get(file.webkitRelativePath) || {}, source = details.source_dataset || 'sorgente sconosciuta', camera = details.camera_id || details.site_id || '', timestamp = details.timestamp || '';
+        elements.name.value = file.name; elements.detail.textContent = `${elements.split.options[elements.split.selectedIndex].text} · ${position+1} / ${visible.length} · ${image.naturalWidth}×${image.naturalHeight} · ${boxes.length} box · ${source}${source === 'phenocam' ? ' · PhenoCam sì' : ' · PhenoCam no'}${camera ? ` · ${camera}` : ''}${timestamp ? ` · ${timestamp}` : ''}`;
+      };
+      image.onerror = () => { if (token === renderId) { elements.canvas.style.display = 'none'; elements.empty.style.display = 'block'; elements.empty.textContent = 'Immagine non leggibile'; } };
+      image.src = centerUrl;
+    }
+
+    function applyFilters() {
+      const current = visible[position], query = elements.search.value.trim().toLowerCase(), mode = elements.filter.value, classId = elements.classFilter.value;
+      const splitImages = images.filter(selectedSplit), named = splitImages.filter(file => file.name.toLowerCase().includes(query)), positives = named.filter(file => labels.has(labelPath(file)));
+      elements.total.textContent = splitImages.length.toLocaleString('it-IT'); elements.annotations.textContent = splitImages.reduce((count,file) => count+(labels.get(labelPath(file)) || []).length,0).toLocaleString('it-IT');
+      elements.allCount.textContent = `Tutte (${named.length.toLocaleString('it-IT')})`; elements.positiveCount.textContent = `Solo positive (${positives.length.toLocaleString('it-IT')})`; elements.negativeCount.textContent = `Solo negative (${(named.length-positives.length).toLocaleString('it-IT')})`;
+      const content = named.filter(file => mode === 'all' || (mode === 'positive') === labels.has(labelPath(file)));
+      const classCounts = new Map();
+      for (const file of content) for (const id of new Set((labels.get(labelPath(file)) || []).map(box => box.id))) classCounts.set(id,(classCounts.get(id) || 0)+1);
+      for (const option of elements.classFilter.options) option.textContent = option.value === 'all' ? `Tutte le classi (${content.length.toLocaleString('it-IT')})` : `${classes[option.value]} (${(classCounts.get(Number(option.value)) || 0).toLocaleString('it-IT')})`;
+      visible = content.filter(file => classId === 'all' || (labels.get(labelPath(file)) || []).some(box => box.id === Number(classId))); position = Math.max(0,visible.indexOf(current));
+      thumbnailObserver.disconnect(); for (const button of elements.gallery.children) unloadThumbnail(button); elements.gallery.replaceChildren();
+      for (const [index,file] of visible.entries()) {
+        const button = document.createElement('button'), image = document.createElement('img'), text = document.createElement('span'), detail = document.createElement('small');
+        button.type = 'button'; button.className = 'thumb'; button.dataset.index = index; button._file = file; button._url = ''; image.alt = ''; image.decoding = 'async'; text.textContent = file.name;
+        detail.textContent = labels.has(labelPath(file)) ? 'Con bounding box' : 'Senza bounding box'; text.append(detail); button.append(image,text);
+        button.addEventListener('click', () => { position = index; render(); }); elements.gallery.append(button); thumbnailObserver.observe(button);
+      }
+      elements.shown.textContent = visible.length.toLocaleString('it-IT'); elements.gallery.scrollTop = 0; render();
+    }
+
+    elements.folder.addEventListener('change', async event => {
+      const files = [...event.target.files], labelFiles = files.filter(file => /\/labels\/.*\.txt$/i.test(file.webkitRelativePath));
+      labels = new Map(await Promise.all(labelFiles.map(async file => [file.webkitRelativePath,parseBoxes(await file.text())])));
+      images = files.filter(file => /\/images\/.*\.(jpe?g|png|webp)$/i.test(file.webkitRelativePath)).sort((a,b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+      const yaml = files.find(file => /\/(dataset|yolo-dataset)\.ya?ml$/i.test(file.webkitRelativePath)); classes = yaml ? parseClasses(await yaml.text()) : {};
+      metadata = new Map(); const manifest = files.find(file => /\/metadata\/source-images\.csv$/i.test(file.webkitRelativePath));
+      if (manifest) { const prefix = manifest.webkitRelativePath.replace(/metadata\/source-images\.csv$/i,''); for (const row of parseCsv(await manifest.text())) if (row.image_path) metadata.set(prefix+row.image_path,row); }
+      const available = new Set(images.map(splitOf));
+      for (const option of elements.split.options) option.disabled = option.value === 'test' ? !available.has('test_id') && !available.has('test_ood') : !available.has(option.value);
+      elements.split.value = available.has('train') ? 'train' : [...elements.split.options].find(option => !option.disabled)?.value || 'train';
+      elements.classFilter.replaceChildren();
+      const allClasses = document.createElement('option'); allClasses.value = 'all'; allClasses.textContent = 'Tutte le classi'; elements.classFilter.append(allClasses);
+      const usedClassIds = new Set([...labels.values()].flatMap(boxes => boxes.map(box => box.id)));
+      for (const [id,name] of Object.entries(classes).filter(([id]) => usedClassIds.has(Number(id))).sort((left,right) => Number(left[0])-Number(right[0]))) { const option = document.createElement('option'); option.value = id; option.textContent = name; elements.classFilter.append(option); }
+      elements.split.disabled = !images.length; elements.search.disabled = elements.filter.disabled = !images.length; elements.classFilter.disabled = !images.length || elements.classFilter.options.length < 2; position = 0; applyFilters();
+    });
+    elements.split.addEventListener('change',() => { if (centerUrl) { URL.revokeObjectURL(centerUrl); centerUrl = ''; } renderId++; position = 0; applyFilters(); }); elements.search.addEventListener('input',applyFilters); elements.filter.addEventListener('change',applyFilters); elements.classFilter.addEventListener('change',applyFilters);
+    elements.name.addEventListener('click',() => elements.name.select());
+    elements.prev.addEventListener('click',() => { position = (position-1+visible.length)%visible.length; render(true); });
+    elements.next.addEventListener('click',() => { position = (position+1)%visible.length; render(true); });
+    elements.random.addEventListener('click',() => { position = Math.floor(Math.random()*visible.length); render(true); });
+    elements.zoomOut.addEventListener('click',() => setZoom(zoom-zoomStep)); elements.zoomIn.addEventListener('click',() => setZoom(zoom+zoomStep)); elements.zoomReset.addEventListener('click',() => setZoom(1));
+    elements.canvas.addEventListener('wheel',event => { event.preventDefault(); const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? elements.stage.clientHeight : 1; setZoom(zoom*Math.exp(-event.deltaY*unit*.002),{x:event.clientX,y:event.clientY}); },{passive:false});
+    elements.canvas.addEventListener('pointerdown',event => {
+      if (event.button !== 0 || (elements.stage.scrollWidth <= elements.stage.clientWidth && elements.stage.scrollHeight <= elements.stage.clientHeight)) return;
+      pan = {pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:elements.stage.scrollLeft,top:elements.stage.scrollTop}; elements.stage.setPointerCapture(event.pointerId); elements.stage.classList.add('dragging'); event.preventDefault();
+    });
+    elements.stage.addEventListener('pointermove',event => { if (pan && event.pointerId === pan.pointerId) elements.stage.scrollTo({left:pan.left-(event.clientX-pan.x),top:pan.top-(event.clientY-pan.y)}); });
+    elements.stage.addEventListener('lostpointercapture',event => { if (pan && event.pointerId === pan.pointerId) { pan = null; elements.stage.classList.remove('dragging'); } });
+    elements.stage.addEventListener('pointerup',event => { if (pan && event.pointerId === pan.pointerId && elements.stage.hasPointerCapture(event.pointerId)) elements.stage.releasePointerCapture(event.pointerId); });
+    elements.stage.addEventListener('pointercancel',event => { if (pan && event.pointerId === pan.pointerId && elements.stage.hasPointerCapture(event.pointerId)) elements.stage.releasePointerCapture(event.pointerId); });
+    addEventListener('keydown',event => {
+      if (event.target.matches('input[type="search"],select')) return;
+      const button = event.key === 'ArrowLeft' ? elements.prev : event.key === 'ArrowRight' ? elements.next : null;
+      if (button && !button.disabled) { event.preventDefault(); button.click(); }
+      const zoomButton = event.key === '0' ? elements.zoomReset : event.key === '+' || event.key === '=' ? elements.zoomIn : event.key === '-' ? elements.zoomOut : null;
+      if (zoomButton && !zoomButton.disabled) { event.preventDefault(); zoomButton.click(); }
+    });
+    addEventListener('resize',() => applyZoom(false));
+    addEventListener('beforeunload',() => { if (centerUrl) URL.revokeObjectURL(centerUrl); for (const button of elements.gallery.children) unloadThumbnail(button); });
+  </script>
+</body>
+</html>

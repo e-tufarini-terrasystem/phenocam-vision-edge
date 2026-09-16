@@ -52,7 +52,7 @@ class ReferenceImageTests(unittest.TestCase):
         source_path = ROOT / "input" / name
         if not source_path.is_file():
             self.skipTest(f"reference image is unavailable: {name}")
-        model_path = ROOT / "models" / "yolo26n.onnx"
+        model_path = ROOT / "models" / "yolo26n-phenocam.onnx"
         captured = {}
         real_write_outputs = pipeline.write_outputs
 
@@ -97,7 +97,7 @@ class ReferenceImageTests(unittest.TestCase):
         model_names = captured["model_names"]
         for detection in detections:
             self.assertGreaterEqual(
-                detection.confidence, 0.30, (name, detection)
+                detection.confidence, 0.47, (name, detection)
             )
         for index, left in enumerate(detections):
             for right in detections[index + 1 :]:
@@ -134,9 +134,8 @@ class ReferenceImageTests(unittest.TestCase):
                 self.assertLess(
                     iou, 0.50, diagnostic
                 )
-                self.assertLess(
-                    smaller_box_coverage, 0.50, diagnostic
-                )
+                if left.view_priority != right.view_priority:
+                    self.assertLess(smaller_box_coverage, 0.50, diagnostic)
 
         expected = next(
             (item for item in EXPECTED_WINNERS if item[0] == name), None

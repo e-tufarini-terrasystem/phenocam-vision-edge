@@ -40,11 +40,13 @@ class ReleasePackageTests(unittest.TestCase):
             "docs/manual.md": b"operator manual\n",
             "phenocam/__init__.py": b'"""Package."""\n',
             "phenocam/classes/naïve.py": b"VALUE = 1\n",
-            "models/yolo26n.onnx": b"model bytes\x00",
+            "models/yolo26n-phenocam.onnx": b"model bytes\x00",
+            "models/yolo26n-phenocam.json": b'{"acceptance_status":"experimental"}\n',
             "requirements/runtime.txt": b"Pillow==12.3.0\n",
             "scripts/batch.sh": b"#!/bin/sh\nexit 0\n",
             "scripts/installer.sh": b"#!/bin/sh\nexit 0\n",
-            "models/yolo26n.pt": b"forbidden model\n",
+            "models/yolo26n.onnx": b"forbidden baseline model\n",
+            "models/yolo26n.pt": b"forbidden checkpoint\n",
             "tests/test_example.py": b"forbidden test\n",
         }
         for name, data in files.items():
@@ -113,7 +115,8 @@ class ReleasePackageTests(unittest.TestCase):
                 f"{root}/docs/cli.md",
                 f"{root}/docs/development.md",
                 f"{root}/docs/manual.md",
-                f"{root}/models/yolo26n.onnx",
+                f"{root}/models/yolo26n-phenocam.onnx",
+                f"{root}/models/yolo26n-phenocam.json",
                 f"{root}/phenocam/__init__.py",
                 f"{root}/phenocam/classes/naïve.py",
                 f"{root}/requirements/runtime.txt",
@@ -122,6 +125,7 @@ class ReleasePackageTests(unittest.TestCase):
             }
             self.assertEqual({member.name for member in archive if member.isfile()}, expected_files)
             self.assertTrue(all(name == root or name.startswith(f"{root}/") for name in names))
+            self.assertNotIn(f"{root}/models/yolo26n.onnx", names)
             self.assertNotIn(f"{root}/models/yolo26n.pt", names)
             self.assertNotIn(f"{root}/tests/test_example.py", names)
             self.assertNotIn(f"{root}/phenocam/untracked.py", names)

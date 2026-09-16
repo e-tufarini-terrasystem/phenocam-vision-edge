@@ -36,7 +36,7 @@ class DetectionTests(unittest.TestCase):
         return SimpleNamespace(**values)
 
     def test_inverse_letterbox_crop_origin_and_row_priority(self):
-        rows = np.array([[20, 40, 60, 100, 0.30, 42]], dtype=np.float32)
+        rows = np.array([[20, 40, 60, 100, 0.47, 42]], dtype=np.float32)
         detection = normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES)[0]
         self.assertEqual(
             (detection.x1, detection.y1, detection.x2, detection.y2),
@@ -48,10 +48,10 @@ class DetectionTests(unittest.TestCase):
     def test_confidence_threshold_is_uniform_and_inclusive(self):
         rows = np.array(
             [
-                [10, 20, 30, 40, 0.29, 42],
-                [10, 20, 30, 40, 0.30, 42],
-                [10, 20, 30, 40, 0.25, 17],
-                [10, 20, 30, 40, 0.30, 17],
+                [10, 20, 30, 40, 0.44, 42],
+                [10, 20, 30, 40, 0.47, 42],
+                [10, 20, 30, 40, 0.40, 17],
+                [10, 20, 30, 40, 0.47, 17],
             ],
             dtype=np.float32,
         )
@@ -60,8 +60,17 @@ class DetectionTests(unittest.TestCase):
 
         self.assertEqual(tuple(item.class_id for item in detections), (42, 17))
         self.assertEqual(tuple(item.row_priority for item in detections), (1, 3))
-        self.assertAlmostEqual(detections[0].confidence, 0.30)
-        self.assertAlmostEqual(detections[1].confidence, 0.30)
+        self.assertAlmostEqual(detections[0].confidence, 0.47)
+        self.assertAlmostEqual(detections[1].confidence, 0.47)
+
+    def test_evaluator_can_lower_threshold_without_changing_runtime_default(self):
+        rows = np.array([[10, 20, 30, 40, 0.10, 42]], dtype=np.float32)
+
+        self.assertEqual(normalize_rows(rows, self.view(), 500, 500, MODEL_NAMES), ())
+        lowered = normalize_rows(
+            rows, self.view(), 500, 500, MODEL_NAMES, confidence_threshold=0.10
+        )
+        self.assertEqual(len(lowered), 1)
 
     def test_clips_to_source_bounds_and_keeps_all_model_classes(self):
         rows = np.array(
@@ -134,22 +143,48 @@ class DetectionTests(unittest.TestCase):
             (separate_left, below),
         )
 
-    def test_minimum_area_overlap_exact_half_is_suppressed(self):
+    def test_half_coverage_keeps_adjacent_objects_only_in_same_view(self):
         large = self.detection(x2=20.0)
-        fragment = self.detection(x1=15.0, x2=25.0, confidence=0.8)
-        self.assertEqual(deduplicate((large, fragment), MODEL_NAMES), (large,))
+        for view_priority in (0, 1, 2):
+            with self.subTest(view_priority=view_priority):
+                adjacent = self.detection(
+                    x1=15.0, x2=25.0, confidence=0.8, view_priority=view_priority
+                )
+                self.assertEqual(
+                    deduplicate((large, adjacent), MODEL_NAMES),
+                    (large, adjacent) if view_priority == large.view_priority else (large,),
+                )
 
-    def test_minimum_area_overlap_below_half_is_retained(self):
-        large = self.detection(x2=20.0)
-        fragment = self.detection(x1=15.1, x2=25.1, confidence=0.8)
-        self.assertEqual(
-            deduplicate((large, fragment), MODEL_NAMES), (large, fragment)
-        )
-
-    def test_partial_box_is_suppressed_when_iou_is_below_half(self):
+    def test_cross_view_fragment_requires_fifty_percent_coverage(self):
         large = self.detection(x2=20.0, y2=20.0)
-        fragment = self.detection(x1=12.0, x2=22.0, confidence=0.8)
-        self.assertEqual(deduplicate((large, fragment), MODEL_NAMES), (large,))
+        for view_priority in (0, 2):
+            with self.subTest(view_priority=view_priority):
+                fragment = self.detection(
+                    x1=15.0, x2=25.0, confidence=0.8, view_priority=view_priority
+                )
+                below = self.detection(
+                    x1=15.1, x2=25.1, confidence=0.8, view_priority=view_priority
+                )
+                self.assertEqual(deduplicate((large, fragment), MODEL_NAMES), (large,))
+                self.assertEqual(
+                    deduplicate((large, below), MODEL_NAMES), (large, below)
+                )
+
+    def test_same_view_containment_keeps_distinct_occluded_objects(self):
+        large = self.detection(x2=20.0, y2=20.0)
+        smaller = self.detection(x1=5.0, x2=10.0, confidence=0.8)
+        self.assertEqual(deduplicate((large, smaller), MODEL_NAMES), (large, smaller))
+
+    def test_ring_fence_cars_survive_small_box_coverage(self):
+        # V5 full-view boxes from phenozero1_2026_09_08_095832, scaled to 2048px.
+        front = self.detection(402, 615, 1009, 1036, 0.839921, view_priority=0)
+        adjacent = self.detection(851, 643, 1133, 936, 0.519031, view_priority=0)
+        self.assertEqual(deduplicate((front, adjacent), MODEL_NAMES), (front, adjacent))
+
+    def test_cross_view_containment_preserves_road_vehicle_competition(self):
+        truck = self.detection(x2=20.0, y2=20.0, class_id=6, view_priority=0)
+        fragment = self.detection(confidence=0.8, class_id=42, view_priority=2)
+        self.assertEqual(deduplicate((fragment, truck), MODEL_NAMES), (truck,))
 
     def test_equal_confidence_prefers_full_then_earlier_crop(self):
         late = self.detection(view_priority=8)
@@ -219,7 +254,8 @@ class DetectionTests(unittest.TestCase):
                     left_area + right_area - intersection
                 )
                 self.assertLess(intersection / union, 0.50)
-                self.assertLess(intersection / min(left_area, right_area), 0.50)
+                if left.view_priority != right.view_priority:
+                    self.assertLess(intersection / min(left_area, right_area), 0.50)
 
     def test_empty_aggregation_is_immutable(self):
         self.assertEqual(deduplicate((), MODEL_NAMES), ())

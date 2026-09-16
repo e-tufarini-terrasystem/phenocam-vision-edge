@@ -1,0 +1,23 @@
+# Local credentials and workstation environment.
+/.env
+/.venv/
+
+# Generated dataset state and materialized outputs.
+/workspace/
+/training-dataset/
+
+# Local interpreter and filesystem artifacts.
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+*.bak
+*.cache
+*.log
+*.old
+*.tmp
+
+# Current catalog: reviewed labels are tracked; image bytes stay local.
+/data/images/
+/data/dataset.yaml

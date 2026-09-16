@@ -16,7 +16,7 @@ Request an annotated output:
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 Request privacy output only, or both products from the same inference:
@@ -25,14 +25,14 @@ Request privacy output only, or both products from the same inference:
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --privacy-output output/privacy.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
   --privacy-output output/privacy.jpg \
   --meta input/example.meta \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 Request products and conditional input deletion together, or use deletion-only mode:
@@ -42,12 +42,12 @@ Request products and conditional input deletion together, or use deletion-only m
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
   --privacy-output output/privacy.jpg \
-  --model models/yolo26n.onnx \
+  --model models/yolo26n-phenocam.onnx \
   --delete-input-on-detection
 
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
-  --model models/yolo26n.onnx \
+  --model models/yolo26n-phenocam.onnx \
   --delete-input-on-detection
 ```
 
@@ -62,7 +62,7 @@ the cost of latency, set the thread count to a value from 1 to 4:
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/example.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 ## Arguments
@@ -96,6 +96,21 @@ claim atomic protection against a hostile replacement between verification and
 unlink. Hard links are allowed, and only the exact directory entry passed to
 `--input` is removed.
 
+## Detection filtering
+
+Inference uses the full image and fifteen overlapping crops, with a uniform
+confidence threshold of `0.47`. Duplicate boxes compete within each class;
+`car`, `bus`, and `truck` also compete with one another. Suppression requires
+IoU of at least `0.50`, or at least `0.50` coverage of the smaller box when the
+boxes come from different views. Smaller-box coverage alone does not suppress
+two detections from the same view, preserving adjacent partially occluded
+objects. These thresholds are fixed in the runtime, not CLI options.
+
+This rule can recover objects that were predicted but suppressed. Objects with
+confidence below `0.47`, or with no model prediction, can still be missed behind
+foliage or railings. Calibration results and limitations are recorded in the
+[development guide](development.md#occlusion-calibration).
+
 ## Detection metadata
 
 When `--meta` is supplied, the existing file is updated only after every
@@ -110,7 +125,7 @@ order:
 detected=true|false
 software_name=phenocam-detection
 software_version=0.1.0
-model_id=yolo26n
+model_id=yolo26n-phenocam
 model_version=0.1.0
 annotated_image=<CLI path or empty>
 privacy_image=<CLI path or empty>

@@ -8,6 +8,7 @@ set -u
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 requirements="$root/requirements/runtime.txt"
+model="$root/models/yolo26n-phenocam.onnx"
 environment="$root/.venv"
 
 if [ "$(uname -m 2>/dev/null)" != "aarch64" ]; then
@@ -28,6 +29,11 @@ fi
 
 if [ ! -f "$requirements" ] || [ -L "$requirements" ]; then
     echo "error: runtime requirements do not exist" >&2
+    exit 1
+fi
+
+if [ ! -f "$model" ] || [ -L "$model" ]; then
+    echo "error: runtime model does not exist" >&2
     exit 1
 fi
 

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "base": "models/yolo26n.pt",
+  "dataset": "dataset/data",
+  "fixed": {
+    "optimizer": "AdamW",
+    "lr0": 0.0001,
+    "lrf": 0.1,
+    "epochs": 30,
+    "patience": 10,
+    "warmup_epochs": 2.0,
+    "momentum": 0.937,
+    "weight_decay": 0.0005,
+    "imgsz": 640,
+    "batch": 16,
+    "workers": 0,
+    "cache": false,
+    "fraction": 1.0,
+    "resume": false,
+    "pretrained": true,
+    "deterministic": true,
+    "amp": false,
+    "plots": true,
+    "save": true,
+    "save_period": 5,
+    "val": true,
+    "mosaic": 0.5,
+    "close_mosaic": 5,
+    "mixup": 0.0,
+    "copy_paste": 0.0,
+    "cutmix": 0.0,
+    "hsv_h": 0.015,
+    "hsv_s": 0.7,
+    "hsv_v": 0.4,
+    "degrees": 0.0,
+    "translate": 0.1,
+    "scale": 0.5,
+    "shear": 0.0,
+    "perspective": 0.0,
+    "flipud": 0.0,
+    "fliplr": 0.5,
+    "bgr": 0.0,
+    "multi_scale": false,
+    "rect": false,
+    "cos_lr": false
+  },
+  "recipes": {
+    "head": {
+      "freeze": 23
+    },
+    "neck-head": {
+      "freeze": 10
+    }
+  },
+  "initial_seed": 42,
+  "replica_seeds": [
+    17,
+    73
+  ],
+  "maximum_trainings": 4,
+  "checkpoint_candidates": [
+    "best",
+    "last"
+  ],
+  "threshold_grid": {
+    "start_percent": 20,
+    "stop_percent": 70,
+    "step_percent": 1
+  },
+  "selection": "Maximum validation ONNX pipeline F1; ties: higher recall, lower threshold, recipe order, best before last. Baselines optimize on the identical threshold grid. Replicas retain the first seed threshold and checkpoint rule; deliver seed 42, never select a seed using its score.",
+  "gate": {
+    "mean_onnx_f1_gain": 0.005,
+    "minimum_replica_f1_gain": 0.0,
+    "maximum_open_images_map_loss": 0.01,
+    "minimum_source_recall_gain": 0.0
+  },
+  "rationale": "Fresh base initialization, bounded training budget, validation-only selection and seed stability. No interpolation or test-driven grid expansion.",
+  "runtime_threads": 4,
+  "historical_tests": [
+    "pklot_holdout",
+    "test_id",
+    "test_ood"
+  ],
+  "dataset_manifest_sha256": "b4734abd45430721d425aa6c280452d965b136fdbcf4347d8527239297abdbb2",
+  "reference": "models/yolo26n-phenocam",
+  "protocol": "Current specialized model frozen per run; historical v6 receipts remain unchanged."
+}

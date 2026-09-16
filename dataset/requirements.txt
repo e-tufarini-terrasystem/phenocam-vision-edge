@@ -1,0 +1,5 @@
+# Workstation-only dependencies for public dataset construction and auditing.
+-r ../requirements/runtime.txt
+torch==2.8.0
+scipy==1.18.1
+PyYAML==6.0.2

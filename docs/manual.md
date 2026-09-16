@@ -31,8 +31,10 @@ Ultralytics, PyTorch, OpenCV, and the export toolchain are not required on the
 Pi. The virtual environment occupies about 154 MiB and the complete tested
 working copy about 187 MiB.
 
-A minimal source copy may omit `models/yolo26n.pt`, the export scripts, and
-`requirements/export.txt`, but must retain `models/yolo26n.onnx`.
+A minimal source copy may omit PT checkpoints, `training/`, `dataset/`,
+workstation scripts and workstation requirements. It must retain
+`models/yolo26n-phenocam.onnx`. The figures above describe the historical
+runtime environment, not a new qualification of the specialized model.
 
 ### macOS
 
@@ -53,8 +55,9 @@ The commands work without activation. To use the environment's `python`, run
 
 The fixed `phenocam/classes/configuration.py` file is loaded automatically.
 Change only its existing `True` and `False` values and keep at least one class
-enabled. The committed configuration enables `person`, `bicycle`, `car`,
-`motorcycle`, `bus`, and `truck`.
+enabled. The committed configuration enables `person`, `car`, `motorcycle`,
+`bus`, and `truck`. A bicycle without a person is not a privacy target; a
+cyclist is protected by the `person` box.
 
 Class filtering controls final annotations, privacy regions, and the conditional
 deletion trigger. All model classes still participate in inference, merging,
@@ -74,10 +77,17 @@ Run inference on every supported image directly inside `input/`:
 ```
 
 The script creates `output/` when needed and writes
-`<stem>_annotated.<ext>` and `<stem>_privacy.<ext>` in one process per input,
-preserving extension spelling. If a regular non-symlink
+`<stem>_annotated.<ext>` in one process per input, preserving extension
+spelling. Privacy output remains available through the direct CLI. If a regular
+non-symlink
 `input/<stem>.meta` exists, it is passed through `--meta`; a missing match is
 not created and does not fail that image.
+
+The batch script, installer and runtime package use the same
+`models/yolo26n-phenocam.onnx`. Its bytes match the former v6 model, whose
+experimental status is unchanged. The current comparison is recorded in
+`docs/status/model-comparison-2026-09-15.md`; specialized-model Raspberry Pi
+timing still requires a target-device run.
 
 Existing files are overwritten. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is
@@ -96,6 +106,7 @@ these terminal errors without additional host details:
 - `error: python3-venv is required`
 - `error: virtual environment already exists`
 - `error: runtime requirements do not exist`
+- `error: runtime model does not exist`
 - `error: virtual environment could not be created`
 - `error: runtime dependencies could not be installed`
 - `error: input directory could not be created`

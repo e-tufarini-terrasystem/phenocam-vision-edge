@@ -9,8 +9,9 @@ import math
 from dataclasses import dataclass
 
 
-_CONFIDENCE_THRESHOLD = 0.30
+_CONFIDENCE_THRESHOLD = 0.47
 _OVERLAP_THRESHOLD = 0.50
+_CROSS_VIEW_COVERAGE_THRESHOLD = 0.50
 _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
 
@@ -26,7 +27,10 @@ class Detection:
     row_priority: int
 
 
-def normalize_rows(rows, view, image_width, image_height, model_names):
+def normalize_rows(
+    rows, view, image_width, image_height, model_names,
+    confidence_threshold=_CONFIDENCE_THRESHOLD,
+):
     detections = []
     maximum_x = image_width - 1.0
     maximum_y = image_height - 1.0
@@ -39,7 +43,9 @@ def normalize_rows(rows, view, image_width, image_height, model_names):
             class_id = int(class_value)
             if class_value != class_id or class_id not in model_names:
                 continue
-            if confidence < _CONFIDENCE_THRESHOLD:
+            # ONNX confidence values are float32: keep the threshold inclusive
+            # after their conversion to Python floats.
+            if confidence + 1e-7 < confidence_threshold:
                 continue
 
             # Global coordinates are clipped before the positive-area invariant.
@@ -76,9 +82,14 @@ def _overlaps(left, right):
     right_area = (right.x2 - right.x1) * (right.y2 - right.y1)
     iou = intersection / (left_area + right_area - intersection)
     smaller_box_coverage = intersection / min(left_area, right_area)
+    # Containment reconciles crop fragments across views. Within one view,
+    # neighboring occluded objects can cover much of each other's smaller box.
     return (
         iou >= _OVERLAP_THRESHOLD
-        or smaller_box_coverage >= _OVERLAP_THRESHOLD
+        or (
+            left.view_priority != right.view_priority
+            and smaller_box_coverage >= _CROSS_VIEW_COVERAGE_THRESHOLD
+        )
     )
 
 

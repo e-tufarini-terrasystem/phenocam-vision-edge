@@ -1,0 +1,2 @@
+# Annotation-tool client kept separate from builder/runtime dependencies.
+cvat-cli==2.71.0
