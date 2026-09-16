@@ -52,7 +52,7 @@ class ReferenceImageTests(unittest.TestCase):
         source_path = ROOT / "input" / name
         if not source_path.is_file():
             self.skipTest(f"reference image is unavailable: {name}")
-        model_path = ROOT / "models" / "yolo26n.onnx"
+        model_path = ROOT / "models" / "yolo26n-phenocam.onnx"
         captured = {}
         real_write_outputs = pipeline.write_outputs
 

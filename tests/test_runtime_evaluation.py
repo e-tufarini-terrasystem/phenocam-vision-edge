@@ -1,8 +1,8 @@
 import unittest
 
 from phenocam.inference.detections import Detection
-from scripts.runtime_evaluation.metrics import events, summarize
-from scripts.runtime_evaluation.prediction import Predictor
+from training.evaluation.metrics import events, summarize
+from training.evaluation.prediction import Predictor
 
 
 class RuntimeEvaluationTests(unittest.TestCase):

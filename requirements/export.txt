@@ -1,2 +1,4 @@
-# Optional workstation-only dependency. Not needed for inference on Raspberry Pi.
+# Workstation training/export dependencies; not needed on Raspberry Pi.
 ultralytics==8.4.48
+onnx==1.19.0
+onnxslim==0.1.71

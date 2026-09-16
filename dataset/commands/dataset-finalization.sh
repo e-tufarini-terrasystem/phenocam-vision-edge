@@ -7,7 +7,7 @@ python="$repository_root/dataset/.venv/bin/python"
 usage() {
     printf '%s\n' \
         "usage: dataset/commands/dataset-finalization.sh COMMAND [FILES]" \
-        "commands: prepare, open-open-images, open-phenocam-a, open-phenocam-b, import, resolve, second-round, complete-retry, import-final, accept-single-review, build, build-v3"
+        "commands: prepare, open-open-images, open-phenocam-a, open-phenocam-b, import, resolve, second-round, complete-retry, import-final, accept-single-review, build"
 }
 
 command_name=${1:-}
@@ -70,15 +70,6 @@ case "$command_name" in
         [ "$#" -eq 1 ] || { usage >&2; exit 2; }
         cd "$repository_root"
         "$python" -m dataset.builder.finalization build
-        ;;
-    build-v3)
-        [ "$#" -le 2 ] || { usage >&2; exit 2; }
-        cd "$repository_root"
-        if [ "$#" -eq 2 ]; then
-            "$python" -m dataset.builder.finalization build-v3 --destination "$2"
-        else
-            "$python" -m dataset.builder.finalization build-v3
-        fi
         ;;
     *)
         usage >&2

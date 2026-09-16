@@ -16,7 +16,7 @@ Request an annotated output:
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 Request privacy output only, or both products from the same inference:
@@ -25,14 +25,14 @@ Request privacy output only, or both products from the same inference:
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --privacy-output output/privacy.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
   --privacy-output output/privacy.jpg \
   --meta input/example.meta \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 Request products and conditional input deletion together, or use deletion-only mode:
@@ -42,12 +42,12 @@ Request products and conditional input deletion together, or use deletion-only m
   --input input/example.jpg \
   --annotated-output output/annotated.jpg \
   --privacy-output output/privacy.jpg \
-  --model models/yolo26n.onnx \
+  --model models/yolo26n-phenocam.onnx \
   --delete-input-on-detection
 
 .venv/bin/python -m phenocam \
   --input input/example.jpg \
-  --model models/yolo26n.onnx \
+  --model models/yolo26n-phenocam.onnx \
   --delete-input-on-detection
 ```
 
@@ -62,7 +62,7 @@ the cost of latency, set the thread count to a value from 1 to 4:
 YOLO_NUM_THREADS=2 .venv/bin/python -m phenocam \
   --input input/example.jpg \
   --annotated-output output/example.jpg \
-  --model models/yolo26n.onnx
+  --model models/yolo26n-phenocam.onnx
 ```
 
 ## Arguments
@@ -125,7 +125,7 @@ order:
 detected=true|false
 software_name=phenocam-detection
 software_version=0.1.0
-model_id=yolo26n
+model_id=yolo26n-phenocam
 model_version=0.1.0
 annotated_image=<CLI path or empty>
 privacy_image=<CLI path or empty>

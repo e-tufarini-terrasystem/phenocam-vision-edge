@@ -57,12 +57,12 @@
 <body>
   <header>
     <div><p class="eyebrow">YOLO inspection tool</p><h1>Phenocam Dataset Viewer</h1></div>
-    <label class="load">Scegli dataset v2/v3<input id="folder" type="file" webkitdirectory multiple></label>
+    <label class="load">Scegli dataset<input id="folder" type="file" webkitdirectory multiple></label>
   </header>
   <main>
     <aside>
       <div class="controls">
-        <label class="control">Dataset split<select id="split" disabled><option value="train">Train</option><option value="val">Validation</option><option value="test">Test</option><option value="test_id">Test ID</option><option value="test_ood">Test OOD</option></select></label>
+        <label class="control">Dataset split<select id="split" disabled><option value="train">Train</option><option value="val">Validation</option><option value="pklot_holdout">PKLot holdout</option><option value="test">Test</option><option value="test_id">Test ID</option><option value="test_ood">Test OOD</option></select></label>
         <label class="control">Cerca per nome<input id="search" type="search" placeholder="open-images, phenocam…" disabled></label>
         <label class="control">Contenuto<select id="filter" disabled><option id="allCount" value="all">Tutte</option><option id="positiveCount" value="positive">Solo positive</option><option id="negativeCount" value="negative">Solo negative</option></select></label>
         <label class="control">Classe<select id="classFilter" disabled><option value="all">Tutte le classi</option></select></label>
@@ -71,7 +71,7 @@
       <p class="help">Seleziona il dataset, poi scorri con ← e → o scegli un’immagine dal pannello a destra. Usa la rotellina per lo zoom e trascina l’immagine ingrandita per spostarla. Tutto resta nel browser.</p>
     </aside>
     <section class="workspace">
-      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/dataset-v3</code>.</div></div></div>
+      <div id="stage" class="stage"><div class="image-frame"><canvas id="canvas" aria-label="Immagine selezionata con bounding box" style="display:none"></canvas><div id="empty" class="empty"><strong>Nessun dataset selezionato</strong>Apri <code>dataset/data</code>.</div></div></div>
       <div class="toolbar">
         <div class="nav"><button id="prev" aria-label="Immagine precedente" disabled>←</button><button id="next" aria-label="Immagine successiva" disabled>→</button></div>
         <div class="identity"><input id="name" value="—" aria-label="Nome immagine" readonly><div id="detail">0 / 0</div></div>
@@ -100,6 +100,9 @@
       const path = file.webkitRelativePath;
       if (/\/images\/test\/id\//i.test(path)) return 'test_id';
       if (/\/images\/test\/ood\//i.test(path)) return 'test_ood';
+      if (/\/images\/test_id\//i.test(path)) return 'test_id';
+      if (/\/images\/test_ood\//i.test(path)) return 'test_ood';
+      if (/\/images\/pklot_holdout\//i.test(path)) return 'pklot_holdout';
       if (/\/images\/val\//i.test(path)) return 'val';
       if (/\/images\/train\//i.test(path)) return 'train';
       return '';
@@ -129,6 +132,13 @@
     }
 
     function parseClasses(text) {
+      // The canonical catalog writes JSON, which is also valid YAML.
+      if (text.trimStart().startsWith('{')) {
+        try {
+          const names = JSON.parse(text).names;
+          return Object.fromEntries(Object.entries(names || {}).filter(([id, name]) => /^\d+$/.test(id) && typeof name === 'string'));
+        } catch { return {}; }
+      }
       const parsed = {}, inline = text.match(/names:\s*\{([^}]+)\}/);
       if (inline) for (const item of inline[1].split(',')) {
         const [rawId,...parts] = item.split(':'), id = Number(rawId.trim()), name = parts.join(':').trim();

@@ -31,9 +31,10 @@ Ultralytics, PyTorch, OpenCV, and the export toolchain are not required on the
 Pi. The virtual environment occupies about 154 MiB and the complete tested
 working copy about 187 MiB.
 
-A minimal source copy may omit the PT checkpoints, the original
-`models/yolo26n.onnx`, the export scripts, and `requirements/export.txt`, but
-must retain the packaged model `models/yolo26n-v4.onnx`.
+A minimal source copy may omit PT checkpoints, `training/`, `dataset/`,
+workstation scripts and workstation requirements. It must retain
+`models/yolo26n-phenocam.onnx`. The figures above describe the historical
+runtime environment, not a new qualification of the specialized model.
 
 ### macOS
 
@@ -82,10 +83,11 @@ non-symlink
 `input/<stem>.meta` exists, it is passed through `--meta`; a missing match is
 not created and does not fail that image.
 
-The batch script and installer use the validation-selected
-`models/yolo26n-v4.onnx`. Its frozen TEST-ID and TEST-OOD evaluation is recorded
-in `docs/status/training-v4-experiment-2026-09-03.md`; Raspberry Pi timing still
-requires a target-device run.
+The batch script, installer and runtime package use the same
+`models/yolo26n-phenocam.onnx`. Its bytes match the former v6 model, whose
+experimental status is unchanged. The current comparison is recorded in
+`docs/status/model-comparison-2026-09-15.md`; specialized-model Raspberry Pi
+timing still requires a target-device run.
 
 Existing files are overwritten. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is

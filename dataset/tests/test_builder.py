@@ -26,7 +26,7 @@ from dataset.builder.annotation import (
     import_positive_coco,
 )
 from dataset.builder.config import DEFAULT_CONFIG_PATH, ConfigurationError, load_config
-from dataset.builder.earthdata import _DATASET_ENV, _env_credentials, retrieve
+from dataset.builder.phenocam.authentication import _DATASET_ENV, _env_credentials, retrieve
 from dataset.builder.embeddings import DUPLICATE_PAIR_FIELDS, combine_manifests
 from dataset.builder.openimages import _rotate_box, index_metadata
 from dataset.builder.phenocam import GRANULE_FIELDS, index_granules, plan_archives
@@ -261,7 +261,7 @@ class DatasetBuilderTests(unittest.TestCase):
             {"hits": 2, "items": [{"umm": sites_umm}, {"umm": archive_umm}]},
             {"hits": 2, "items": []},
         ]
-        with patch("dataset.builder.phenocam._get_json", side_effect=pages):
+        with patch("dataset.builder.phenocam.catalog._get_json", side_effect=pages):
             result = index_granules(self.root / "phenocam", self.config)
         self.assertEqual(result["archive_count"], 1)
         self.assertEqual(result["site_count"], 1)

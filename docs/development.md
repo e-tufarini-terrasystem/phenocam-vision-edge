@@ -5,6 +5,108 @@ local verification procedure, and optional model-export workflow.
 
 # Development
 
+## Current workflow
+
+The repository maintains one model: **YOLO26n specialized for PhenoCam**.
+`models/yolo26n-phenocam.{pt,onnx,json}` replace the former v6 filenames.
+Model bytes are unchanged. The metadata records its experimental acceptance
+status and links to the original training and comparison reports. The original
+COCO `models/yolo26n.pt` remains solely as fresh training initialization.
+
+The runtime still uses sixteen views, confidence 0.47, IoU 0.50 and smaller-box
+coverage 0.50 between different views. Its enabled classes are person, car,
+motorcycle, bus and truck. Consolidation changes no detection or output rules.
+
+Code responsibilities:
+
+- `phenocam/`: deployed inference; no training or dataset dependency.
+- `dataset/builder/`: source acquisition, human review and current artifact.
+- `training/`: one bounded training workflow and evaluation.
+- `scripts/`: runtime batch, installation, packaging and optional base export.
+- `dataset/data/`: one reviewed catalog and five disjoint splits.
+
+Set up the workstation environment with the existing export requirements plus
+runtime dependencies. Ultralytics supplies its training dependencies; the ONNX
+export tools are explicitly included in the export requirements.
+The historical environment is recorded in the original report. Reproducing its
+exact numerical results requires that environment and the original code.
+
+```sh
+python3.13 -m venv .venv-export
+.venv-export/bin/python -m pip install -r requirements/runtime.txt -r requirements/export.txt
+```
+
+Reconstruct the catalog's local images using the approved SHA-256-addressed pool,
+then verify them. The pool includes frozen crops; public downloads alone cannot
+recreate human annotations or private images. See [dataset instructions](../dataset/README.md).
+
+```sh
+.venv/bin/python -m dataset.builder.artifact hydrate \
+  --sources dataset/workspace/sources/approved/images
+.venv/bin/python -m dataset.builder.artifact verify
+```
+
+Hydration refuses an existing image directory. If images are already present,
+run only verification. The versioned catalog has no machine-specific root;
+`dataset.yaml` is generated locally. Training generates its own absolute YAML
+inside the named run directory, so moving a checkout does not reuse stale roots.
+
+Start a fresh protocol from the repository root with a unique run name:
+
+```sh
+PHENOCAM_TRAINING_RUN=experiment-01 \
+  .venv-export/bin/python -m training.workflow
+```
+
+Preflight freezes the current specialized PT/ONNX pair as the reference, verifies
+the full dataset, records the actual environment and snapshots the current code.
+Two initial recipes plus two replicas retain the four-training budget, fixed
+seeds, complete 2,020-image training split and validation-only selection.
+New runs compare against the frozen current model, not the historical v5 model.
+The original v6 experiment and its acceptance decision are not reinterpreted.
+
+Run artifacts stay under `output/training/<run>/`. Delivery goes to that run's
+`delivery/` directory, never automatically replacing the shipped model.
+Failed or partial runs are preserved. Running the same workflow can reuse
+completed stages only when their recorded inputs still match; an incomplete
+training or partial export requires inspection or a new run name.
+
+Standalone validation does not require training:
+
+```sh
+YOLO_NUM_THREADS=4 .venv/bin/python -m training.evaluation \
+  --model models/yolo26n-phenocam.onnx --dataset dataset/data --split val \
+  --threshold 0.47 --output output/validation-current
+```
+
+Benchmark splits require a frozen receipt for the exact model and threshold.
+They are historical benchmarks, not new independent validation. The generic
+COCO checkpoint can be exported for diagnostics with `scripts/export/fp32.py`;
+that optional output stays under `output/export/`.
+
+Verification from the repository root:
+
+```sh
+.venv/bin/python -m pip install -r requirements/test.txt
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s dataset/tests -v
+```
+
+CI runs both suites and checks all maintained shell scripts. Dataset tests use
+fixtures and the committed catalog, so private images and the training stack
+are not required. Image integration cases remain optional when their named
+reference inputs are absent.
+
+## Historical workflow before consolidation
+
+The following material preserves development context at commit `da14b7d`.
+Versioned model paths, notebooks, build commands and dataset names below describe
+that revision, not the supported current entry points above. Original tracked
+files can be read with `git show da14b7d:<path>`; the local backup branch is
+`backup/before-single-model-consolidation`. Historical measurements retain their
+original model, threshold, code and dataset identities.
+
+
 ## Inference architecture
 
 The v5 reference model is `models/yolo26n-v5.onnx`, with an end-to-end ONNX

@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 
 from .common import DatasetError, require_columns, stable_rank, write_csv
-from .download import DOWNLOAD_FIELDS
+from .openimages.download import DOWNLOAD_FIELDS
 from .embeddings import CALIBRATION_FIELDS, DUPLICATE_PAIR_FIELDS
 from .openimages import REJECTION_FIELDS
 

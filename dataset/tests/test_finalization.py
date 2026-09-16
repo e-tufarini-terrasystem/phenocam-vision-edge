@@ -19,8 +19,6 @@ from dataset.builder.finalization.negative_pool import select
 from dataset.builder.finalization.acceptance import accept_single_review
 from dataset.builder.finalization.materialize import _artifact_name
 from dataset.builder.finalization.materialize import SOURCE_FIELDS
-from dataset.builder.finalization.operational_dataset import materialize_operational
-from dataset.builder.finalization.public_expansion import SOURCE_METADATA_FIELDS
 from dataset.builder.finalization.reconcile import reconcile_positive_floors
 from dataset.builder.finalization.review_queue import import_negative_reviews
 from dataset.builder.selection import SELECTION_FIELDS
@@ -227,91 +225,6 @@ class FinalizationTests(unittest.TestCase):
         audit = json.loads(output.with_name("negative-reviews-audit.json").read_text())
         self.assertEqual(audit["review_protocol"], "single_reviewer_waiver")
 
-    def test_v3_dataset_preserves_v2_and_exposes_operational_sites(self):
-        public = self.root / "training-dataset"
-        image = public / "images/train/public.jpg"
-        label = public / "labels/train/public.txt"
-        image.parent.mkdir(parents=True)
-        label.parent.mkdir(parents=True)
-        image.write_bytes(b"public-image")
-        label.write_text("2 0.5 0.5 0.5 0.5\n", encoding="utf-8")
-        public_row = {field: "" for field in SOURCE_FIELDS}
-        public_row.update({"image_id": "public", "source_identity": "phenocam::public", "source_dataset": "phenocam", "source_id": "public", "polarity": "positive", "compiled_sha256": sha256_file(image), "embedding_model": "sscd@test", "split": "train", "image_path": "images/train/public.jpg", "label_path": "labels/train/public.txt"})
-        self.write_csv(public / "metadata/source-images.csv", SOURCE_FIELDS, [public_row])
-        (public / "metadata/source-annotations.jsonl").write_text('{"source_identity":"open_images:test:public"}\n', encoding="utf-8")
-        paths = [image, label, public / "metadata/source-images.csv", public / "metadata/source-annotations.jsonl"]
-        (public / "metadata/checksums.sha256").write_text("".join(f"{sha256_file(path)}  {path.relative_to(public)}\n" for path in paths), encoding="utf-8")
-
-        reviewed = self.root / "workspace/training-v3/reviewed"
-        for index, (folder, split, site) in enumerate((("operational-dev-representative", "operational_dev", "site-a"), ("operational-mining-informative", "operational_mining", "site-b")), 1):
-            root = reviewed / folder
-            name = f"{site}--2026-08-0{index}T120000--abc{index}.jpg"
-            source = root / "images/default" / name
-            source.parent.mkdir(parents=True)
-            source.write_bytes(f"internal-{index}".encode())
-            annotation = {"class_id": 2, "class_name": "car", "bbox": [2, 2, 8, 6], "occluded": False, "truncated": False, "vehicle_subtype": "none"}
-            row = {field: "" for field in REVIEW_FIELDS}
-            row.update({"source_identity": f"internal:{site}:frame", "source_dataset": "internal", "source_subset": site, "source_id": "frame", "site_id": site, "timestamp": f"2026-08-0{index}T12:00:00", "group_id": f"{site}:day", "split": split, "cohort": "representative" if index == 1 else "informative", "original_file_name": "frame.jpg", "artifact_file_name": name, "source_sha256": sha256_file(source), "decoded_sha256": "d" * 64, "phash": "0" * 16, "review_status": "positive", "annotation_count": "1", "annotations_json": json.dumps([annotation]), "annotator": "owner", "reviewer": "owner", "task_id": str(8 + index)})
-            self.write_csv(root / "manifest.csv", REVIEW_FIELDS, [row])
-            document = {"images": [{"id": 1, "file_name": name, "width": 16, "height": 12}], "annotations": [], "categories": []}
-            (root / "instances_default.json").write_text(json.dumps(document), encoding="utf-8")
-            with zipfile.ZipFile(root / "annotations.coco.zip", "w") as archive:
-                archive.writestr("annotations/instances_default.json", json.dumps(document))
-
-        public_review = reviewed / "public-phenocam-teacher"
-        public_name = "site-c--2023-06-01T120000--abcdef123456.jpg"
-        public_source = public_review / "images/default" / public_name
-        public_source.parent.mkdir(parents=True)
-        public_source.write_bytes(b"reviewed-public")
-        public_annotation = {"class_id": 7, "class_name": "truck", "bbox": [1, 1, 6, 4], "occluded": False, "truncated": False, "vehicle_subtype": "none"}
-        public_review_row = {field: "" for field in REVIEW_FIELDS}
-        public_review_row.update({"source_identity": "phenocam::public-new", "source_dataset": "phenocam", "source_id": "public-new", "site_id": "site-c", "timestamp": "2023-06-01T12:00:00", "group_id": "phenocam:site-c:2023-06-01", "original_file_name": "public-new.source", "artifact_file_name": public_name, "source_sha256": sha256_file(public_source), "decoded_sha256": "e" * 64, "phash": "1" * 16, "review_status": "positive", "annotation_count": "1", "annotations_json": json.dumps([public_annotation]), "annotator": "owner", "reviewer": "owner", "task_id": "11"})
-        self.write_csv(public_review / "manifest.csv", REVIEW_FIELDS, [public_review_row])
-        public_document = {"images": [{"id": 1, "file_name": public_name, "width": 16, "height": 12}], "annotations": [], "categories": []}
-        (public_review / "instances_default.json").write_text(json.dumps(public_document), encoding="utf-8")
-        with zipfile.ZipFile(public_review / "annotations.coco.zip", "w") as archive:
-            archive.writestr("annotations/instances_default.json", json.dumps(public_document))
-        decision = {field: "" for field in DECISION_FIELDS}
-        decision.update({"source_identity": "phenocam::public-new", "decision": "included", "reason": "diverse_human_positive", "rank": "1", "site_id": "site-c", "group_id": "phenocam:site-c:2023-06-01", "annotation_count": "1", "class_instances": '{"truck":1}', "maximum_existing_similarity": "0.1", "maximum_selected_similarity": "0"})
-        selection = self.root / "workspace/training-v3/selection"
-        self.write_csv(selection / "public-teacher-reviewed-decisions.csv", DECISION_FIELDS, [decision])
-        (selection / "public-teacher-reviewed-statistics.json").write_text('{}\n', encoding="utf-8")
-        source_metadata = {field: "" for field in SOURCE_METADATA_FIELDS}
-        source_metadata.update({"source_id": "public-new", "source_version": "3", "original_url": "https://example.test/archive#public-new.jpg", "landing_url": "https://example.test", "license_url": "https://creativecommons.org/licenses/by/4.0/", "attribution": "PhenoCam test", "site_id": "site-c", "camera_id": "site-c", "sequence_id": "site-c:2023-06-01", "timestamp": "2023-06-01T12:00:00", "group_id": "phenocam:site-c:2023-06-01", "source_sha256": sha256_file(public_source), "decoded_sha256": "e" * 64, "phash": "1" * 16})
-        self.write_csv(self.root / "workspace/sources/phenocam/baseline-screened.csv", SOURCE_METADATA_FIELDS, [source_metadata])
-        config = self.root / "config"
-        config.mkdir()
-        (config / "training-v3.json").write_text(json.dumps({"public_expansion": {"maximum_images": 18, "maximum_per_site": 8, "maximum_per_group": 1}}), encoding="utf-8")
-
-        destination = self.root / "dataset-v3-source"
-        with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1):
-            result = materialize_operational(self.root, destination)
-            resumed = materialize_operational(self.root, destination)
-        self.assertEqual(result["images"], 3)
-        self.assertEqual(result["public_expansion_images"], 0)
-        self.assertEqual(result["class_instances"], {"car": 3})
-        self.assertTrue(resumed["resumed"])
-        self.assertTrue((destination / "images/operational_dev/site-a--2026-08-01T120000--abc1.jpg").is_file())
-        self.assertTrue((destination / "labels/operational_mining/site-b--2026-08-02T120000--abc2.txt").is_file())
-        self.assertFalse((destination / f"images/train/{public_name}").exists())
-        self.assertIn("train: images/train", (destination / "yolo-dataset.yaml").read_text())
-
-        expanded = self.root / "dataset-v3-expanded"
-        with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1):
-            expanded_result = materialize_operational(
-                self.root, expanded, include_public_expansion=True
-            )
-        self.assertEqual(expanded_result["images"], 4)
-        self.assertEqual(expanded_result["public_expansion_images"], 1)
-        self.assertEqual(expanded_result["class_instances"], {"car": 3, "truck": 1})
-        self.assertTrue((expanded / f"images/train/{public_name}").is_file())
-
-        decision["decision"] = "untracked"
-        self.write_csv(selection / "public-teacher-reviewed-decisions.csv", DECISION_FIELDS, [decision])
-        with patch("dataset.builder.finalization.operational_dataset.PUBLIC_IMAGE_COUNT", 1), patch("dataset.builder.finalization.operational_dataset.REVIEWED_IMAGE_COUNT", 1), self.assertRaises(DatasetError):
-            materialize_operational(
-                self.root, self.root / "invalid-v3", include_public_expansion=True
-            )
 
 
 if __name__ == "__main__":

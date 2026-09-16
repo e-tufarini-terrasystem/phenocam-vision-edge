@@ -64,20 +64,20 @@ def _archive(annotation_path, archive_path):
     os.replace(temporary, archive_path)
 
 
-def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, suggestion_policy=None, model_names=("baseline", "v2"), minimum_confidence=None):
+def build_bundle(selection_path, baseline_index, candidate_index, output_dir, config, suggestion_policy=None, model_names=("baseline", "candidate"), minimum_confidence=None):
     selection_path, output_dir = Path(selection_path), Path(output_dir)
     with selection_path.open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         require_columns(reader, SELECTION_FIELDS, selection_path)
         rows = list(reader)
-    baseline, v2 = load_predictions(baseline_index), load_predictions(v2_index)
+    baseline, candidate = load_predictions(baseline_index), load_predictions(candidate_index)
     identity = {
         "schema_version": 1, "selection_sha256": sha256_file(selection_path),
-        "baseline_index_sha256": sha256_file(baseline_index), "v2_index_sha256": sha256_file(v2_index),
+        "baseline_index_sha256": sha256_file(baseline_index), "candidate_index_sha256": sha256_file(candidate_index),
     }
     if suggestion_policy is not None:
         identity["suggestion_policy"] = suggestion_policy
-    if model_names != ("baseline", "v2"):
+    if model_names != ("baseline", "candidate"):
         identity["suggestion_models"] = list(model_names)
     if minimum_confidence is not None:
         identity["minimum_confidence"] = float(minimum_confidence)
@@ -105,7 +105,7 @@ def build_bundle(selection_path, baseline_index, v2_index, output_dir, config, s
             image_name = f"{image_id:04d}-{row['source_sha256'][:16]}{suffix}"
             _copy(row["local_path"], image_dir / image_name)
             images.append({"id": image_id, "file_name": image_name, "width": int(row["width"]), "height": int(row["height"])})
-            proposed = suggestions(baseline[row["source_identity"]], v2[row["source_identity"]], set(category_by_class), suggestion_policy, model_names)
+            proposed = suggestions(baseline[row["source_identity"]], candidate[row["source_identity"]], set(category_by_class), suggestion_policy, model_names)
             if minimum_confidence is not None:
                 proposed = [item for item in proposed if item["confidence"] >= minimum_confidence]
             for suggestion in proposed:
@@ -193,7 +193,7 @@ def build_label_audit_bundle(audit_path, dataset_root, manifest_path, output_dir
             audit_manifest.append({"source_identity": row["source_identity"], "image_name": image_name, "compiled_sha256": row["compiled_sha256"], "reviewer": reported["reviewer"], "reported_decision": reported["decision"], "reported_reason": reported["reason"], "annotation_count": len(lines)})
         annotation_path = temporary / "instances_default.json"
         with atomic_text(annotation_path) as output:
-            json.dump({"info": {"description": "Reported v2 labels; mandatory correction audit"}, "licenses": [], "images": images, "annotations": annotations, "categories": categories}, output, separators=(",", ":"), sort_keys=True)
+            json.dump({"info": {"description": "Reported candidate labels; mandatory correction audit"}, "licenses": [], "images": images, "annotations": annotations, "categories": categories}, output, separators=(",", ":"), sort_keys=True)
             output.write("\n")
         with atomic_text(temporary / "labels.json") as output:
             json.dump(_labels(config), output, indent=2); output.write("\n")

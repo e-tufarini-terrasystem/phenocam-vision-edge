@@ -58,7 +58,7 @@ class MiningTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_committed_v3_config_is_sealed_and_contains_no_local_root(self):
-        path = Path(__file__).resolve().parents[1] / "config/training-v3.json"
+        path = Path(__file__).resolve().parents[1] / "config/mining.json"
         text = path.read_text(encoding="utf-8")
         config = json.loads(text)
         self.assertEqual(config["test_status"], "sealed")
@@ -413,7 +413,7 @@ class MiningTests(unittest.TestCase):
     def test_selection_signals_and_group_limit_are_explicit(self):
         box = {"class_id": 0, "confidence": 0.31, "x1": 0, "y1": 0, "x2": 10, "y2": 10, "view_priority": 1}
         config = {"classes": {"person": 0}, "screening": {"production_threshold": 0.30}}
-        self.assertEqual(_signals([box], [box], config), {"high_v2", "shared", "crop_only", "near_threshold"})
+        self.assertEqual(_signals([box], [box], config), {"high_candidate", "shared", "crop_only", "near_threshold"})
         rows = [{"source_id": str(index), "group_id": "a" if index < 3 else "b"} for index in range(5)]
         vectors = np.eye(5, dtype=np.float32)
         selected = _diverse(rows, vectors, range(5), 3, 1, 2)
@@ -459,12 +459,12 @@ class MiningTests(unittest.TestCase):
             write_csv(directory / "index.csv", INDEX_FIELDS, [index_row])
             return directory / "index.csv"
 
-        baseline, v2 = prediction_index("baseline"), prediction_index("v2")
+        baseline, candidate = prediction_index("baseline"), prediction_index("candidate")
         config = {"classes": {"person": 0, "car": 2}, "single_reviewer_waiver": True}
         output = self.root / "bundle"
-        result = build_bundle(selection, baseline, v2, output, config)
+        result = build_bundle(selection, baseline, candidate, output, config)
         self.assertEqual(result, {"images": 1, "annotations": 1, "resumed": False})
-        self.assertEqual(build_bundle(selection, baseline, v2, output, config)["resumed"], True)
+        self.assertEqual(build_bundle(selection, baseline, candidate, output, config)["resumed"], True)
         labels = json.loads((output / "labels.json").read_text())
         self.assertEqual([label["name"] for label in labels], ["person", "car", "ambiguous"])
         with zipfile.ZipFile(output / "annotations.coco.zip") as archive:
@@ -472,14 +472,14 @@ class MiningTests(unittest.TestCase):
         self.assertEqual(len(coco["annotations"]), 1)
         with (output / "manifest.csv").open(newline="", encoding="utf-8") as source_stream:
             manifest = list(csv.DictReader(source_stream))
-        self.assertEqual(manifest[0]["suggestion_models"], "baseline;v2")
+        self.assertEqual(manifest[0]["suggestion_models"], "baseline;candidate")
 
     def test_clean_suggestions_require_strong_same_class_model_agreement(self):
         person = {"class_id": 0, "confidence": 0.4, "x1": 1, "y1": 1, "x2": 9, "y2": 9, "view_priority": 0}
         policy = {"minimum_confidence": 0.3, "minimum_iou": 0.5, "require_both_models": True, "require_same_class": True}
         agreed = suggestions([person], [{**person, "confidence": 0.5}], {0, 2}, policy)
         self.assertEqual(len(agreed), 1)
-        self.assertEqual(agreed[0]["models"], {"baseline", "v2"})
+        self.assertEqual(agreed[0]["models"], {"baseline", "candidate"})
         self.assertEqual(suggestions([person], [{**person, "class_id": 2}], {0, 2}, policy), [])
         self.assertEqual(suggestions([{**person, "confidence": 0.2}], [person], {0, 2}, policy), [])
 

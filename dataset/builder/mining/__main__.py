@@ -19,13 +19,13 @@ from .training_pool import build_training_pool
 from .validation_selection import select_validation_public
 
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "training-v3.json"
+DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "mining.json"
 
 
 def _config(path):
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     if value.get("schema_version") != 1 or value.get("test_status") not in {"sealed", "opened"}:
-        raise ValueError("invalid training-v3 configuration")
+        raise ValueError("invalid mining configuration")
     return value
 
 
@@ -47,7 +47,7 @@ def _parser():
     screen_command = commands.add_parser("screen")
     screen_command.add_argument("--input", type=Path, required=True)
     screen_command.add_argument("--output-dir", type=Path, required=True)
-    screen_command.add_argument("--model", choices=("baseline", "v2"), required=True)
+    screen_command.add_argument("--model", choices=("specialized",), default="specialized")
     screen_command.add_argument("--split", action="append", default=[])
     screen_command.add_argument("--resume", action="store_true")
     teacher_screen = commands.add_parser("teacher-screen")
@@ -67,16 +67,16 @@ def _parser():
     for option in ("pool", "teacher-index", "dataset", "output", "audit"):
         validation.add_argument(f"--{option}", type=Path, required=True)
     public = commands.add_parser("select-public")
-    for option in ("candidates", "existing", "baseline-index", "v2-index", "embeddings", "output", "statistics"):
+    for option in ("candidates", "existing", "baseline-index", "candidate-index", "embeddings", "output", "statistics"):
         public.add_argument(f"--{option}", type=Path, required=True)
     teacher_public = commands.add_parser("select-teacher-public")
     for option in ("candidates", "existing", "reviewed", "teacher-index", "embeddings", "output", "statistics"):
         teacher_public.add_argument(f"--{option}", type=Path, required=True)
     internal = commands.add_parser("select-internal")
-    for option in ("split", "baseline-index", "v2-index", "embeddings", "representative", "informative", "statistics"):
+    for option in ("split", "baseline-index", "candidate-index", "embeddings", "representative", "informative", "statistics"):
         internal.add_argument(f"--{option}", type=Path, required=True)
     bundle = commands.add_parser("cvat-bundle")
-    for option in ("selection", "baseline-index", "v2-index", "output-dir"):
+    for option in ("selection", "baseline-index", "candidate-index", "output-dir"):
         bundle.add_argument(f"--{option}", type=Path, required=True)
     bundle.add_argument("--clean-suggestions", action="store_true")
     teacher_bundle = commands.add_parser("teacher-bundle")
@@ -149,14 +149,14 @@ def main(argv=None):
             arguments.output, arguments.audit, config,
         )
     elif arguments.command == "select-public":
-        result = select_public(arguments.candidates, arguments.existing, arguments.baseline_index, arguments.v2_index, arguments.embeddings, arguments.output, arguments.statistics, config)
+        result = select_public(arguments.candidates, arguments.existing, arguments.baseline_index, arguments.candidate_index, arguments.embeddings, arguments.output, arguments.statistics, config)
     elif arguments.command == "select-teacher-public":
         result = select_teacher_public(arguments.candidates, arguments.existing, arguments.reviewed, arguments.teacher_index, arguments.embeddings, arguments.output, arguments.statistics, config)
     elif arguments.command == "select-internal":
-        result = select_internal(arguments.split, arguments.baseline_index, arguments.v2_index, arguments.embeddings, arguments.representative, arguments.informative, arguments.statistics, config)
+        result = select_internal(arguments.split, arguments.baseline_index, arguments.candidate_index, arguments.embeddings, arguments.representative, arguments.informative, arguments.statistics, config)
     elif arguments.command == "cvat-bundle":
         policy = config["cvat"]["clean_suggestions"] if arguments.clean_suggestions else None
-        result = build_bundle(arguments.selection, arguments.baseline_index, arguments.v2_index, arguments.output_dir, config, policy)
+        result = build_bundle(arguments.selection, arguments.baseline_index, arguments.candidate_index, arguments.output_dir, config, policy)
     elif arguments.command == "teacher-bundle":
         minimum_confidence = arguments.minimum_confidence
         if minimum_confidence is None:

@@ -1,5 +1,79 @@
 # Phenocam Vision training data
 
+## Current canonical dataset
+
+Use `dataset/data/`. It contains the reviewed former v6 training/validation
+artifact and the two historical test splits, with source identities and human
+labels preserved. There is no dependency on materializing older dataset versions.
+
+| Split | Images | Purpose |
+|---|---:|---|
+| train | 2,020 | Training |
+| val | 206 | Model and threshold selection |
+| pklot_holdout | 6 | Historical parking benchmark |
+| test_id | 200 | Historical public benchmark |
+| test_ood | 240 | Historical operational benchmark |
+
+Total: 2,672 images and 13,467 annotations. Images include private operational
+data. Labels and metadata are tracked; image bytes, source pools, CVAT credentials
+and generated workstation YAML remain local. Do not treat this catalog as an
+entirely public image distribution.
+
+`config/dataset.json` fixes the manifest digest, counts and 80-class mapping.
+`data/metadata/source-images.csv` is the authoritative catalog;
+`data/labels/` holds each reviewed label file once. `provenance.json` maps every
+migrated image and label to its original path and unchanged SHA-256.
+Source `decoded_sha256` remains historical provenance; `compiled_decoded_sha256`
+identifies the actual compiled image pixels, which may differ after JPEG encoding.
+
+The approved local pool stores each compiled JPEG as `<sha256>.jpg`, including
+frozen derived crops. Preserve this pool or restore it from an authorized backup.
+The acquisition tools can download public originals and prepare review tasks;
+they cannot recreate human decisions or provide private images on a fresh clone.
+
+From the repository root:
+
+```sh
+# Fresh clone: restore all image bytes alongside the tracked labels.
+.venv/bin/python -m dataset.builder.artifact hydrate \
+  --sources dataset/workspace/sources/approved/images
+
+# Existing complete dataset: verify bytes, labels, inventory and split isolation.
+.venv/bin/python -m dataset.builder.artifact verify
+
+# Independent rebuild at a new destination.
+.venv/bin/python -m dataset.builder.artifact build \
+  --sources dataset/workspace/sources/approved/images --destination output/dataset-check
+
+# CI or a clone without private images: verify the tracked catalog only.
+.venv/bin/python -m dataset.builder.artifact verify --metadata-only
+```
+
+Construction refuses existing outputs and publishes only a fully verified
+artifact. Image and label copies do not share writable hard links with sources.
+Training/validation/test membership, parent image identity and site-day groups
+remain separate. New annotations require an explicit catalog revision and audit;
+there is no automatic admission of downloaded or model-annotated images.
+
+Source-specific download commands remain under `python -m dataset.builder`.
+Operational mining uses `config/mining.json` and the configured `specialized`
+model. Paired diagnostic commands use `--baseline-index` and `--candidate-index`;
+these are explicit prediction inputs, not dependencies on older shipped models.
+Existing CVAT task names and local workspace paths preserve annotation history.
+
+Open `viewer.html`, select `data/`, then choose one of the five splits. It stays
+local and does not upload images. Training instructions are in
+[the development guide](../docs/development.md#current-workflow).
+
+## Historical acquisition and annotation context
+
+The following describes the pre-consolidation pipeline at `da14b7d`. Intermediate
+artifacts, model versions and historical commands are preserved as context;
+use the canonical commands above for current builds. The old partition command
+and `build-v3` materializer have been retired. The unversioned public-source
+review/finalization tools remain available for acquisition work.
+
+
 This directory owns both the completed public training dataset and the local,
 reproducible construction pipeline. The distributable `training-dataset/` never
 contains internal operational imagery. The private `dataset-v3/` artifact

@@ -22,7 +22,7 @@ VERSION = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
 REQUIRED = (
     "README.md",
     "assets/logo.svg",
-    "models/yolo26n-v4.onnx",
+    "models/yolo26n-phenocam.onnx",
     "requirements/runtime.txt",
     "scripts/batch.sh",
     "scripts/installer.sh",

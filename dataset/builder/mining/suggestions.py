@@ -18,7 +18,7 @@ def _coverage(left, right):
     return area / min(left_area, right_area)
 
 
-def _union(baseline, candidate, class_ids, model_names=("baseline", "v2")):
+def _union(baseline, candidate, class_ids, model_names=("baseline", "candidate")):
     accepted = []
     for model, detections in zip(model_names, (baseline, candidate)):
         for detection in detections:
@@ -37,7 +37,7 @@ def _union(baseline, candidate, class_ids, model_names=("baseline", "v2")):
     return accepted
 
 
-def suggestions(baseline, candidate, class_ids, policy=None, model_names=("baseline", "v2")):
+def suggestions(baseline, candidate, class_ids, policy=None, model_names=("baseline", "candidate")):
     if policy is None:
         return _union(baseline, candidate, class_ids, model_names)
     if policy.get("require_both_models") is not True or policy.get("require_same_class") is not True:
@@ -53,7 +53,7 @@ def suggestions(baseline, candidate, class_ids, policy=None, model_names=("basel
         index, match = max(matches, key=lambda value: value[1]["confidence"])
         used.add(index)
         winner = detection if detection["confidence"] >= match["confidence"] else match
-        accepted.append({**winner, "models": {"baseline", "v2"}})
+        accepted.append({**winner, "models": {"baseline", "candidate"}})
     return accepted
 
 

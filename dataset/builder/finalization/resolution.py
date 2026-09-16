@@ -82,7 +82,7 @@ def prepare_replacements(dataset_root, config, openimages_path, first_path, seco
         output_root / "open-images-selection.csv",
         output_root / "open-images-screened.csv",
         output_root / "open-images-rejections.csv",
-        Path(dataset_root).parent / "models" / "yolo26n.onnx",
+        Path(dataset_root).parent / "models" / "yolo26n-phenocam.onnx",
         config,
     )
     if screening["screened"] != len(replacement_openimages) or screening["rejected"]:

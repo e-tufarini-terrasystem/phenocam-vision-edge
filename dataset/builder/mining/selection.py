@@ -57,10 +57,10 @@ def _signals(baseline, candidate, config):
     full_left, crop_left = any(x["view_priority"] == 0 for x in left), any(x["view_priority"] > 0 for x in left)
     full_right, crop_right = any(x["view_priority"] == 0 for x in right), any(x["view_priority"] > 0 for x in right)
     signals = set()
-    if maximum >= threshold: signals.add("high_v2")
+    if maximum >= threshold: signals.add("high_candidate")
     if shared: signals.add("shared")
     if left and not right: signals.add("baseline_only")
-    if right and not left: signals.add("v2_only")
+    if right and not left: signals.add("candidate_only")
     if (crop_left and not full_left) or (crop_right and not full_right): signals.add("crop_only")
     if full_left != full_right or crop_left != crop_right: signals.add("full_crop_disagreement")
     if right and abs(maximum - threshold) <= 0.05: signals.add("near_threshold")
@@ -103,12 +103,12 @@ def _diverse(rows, vectors, eligible, count, seed, group_limit, initial=None, ex
     return selected
 
 
-def select_public(candidates_path, existing_path, baseline_index, v2_index, embeddings_path, output_path, statistics_path, config):
+def select_public(candidates_path, existing_path, baseline_index, candidate_index, embeddings_path, output_path, statistics_path, config):
     existing = _rows(existing_path, require_local=False)
     rows = eligible_public(candidates_path, existing_path)
-    base, v2, embedding_map = load_predictions(baseline_index), load_predictions(v2_index), _embeddings(embeddings_path)
+    base, candidate, embedding_map = load_predictions(baseline_index), load_predictions(candidate_index), _embeddings(embeddings_path)
     identities = [f"phenocam::{row['source_id']}" for row in rows]
-    rows = [row for row, identity in zip(rows, identities) if identity in base and identity in v2 and identity in embedding_map]
+    rows = [row for row, identity in zip(rows, identities) if identity in base and identity in candidate and identity in embedding_map]
     identities = [f"phenocam::{row['source_id']}" for row in rows]
     vectors = np.stack([embedding_map[identity] for identity in identities])
     initial_ids = [row.get("source_identity", "") for row in existing if row.get("source_identity", "") in embedding_map]
@@ -117,11 +117,11 @@ def select_public(candidates_path, existing_path, baseline_index, v2_index, embe
         similarity = np.max(vectors @ initial.T, axis=1)
         keep = similarity < 0.95
         rows, vectors, identities = [row for row, value in zip(rows, keep) if value], vectors[keep], [identity for identity, value in zip(identities, keep) if value]
-    signals = [_signals(base[identity], v2[identity], config) for identity in identities]
+    signals = [_signals(base[identity], candidate[identity], config) for identity in identities]
     categories = {
-        "high_or_shared": lambda value: bool(value & {"high_v2", "shared"}),
+        "high_or_shared": lambda value: bool(value & {"high_candidate", "shared"}),
         "baseline_only": lambda value: "baseline_only" in value,
-        "v2_only": lambda value: "v2_only" in value,
+        "candidate_only": lambda value: "candidate_only" in value,
         "crop_disagreement": lambda value: bool(value & {"crop_only", "full_crop_disagreement"}),
         "confuser": lambda value: "confuser" in value,
     }
@@ -130,7 +130,7 @@ def select_public(candidates_path, existing_path, baseline_index, v2_index, embe
         indexes = _diverse(rows, vectors, [i for i, value in enumerate(signals) if categories[category](value) and i not in chosen], int(quota), config["selection_seed"], int(config["selection"]["maximum_per_group"]), vectors[list(chosen)] if chosen else initial, chosen, True)
         chosen.update(indexes)
         output.extend(_output_row(rows[index], category, signals[index], "public_mining") for index in indexes)
-    indexes = _diverse(rows, vectors, [i for i, value in enumerate(signals) if i not in chosen and not value & {"high_v2", "shared"}], int(config["selection"]["public_pilot_images"]) - len(chosen), config["selection_seed"], int(config["selection"]["maximum_per_group"]), vectors[list(chosen)] if chosen else initial, chosen)
+    indexes = _diverse(rows, vectors, [i for i, value in enumerate(signals) if i not in chosen and not value & {"high_candidate", "shared"}], int(config["selection"]["public_pilot_images"]) - len(chosen), config["selection_seed"], int(config["selection"]["maximum_per_group"]), vectors[list(chosen)] if chosen else initial, chosen)
     output.extend(_output_row(rows[index], "hard_negative_fill", signals[index], "public_mining") for index in indexes)
     write_csv(output_path, SELECTION_FIELDS, output)
     stats = {"selected": len(output), "eligible_after_exclusions": len(rows), "category_counts": dict(Counter(row["selection_category"] for row in output)), "sscd_existing_threshold": 0.95}
@@ -185,8 +185,8 @@ def _write_audit(path, value):
         json.dump(value, output, indent=2, sort_keys=True); output.write("\n")
 
 
-def select_internal(split_path, baseline_index, v2_index, embeddings_path, representative_path, informative_path, statistics_path, config):
-    rows, base, v2, embedding_map = _rows(split_path), load_predictions(baseline_index), load_predictions(v2_index), _embeddings(embeddings_path)
+def select_internal(split_path, baseline_index, candidate_index, embeddings_path, representative_path, informative_path, statistics_path, config):
+    rows, base, candidate, embedding_map = _rows(split_path), load_predictions(baseline_index), load_predictions(candidate_index), _embeddings(embeddings_path)
     representative, informative = [], []
     for site in sorted({row["site_id"] for row in rows}):
         dev = sorted((row for row in rows if row["site_id"] == site and row["split"] == "operational_dev"), key=lambda row: row["timestamp"])
@@ -204,13 +204,13 @@ def select_internal(split_path, baseline_index, v2_index, embeddings_path, repre
             representative.extend(_output_row(group_rows[index], "temporal_uniform", (), "representative") for index in indexes)
         mining = [row for row in rows if row["site_id"] == site and row["split"] == "operational_mining"]
         identities = [f"internal:{site}:{row['source_id']}" for row in mining]
-        mining = [row for row, identity in zip(mining, identities) if identity in base and identity in v2 and identity in embedding_map]
+        mining = [row for row, identity in zip(mining, identities) if identity in base and identity in candidate and identity in embedding_map]
         identities = [f"internal:{site}:{row['source_id']}" for row in mining]
         vectors = np.stack([embedding_map[identity] for identity in identities])
-        signals = [_signals(base[identity], v2[identity], config) for identity in identities]
+        signals = [_signals(base[identity], candidate[identity], config) for identity in identities]
         strong = defaultdict(list)
         for index, value in enumerate(signals):
-            if value & {"high_v2", "shared"}: strong[mining[index]["group_id"]].append(datetime.fromisoformat(mining[index]["timestamp"]))
+            if value & {"high_candidate", "shared"}: strong[mining[index]["group_id"]].append(datetime.fromisoformat(mining[index]["timestamp"]))
         for index, row in enumerate(mining):
             stamp = datetime.fromisoformat(row["timestamp"])
             if any(0 < abs((stamp - other).total_seconds()) <= 3600 for other in strong[row["group_id"]]): signals[index].add("temporal_neighbor")

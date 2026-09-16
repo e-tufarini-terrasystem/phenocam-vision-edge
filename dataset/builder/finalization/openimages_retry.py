@@ -41,7 +41,7 @@ def _generate(dataset_root, config, combined, attempted, needed):
         root / "open-images-retry-selection.csv",
         root / "open-images-retry-screened.csv",
         root / "open-images-retry-rejections.csv",
-        Path(dataset_root).parent / "models" / "yolo26n.onnx",
+        Path(dataset_root).parent / "models" / "yolo26n-phenocam.onnx",
         config,
     )
     if screening["screened"] != probe_count or screening["rejected"]:

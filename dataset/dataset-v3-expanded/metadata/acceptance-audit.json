@@ -1,9 +1,0 @@
-{
-  "internal_training_allowed": false,
-  "operational_test_status": "sealed",
-  "public_expansion_annotation_source": "human_cvat",
-  "public_expansion_images": 18,
-  "public_v2_training_preserved": true,
-  "status": "reviewed_public_expansion_ready",
-  "viewer_compatible": true
-}

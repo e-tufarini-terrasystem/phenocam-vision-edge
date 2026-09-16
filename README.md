@@ -28,6 +28,20 @@ class is detected.
 Phenocam Vision Edge is a focused single-image runtime, not a general-purpose
 object-detection or model-training framework.
 
+## Current source model
+
+The current source tree maintains **YOLO26n specialized for PhenoCam**, at
+`models/yolo26n-phenocam.onnx`. This is the unchanged former v6 artifact;
+its experimental acceptance status and measured limitations remain recorded in
+`models/yolo26n-phenocam.json`. It is not part of the frozen v0.1.0 download below.
+After the [manual source setup](docs/manual.md), run:
+
+```sh
+.venv/bin/python -m phenocam --input input/example.jpg \
+  --annotated-output output/example_annotated.jpg \
+  --model models/yolo26n-phenocam.onnx
+```
+
 ## Supported environments
 
 | Use | Platform | Python | Scope |
@@ -81,7 +95,7 @@ cp /path/to/image.jpg input/example.jpg
   --input input/example.jpg \
   --annotated-output output/example_annotated.jpg \
   --privacy-output output/example_privacy.jpg \
-  --model models/yolo26n-v3-extended.onnx
+  --model models/yolo26n.onnx
 ```
 
 The command leaves the source image unchanged. See the
@@ -114,7 +128,7 @@ Release claims and verification apply only to the exact tagged commit.
 - [Manual installation and configuration](docs/manual.md)
 - [Development, verification, and model export](docs/development.md)
 - [Training dataset composition and reproducible builder](dataset/README.md)
-- [V2, v3, and v3-expanded training notebooks](notebooks/)
+- [Single specialized-model training workflow](docs/development.md#current-workflow)
 
 ## Support and license
 
