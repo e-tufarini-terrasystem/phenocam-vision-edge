@@ -134,9 +134,8 @@ class ReferenceImageTests(unittest.TestCase):
                 self.assertLess(
                     iou, 0.50, diagnostic
                 )
-                self.assertLess(
-                    smaller_box_coverage, 0.50, diagnostic
-                )
+                if left.view_priority != right.view_priority:
+                    self.assertLess(smaller_box_coverage, 0.50, diagnostic)
 
         expected = next(
             (item for item in EXPECTED_WINNERS if item[0] == name), None

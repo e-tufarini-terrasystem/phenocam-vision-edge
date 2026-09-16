@@ -88,6 +88,29 @@ stesso oggetto tra frame diversi e qui non è appropriato.
 Al termine assegna il job al revisore, portalo allo stage di validazione e risolvi
 gli eventuali problemi prima di marcarlo completato.
 
+### V6 — primo batch operativo, 11 settembre 2026
+
+Il [progetto v6](http://localhost:8080/projects/2) contiene 60 frame train con
+352 box proposte da YOLO26n-v5, da correggere integralmente:
+
+- [PhenoZero1: 24 frame](http://localhost:8080/tasks/18/jobs/43).
+- [PhenoZero2: 12 frame](http://localhost:8080/tasks/19/jobs/44).
+- [TS02: 24 frame](http://localhost:8080/tasks/20/jobs/45).
+
+Seguire le regole operative v3 e la guida integrata nel progetto. Aggiungere
+anche i target non suggeriti; lasciare senza box i veri negativi e usare
+`ambiguous` quando non è possibile decidere. Le proposte non sono ground truth.
+Raspberry è escluso perché tutti i giorni disponibili sono riservati ai test.
+Validation e test v6 sono ancora da preparare su giorni separati.
+Dettagli e verifiche nel
+[resoconto del batch](../../docs/status/training-v6-annotation-2026-09-11.md).
+
+Il batch è stato completato con revisione visuale e correzioni Codex: **57 frame
+inclusi nella v6**, tre mantenuti in CVAT con tag `ambiguous` (task 18/frame 10
+e 23, task 19/frame 0; numerazione CVAT da zero). La v6 è materializzata in
+`dataset/dataset-v6`; gli export finali sono conservati insieme ai backup.
+Non togliere il tag ai tre esclusi senza risolvere il dubbio e riesportare.
+
 ## 3. Negativi
 
 Le code finali riutilizzano le 335 immagini già confermate vuote in CVAT. Apri

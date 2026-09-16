@@ -96,6 +96,21 @@ claim atomic protection against a hostile replacement between verification and
 unlink. Hard links are allowed, and only the exact directory entry passed to
 `--input` is removed.
 
+## Detection filtering
+
+Inference uses the full image and fifteen overlapping crops, with a uniform
+confidence threshold of `0.47`. Duplicate boxes compete within each class;
+`car`, `bus`, and `truck` also compete with one another. Suppression requires
+IoU of at least `0.50`, or at least `0.50` coverage of the smaller box when the
+boxes come from different views. Smaller-box coverage alone does not suppress
+two detections from the same view, preserving adjacent partially occluded
+objects. These thresholds are fixed in the runtime, not CLI options.
+
+This rule can recover objects that were predicted but suppressed. Objects with
+confidence below `0.47`, or with no model prediction, can still be missed behind
+foliage or railings. Calibration results and limitations are recorded in the
+[development guide](development.md#occlusion-calibration).
+
 ## Detection metadata
 
 When `--meta` is supplied, the existing file is updated only after every

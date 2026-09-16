@@ -10,7 +10,7 @@ set -u
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || { echo "error: project directory cannot be resolved" >&2; exit 1; }
 
 # Settings: paths may be absolute or relative to the project root.
-model="$root/models/yolo26n-v5.onnx"
+model="$root/models/yolo26n-v6.onnx"
 input_dir="$root/input"
 output_dir="$root/output"
 confidence=0.47  # Range 0..1; higher filters more boxes, including false positives.

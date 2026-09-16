@@ -7,10 +7,10 @@ local verification procedure, and optional model-export workflow.
 
 ## Inference architecture
 
-Inference uses the validation-selected `models/yolo26n-v4.onnx` and its
-end-to-end ONNX graph. The v4 selection retains the original pretrained weights
-after fine-tuning and interpolation failed the declared validation gain. Older
-models remain available for comparisons.
+The v5 reference model is `models/yolo26n-v5.onnx`, with an end-to-end ONNX
+graph. Pass this path explicitly with `--model` when using v5; older models
+remain available for comparisons. The runtime suppression rule applies to
+every compatible model.
 
 Each image is processed sequentially in one ONNX session using one full-image
 view plus fifteen adaptive overlapping crops. Horizontal and square images use
@@ -19,8 +19,10 @@ overlap. The EXIF-normalized RGB source supplies all sixteen views and remains
 the final rendering background.
 
 Crop detections are converted to global image coordinates, all model classes
-are merged, and all rows require confidence greater than or equal to 0.45.
-Duplicates are suppressed when IoU or smaller-box coverage reaches 0.50.
+are merged, and all rows require confidence greater than or equal to 0.47.
+Duplicates are suppressed when IoU reaches 0.50. Smaller-box coverage also
+suppresses at 0.50, but only between different views, to reconcile crop
+fragments without discarding adjacent occluded objects from the same view.
 `car`, `bus`, and `truck` compete across labels, while other classes compete
 only with themselves. `phenocam/classes/configuration.py` selects the final
 annotations and privacy regions.
@@ -28,6 +30,86 @@ annotations and privacy regions.
 The ONNX model must expose exactly the standard 80 COCO classes and the
 end-to-end six-column detection output used by the included YOLO26n model.
 Incompatible metadata or tensor shapes are rejected before inference.
+
+The v6 experiment completed four independent training runs from the base.
+Its selected `models/yolo26n-v6.onnx` remains experimental because it failed
+the validation acceptance criteria. `scripts/batch.sh` currently selects this
+experimental v6 model explicitly; this setting does not change its acceptance
+status. The [v6 training report](status/training-v6-experiment.md) records its
+fixed protocol, environment, commands, metrics, and verification evidence.
+Checkpoints, logs, and completed run receipts are under `output/training-v6/`.
+
+## Occlusion calibration
+
+Historical results below use cross-view coverage 0.80. On 2026-09-14 the
+runtime coverage threshold was changed to 0.50 at the user's request;
+these metrics have not been remeasured with that threshold.
+
+On 2026-09-08, v5 predictions were evaluated with the legacy suppression rule
+and cross-view containment thresholds of 0.80, 0.90, and 0.95, each at confidence
+0.47, 0.40, 0.35, and 0.25. The selected combination maximized validation F1:
+IoU 0.50, cross-view coverage 0.80, and confidence 0.47. Lowering confidence
+recovered more targets but reduced F1 at every tested containment threshold.
+
+All candidates reused the same ONNX predictions from the 206-image v5
+validation split, acquired at a 0.20 confidence floor. This preserves every
+candidate needed by the threshold grid. Matching used IoU 0.50 and the five
+enabled classes: person, car, motorcycle, bus, and truck. Model, 640x640 input,
+sixteen views, CPU provider, and four threads stayed fixed. The environment was
+Python 3.13.14 on an Apple Silicon Mac; this is not Raspberry Pi qualification.
+The ONNX SHA-256 remained
+`252f302257759cae6d40579fb76b74d66f87bdce2997d44f89dba85d03420379`.
+
+| Validation rule | Confidence | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: | ---: |
+| Legacy | 0.47 | 0.42607 | 0.44785 | 0.43669 |
+| Cross-view 0.80 | 0.47 | 0.42077 | 0.48875 | 0.45222 |
+| Cross-view 0.80 | 0.40 | 0.38720 | 0.51943 | 0.44367 |
+| Cross-view 0.80 | 0.35 | 0.36630 | 0.53783 | 0.43579 |
+| Cross-view 0.80 | 0.25 | 0.32681 | 0.58078 | 0.41826 |
+| Cross-view 0.90 | 0.47 | 0.41267 | 0.49284 | 0.44921 |
+| Cross-view 0.95 | 0.47 | 0.40641 | 0.49284 | 0.44547 |
+
+The implementation was replayed against the cached validation predictions and
+matched the selected result. Rule, confidence, and model/code hashes were
+recorded before opening the regression splits. Both sides below use the same
+v5 ONNX and confidence 0.47; only suppression differs.
+
+| Split (images) | TP before/after | FP before/after | Recall before/after | F1 before/after |
+| --- | ---: | ---: | ---: | ---: |
+| Validation (206) | 219 / 239 | 295 / 329 | 0.44785 / 0.48875 | 0.43669 / 0.45222 |
+| PKLot holdout (6) | 282 / 282 | 62 / 63 | 0.21478 / 0.21478 | 0.34037 / 0.34017 |
+| TEST-ID (200) | 235 / 246 | 299 / 353 | 0.53047 / 0.55530 | 0.48106 / 0.47217 |
+| TEST-OOD (240) | 2384 / 2456 | 117 / 178 | 0.40510 / 0.41733 | 0.56857 / 0.57659 |
+
+This is a recall trade-off, not a uniform accuracy improvement. TEST-ID
+precision falls from 0.44007 to 0.41068; TEST-OOD precision falls from 0.95322
+to 0.93242. Duplicate detections rise from 0 to 1 on validation, 4 to 5 on
+TEST-ID, and 1 to 13 on TEST-OOD. Validation's 78 negative images retain eight
+false-positive boxes; TEST-ID negatives increase from 16 to 17 boxes, and
+TEST-OOD negatives remain at zero. These are existing benchmarks, not a new
+independent occlusion-labelled test; repeated camera scenes limit independence.
+No training or model export was performed, and no rule was retuned on test.
+
+In `input/phenozero1_2026_09_08_095832.jpg`, the final car count increases from
+three to four. The recovered full-view candidate has confidence 0.519031:
+its overlap with the adjacent car is IoU 0.158367 and smaller-box coverage
+0.560375. The old coverage rule discarded it; the new rule retains it. Other
+cars below confidence 0.47 remain missed. This does not establish recovery of
+foliage-occluded objects that the model never predicts.
+
+Local receipts, metrics, error events, cached validation predictions, test log,
+and before/after images are under ignored
+`output/occlusion-calibration-2026-09-08/`. The baseline source revision is
+`3396bdfe1bb01bb8bf9a5f14aee7a0558cb76a91`. Reproduce current validation with
+the existing evaluator and a new output directory:
+
+```sh
+YOLO_NUM_THREADS=4 .venv/bin/python -m scripts.runtime_evaluation.evaluate \
+  --model models/yolo26n-v5.onnx --dataset dataset/dataset-v5 --split val \
+  --threshold 0.47 --threshold 0.40 --threshold 0.35 --threshold 0.25 \
+  --output output/occlusion-validation
+```
 
 ## Verification
 

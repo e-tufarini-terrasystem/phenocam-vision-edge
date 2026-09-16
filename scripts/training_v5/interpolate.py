@@ -5,9 +5,6 @@ import hashlib
 import json
 from pathlib import Path
 
-from ultralytics import YOLO
-
-
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / "output/training-v5"
 BASE = ROOT / "models/yolo26n.pt"
@@ -23,6 +20,9 @@ def sha256(path):
 
 
 def main():
+    # Keep the workstation dependency optional when importing the fixed grid.
+    from ultralytics import YOLO
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--parent", type=Path, action="append", required=True)
     parser.add_argument("--name", required=True)

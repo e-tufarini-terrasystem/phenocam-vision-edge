@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "base": "models/yolo26n.pt",
+  "dataset": "dataset/dataset-v6/dataset.yaml",
+  "fingerprint": "e1491ab0e3bc073c167026f7e0dd0057c86bede700baa2122a8d3a4126dbfddc",
+  "fixed": {
+    "optimizer": "AdamW", "lr0": 0.0001, "lrf": 0.1,
+    "epochs": 30, "patience": 10, "warmup_epochs": 2.0,
+    "momentum": 0.937, "weight_decay": 0.0005,
+    "imgsz": 640, "batch": 16, "workers": 0, "cache": false,
+    "fraction": 1.0, "resume": false, "pretrained": true,
+    "deterministic": true, "amp": false, "plots": true,
+    "save": true, "save_period": 5, "val": true,
+    "mosaic": 0.5, "close_mosaic": 5, "mixup": 0.0,
+    "copy_paste": 0.0, "cutmix": 0.0,
+    "hsv_h": 0.015, "hsv_s": 0.7, "hsv_v": 0.4,
+    "degrees": 0.0, "translate": 0.1, "scale": 0.5,
+    "shear": 0.0, "perspective": 0.0,
+    "flipud": 0.0, "fliplr": 0.5, "bgr": 0.0,
+    "multi_scale": false, "rect": false, "cos_lr": false
+  },
+  "recipes": {"head": {"freeze": 23}, "neck-head": {"freeze": 10}},
+  "initial_seed": 42,
+  "replica_seeds": [17, 73],
+  "maximum_trainings": 4,
+  "checkpoint_candidates": ["best", "last"],
+  "threshold_grid": {"start_percent": 20, "stop_percent": 70, "step_percent": 1},
+  "selection": "Maximum validation ONNX pipeline F1; ties: higher recall, lower threshold, recipe order, best before last. Baselines optimize on the identical threshold grid. Replicas retain the first seed threshold and checkpoint rule; deliver seed 42, never select a seed using its score.",
+  "gate": {"mean_onnx_f1_gain": 0.005, "minimum_replica_f1_gain": 0.0, "maximum_open_images_map_loss": 0.01, "minimum_source_recall_gain": 0.0},
+  "rationale": "V5 full/freeze10 at LR .001 regressed. Compare its conservative head recipe with broader neck/head adaptation at LR .0001 on all v6 data. No interpolation or test-driven grid expansion.",
+  "runtime_threads": 4,
+  "historical_tests": ["pklot_holdout", "test_id", "test_ood"]
+}

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 _CONFIDENCE_THRESHOLD = 0.47
 _OVERLAP_THRESHOLD = 0.50
+_CROSS_VIEW_COVERAGE_THRESHOLD = 0.50
 _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
 
@@ -81,9 +82,14 @@ def _overlaps(left, right):
     right_area = (right.x2 - right.x1) * (right.y2 - right.y1)
     iou = intersection / (left_area + right_area - intersection)
     smaller_box_coverage = intersection / min(left_area, right_area)
+    # Containment reconciles crop fragments across views. Within one view,
+    # neighboring occluded objects can cover much of each other's smaller box.
     return (
         iou >= _OVERLAP_THRESHOLD
-        or smaller_box_coverage >= _OVERLAP_THRESHOLD
+        or (
+            left.view_priority != right.view_priority
+            and smaller_box_coverage >= _CROSS_VIEW_COVERAGE_THRESHOLD
+        )
     )
 
 
