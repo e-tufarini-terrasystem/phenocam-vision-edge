@@ -22,7 +22,9 @@ def guard_runtime():
     if current != preflight["code_sha256"]:
         raise RuntimeError("Evaluation runtime differs from preflight")
     from dataset.builder.artifact.verification import verify
-    verify(DATASET, decode=False)
+    dataset = verify(DATASET, decode=False)
+    if dataset['checksums_sha256'] != preflight.get('checksums_sha256'):
+        raise RuntimeError('Evaluation annotations differ from preflight')
     frozen_environment = (WORK / "provenance/environment.txt").read_text()
     actual = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
     if actual != frozen_environment:
@@ -51,7 +53,8 @@ def evaluate(model, name, split="val", thresholds=None, receipt=None, standard=T
     output = WORK / ("evaluation" if split == "val" else f"final/{split}") / name
     output.mkdir(parents=True, exist_ok=True)
     identity = {"model_sha256": sha256(model), "split": split, "thresholds": thresholds,
-                "code_sha256": current, "manifest_sha256": sha256(dataset / "metadata/source-images.csv")}
+                "code_sha256": current, "manifest_sha256": sha256(dataset / "metadata/source-images.csv"),
+                "checksums_sha256": sha256(dataset / "metadata/checksums.sha256")}
     provenance = output / "provenance.json"
     if provenance.exists() and json.loads(provenance.read_text()) != identity:
         raise RuntimeError("Existing evaluation belongs to different inputs")

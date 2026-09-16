@@ -90,6 +90,10 @@ def screen(input_path, output_dir, model_key, config, *, allowed_splits=(), resu
     if allowed:
         require_columns(reader, ("split",), input_path)
         rows = [row for row in rows if row["split"] in allowed]
+    # Opening held-out data requires both an explicit split and an opened protocol.
+    if any(row.get("split") == "sealed_test" for row in rows):
+        if "sealed_test" not in allowed or config.get("test_status") != "opened":
+            raise DatasetError("sealed screening requires an opened protocol and explicit split")
     model = config["models"].get(model_key)
     if model is None:
         raise DatasetError("unknown screening model")
@@ -123,6 +127,7 @@ def screen(input_path, output_dir, model_key, config, *, allowed_splits=(), resu
             "source_id": row["source_id"], "group_id": row.get("group_id", ""),
             "split": row.get("split", ""), "cohort": row.get("cohort", ""),
         }
+        record = None
         if record_path.exists():
             record = json.loads(record_path.read_text(encoding="utf-8"))
             if record.get("source_identity") != identity or record.get("source_sha256") != row["source_sha256"] or record.get("model_sha256") != model_sha:
@@ -130,6 +135,7 @@ def screen(input_path, output_dir, model_key, config, *, allowed_splits=(), resu
             if any(record.get(key) != value for key, value in context.items()):
                 record.update(context)
                 _write_json(record_path, record)
+        if record is not None and record.get("status") == "completed":
             resumed += 1
         else:
             record = {

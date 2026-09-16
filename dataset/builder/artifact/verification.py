@@ -13,8 +13,13 @@ from .manifest import CATALOG, CONFIG, DIGEST, load, local_path
 def verify(root=CATALOG, config=CONFIG, images=True, decode=True):
     root = Path(root)
     settings, rows = load(root, config)
+    checksums = local_path(root, 'metadata/checksums.sha256')
+    # The manifest pins image identities; this inventory also pins human labels.
+    checksums_sha = sha256_file(checksums)
+    if checksums_sha != settings.get('checksums_sha256'):
+        raise DatasetError('Canonical checksum inventory changed')
     listed = {}
-    for line in (root / 'metadata/checksums.sha256').read_text().splitlines():
+    for line in checksums.read_text().splitlines():
         digest, name = line.split('  ', 1)
         if name in listed or not DIGEST.fullmatch(digest):
             raise DatasetError('Invalid checksum inventory')
@@ -80,4 +85,5 @@ def verify(root=CATALOG, config=CONFIG, images=True, decode=True):
     if counts != settings['splits'] or labels != settings['annotations']:
         raise DatasetError('Dataset composition changed')
     return {'status': 'passed', 'images_verified': images, 'splits': counts,
-            'annotations': labels, 'manifest_sha256': settings['manifest_sha256']}
+            'annotations': labels, 'manifest_sha256': settings['manifest_sha256'],
+            'checksums_sha256': checksums_sha}

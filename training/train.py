@@ -30,7 +30,9 @@ def main():
             or sha256(CONFIG) != preflight["config_sha256"]):
         raise SystemExit("Pinned experiment inputs changed")
     from dataset.builder.artifact.verification import verify
-    verify(DATASET, decode=False)
+    dataset = verify(DATASET, decode=False)
+    if dataset['checksums_sha256'] != preflight.get('checksums_sha256'):
+        raise SystemExit('Training annotations differ from preflight')
     if sha256(WORK / "dataset.yaml") != preflight["dataset_yaml_sha256"]:
         raise SystemExit("Training dataset configuration changed")
     current = code_hashes()

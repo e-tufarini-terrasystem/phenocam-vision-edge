@@ -98,10 +98,12 @@ def screen_public_teacher(candidates_path, existing_path, reviewed_path, model_p
     for position, row in enumerate(rows, 1):
         identity_value = f"phenocam::{row['source_id']}"
         record_path = records / f"{hashlib.sha256(identity_value.encode()).hexdigest()}.json"
+        record = None
         if record_path.exists():
             record = json.loads(record_path.read_text(encoding="utf-8"))
             if record.get("source_identity") != identity_value or record.get("source_sha256") != row["source_sha256"] or record.get("model_sha256") != model_sha:
                 raise DatasetError("teacher screening checkpoint contains stale data")
+        if record is not None and record.get("status") == "completed":
             resumed_count += 1
         else:
             record = {

@@ -1,12 +1,14 @@
 """Guard acceptance against seed averaging hiding regressions in deployment."""
 
 from copy import deepcopy
+import importlib
 import json
 from pathlib import Path
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from training import preflight, workflow
 from training.provenance import sha256
@@ -77,7 +79,7 @@ class RunProvenanceTests(unittest.TestCase):
                 'ultralytics': SimpleNamespace(YOLO=lambda _: SimpleNamespace(names={int(k): v for k, v in names.items()})),
             }
             with patch.dict('sys.modules', modules), patch.multiple(preflight, ROOT=root, WORK=work, CONFIG=config, DATASET=root / 'dataset/data'), \
-                    patch.object(preflight, 'verify', side_effect=lambda _: {'manifest_sha256': 'catalog'}), \
+                    patch.object(preflight, 'verify', side_effect=lambda _: {'manifest_sha256': 'catalog', 'checksums_sha256': 'labels'}), \
                     patch.object(preflight, 'code_hashes', return_value={'config.json': sha256(config)}), \
                     patch.object(preflight.subprocess, 'check_output', return_value='fixture\n'), \
                     patch.object(preflight.platform, 'platform', return_value='test'), patch('builtins.print'):
@@ -89,6 +91,7 @@ class RunProvenanceTests(unittest.TestCase):
                 preflight.main()
                 receipt = json.loads((work / 'preflight.json').read_text())
                 self.assertEqual(receipt['reference'], digests)
+                self.assertEqual(receipt['checksums_sha256'], 'labels')
                 self.assertEqual(receipt['dataset_yaml_sha256'], sha256(work / 'dataset.yaml'))
                 for kind in ('pt', 'onnx'):
                     self.assertEqual(sha256(work / f'reference/model.{kind}'), digests[kind + '_sha256'])
@@ -118,6 +121,32 @@ class RunProvenanceTests(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, 'not complete'):
                     workflow.training('head', 42)
                 command.assert_not_called()
+
+    def test_evaluation_requires_the_frozen_annotation_inventory(self):
+        # Exercise the guard without importing the optional training stack in CI.
+        modules = {'torch': SimpleNamespace(set_num_threads=Mock()),
+                   'ultralytics': SimpleNamespace(YOLO=Mock()),
+                   'training.evaluation.standard': SimpleNamespace(metrics=Mock())}
+        with tempfile.TemporaryDirectory() as directory, patch.dict(sys.modules, modules):
+            protocol = importlib.import_module('training.evaluation.protocol')
+            work = Path(directory)
+            (work / 'provenance').mkdir()
+            (work / 'provenance/environment.txt').write_text('frozen environment')
+            receipt = {'code_sha256': {}, 'manifest_sha256': 'manifest', 'checksums_sha256': 'frozen labels'}
+            (work / 'preflight.json').write_text(json.dumps(receipt))
+            with patch.multiple(protocol, WORK=work, DATASET=work, code_hashes=lambda: {}, sha256=lambda _: 'manifest'), \
+                    patch('dataset.builder.artifact.verification.verify') as verify, \
+                    patch.object(protocol.subprocess, 'check_output', return_value='frozen environment'), \
+                    patch.dict(protocol.os.environ):
+                verify.return_value = {'checksums_sha256': 'frozen labels'}
+                self.assertEqual(protocol.guard_runtime(), {})
+                verify.return_value = {'checksums_sha256': 'revised labels'}
+                with self.assertRaisesRegex(RuntimeError, 'annotations differ'):
+                    protocol.guard_runtime()
+                del receipt['checksums_sha256']
+                (work / 'preflight.json').write_text(json.dumps(receipt))
+                with self.assertRaisesRegex(RuntimeError, 'annotations differ'):
+                    protocol.guard_runtime()
 
 
 if __name__ == "__main__":

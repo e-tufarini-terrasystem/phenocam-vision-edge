@@ -1,6 +1,7 @@
 """Verify safe deterministic operational inventory and split boundaries."""
 
 import csv
+from copy import deepcopy
 import hashlib
 import json
 import sys
@@ -166,7 +167,11 @@ class MiningTests(unittest.TestCase):
             patch("dataset.builder.mining.screening.run_tensor", return_value=(predictions, 0.1)),
         )
         with patches[0], patches[1], patches[2], patches[3]:
-            result = screen(manifest, self.root / "screen", "baseline", config, allowed_splits=("operational_dev",))
+            with patch("dataset.builder.mining.screening.run_tensor", side_effect=RuntimeError("transient")):
+                failed = screen(manifest, self.root / "screen", "baseline", config, allowed_splits=("operational_dev",))
+            self.assertEqual(failed["failed"], 1)
+        with patches[0], patches[1], patch("dataset.builder.mining.screening.iter_views", return_value=iter((view,))), patches[3]:
+            result = screen(manifest, self.root / "screen", "baseline", config, allowed_splits=("operational_dev",), resume=True)
         self.assertEqual(result, {"images": 1, "completed": 1, "failed": 0, "resumed": 0})
         with patch("dataset.builder.mining.screening.create_session", return_value=object()), patch(
             "dataset.builder.mining.screening.model_contract", return_value=("in", "out", 16, 12, {0: "person"})
@@ -176,6 +181,37 @@ class MiningTests(unittest.TestCase):
         model.write_bytes(b"changed")
         with self.assertRaises(DatasetError):
             screen(manifest, self.root / "screen", "baseline", config, allowed_splits=("operational_dev",), resume=True)
+
+    def test_sealed_screening_requires_opened_protocol_and_explicit_split(self):
+        image = self.root / 'image.jpg'
+        Image.new('RGB', (16, 12), 'white').save(image)
+        model = self.root / 'model.onnx'
+        model.write_bytes(b'model')
+        row = {'source_dataset': 'internal', 'source_id': 'one', 'split': 'sealed_test',
+               'local_path': str(image), 'source_sha256': hashlib.sha256(image.read_bytes()).hexdigest()}
+        manifest = self.root / 'manifest.csv'
+        write_csv(manifest, tuple(row), [row])
+        config = {'test_status': 'sealed', 'models': {'specialized': {
+            'path': str(model), 'sha256': hashlib.sha256(model.read_bytes()).hexdigest()}},
+            'screening': {'confidence_floor': 0.01, 'checkpoint_every': 25}}
+        output = self.root / 'screen'
+        for status, splits in (('sealed', ()), ('sealed', ('sealed_test',)), ('opened', ())):
+            with self.subTest(status=status, splits=splits), \
+                    patch('dataset.builder.mining.screening.create_session') as session, \
+                    patch('dataset.builder.mining.screening.load_image') as load:
+                config['test_status'] = status
+                with self.assertRaisesRegex(DatasetError, 'sealed screening'):
+                    screen(manifest, output, 'specialized', config, allowed_splits=splits)
+                session.assert_not_called()
+                load.assert_not_called()
+                self.assertFalse(output.exists())
+        with patch('dataset.builder.mining.screening.create_session'), \
+                patch('dataset.builder.mining.screening.model_contract', return_value=('in', 'out', 16, 12, {0: 'person'})), \
+                patch('dataset.builder.mining.screening.iter_views', return_value=()):
+            excluded = screen(manifest, self.root / 'dev', 'specialized', config, allowed_splits=('operational_dev',))
+            self.assertEqual(excluded['images'], 0)
+            opened = screen(manifest, output, 'specialized', config, allowed_splits=('sealed_test',))
+            self.assertEqual(opened['completed'], 1)
 
     def test_teacher_screening_excludes_reviewed_and_builds_confidence_first_queue(self):
         model_path = self.root / "teacher.pt"
@@ -224,9 +260,16 @@ class MiningTests(unittest.TestCase):
         }
         module = SimpleNamespace(YOLO=Model)
         with patch.dict(sys.modules, {"ultralytics": module}):
-            result = screen_public_teacher(candidates, existing, reviewed, model_path, self.root / "teacher-screen", config)
-            resumed = screen_public_teacher(candidates, existing, reviewed, model_path, self.root / "teacher-screen", config, resume=True)
+            with patch.object(Model, 'predict', side_effect=RuntimeError('transient')):
+                failed = screen_public_teacher(candidates, existing, reviewed, model_path, self.root / "teacher-screen", config)
+            self.assertEqual(failed['failed'], 1)
+            result = screen_public_teacher(candidates, existing, reviewed, model_path, self.root / "teacher-screen", config, resume=True)
+            with patch.object(Model, 'predict') as predict:
+                resumed = screen_public_teacher(candidates, existing, reviewed, model_path, self.root / "teacher-screen", config, resume=True)
+                predict.assert_not_called()
         self.assertEqual(result["images"], 1)
+        self.assertEqual(result['completed'], 1)
+        self.assertEqual(result['resumed'], 0)
         self.assertEqual(resumed["resumed"], 1)
         embeddings = self.root / "embeddings.npz"
         np.savez(embeddings, identities=np.asarray(["phenocam::strong"]), embeddings=np.asarray([[1.0, 0.0]], np.float32))
@@ -584,6 +627,17 @@ class MiningTests(unittest.TestCase):
         self.assertTrue(import_reviewed(selection, bundle, export, output, 9, "Emanuele", "Emanuele", True, config)["resumed"])
         with self.assertRaises(DatasetError):
             import_reviewed(selection, bundle, export, self.root / "incomplete", 9, "Emanuele", "Emanuele", False, config)
+        for section, field in (('images', 'id'), ('categories', 'id'),
+                               ('annotations', 'image_id'), ('annotations', 'category_id')):
+            for value in (1.9, '1', True, None, []):
+                with self.subTest(section=section, field=field, value=value):
+                    malformed = deepcopy(final)
+                    malformed[section][0][field] = value
+                    with zipfile.ZipFile(export, 'w') as archive:
+                        archive.writestr('annotations/instances_default.json', json.dumps(malformed))
+                    with self.assertRaises(DatasetError):
+                        import_reviewed(selection, bundle, export, self.root / 'invalid', 9, 'A', 'R', True, config)
+                    self.assertFalse((self.root / 'invalid').exists())
 
     def test_reviewed_public_selection_audits_included_reserved_and_rejected(self):
         reviewed = self.root / "reviewed"

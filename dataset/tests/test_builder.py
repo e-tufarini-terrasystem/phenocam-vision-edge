@@ -29,6 +29,7 @@ from dataset.builder.annotation import (
 from dataset.builder.config import DEFAULT_CONFIG_PATH, ConfigurationError, load_config
 from dataset.builder.phenocam.authentication import _DATASET_ENV, _env_credentials, retrieve
 from dataset.builder.embeddings import DUPLICATE_PAIR_FIELDS, combine_manifests
+from dataset.builder.embeddings.pairs import duplicate_pairs
 from dataset.builder.openimages import _rotate_box, index_metadata
 from dataset.builder.phenocam import GRANULE_FIELDS, index_granules, plan_archives
 from dataset.builder.phenocam import FRAME_FIELDS
@@ -49,6 +50,40 @@ class DatasetBuilderTests(unittest.TestCase):
 
     def tearDown(self):
         self.temporary_directory.cleanup()
+
+    def test_calibration_rejects_impossible_pair_quota_before_sampling(self):
+        for count in (0, 1, 2, 20):
+            with self.subTest(images=count), \
+                    patch('dataset.builder.embeddings.pairs._load_downloads', return_value=[{}] * count), \
+                    patch('dataset.builder.embeddings.pairs.np.load') as embeddings:
+                with self.assertRaisesRegex(DatasetError, 'not enough distinct pairs'):
+                    duplicate_pairs(self.root / 'input.csv', self.root / 'embeddings.npz',
+                                    self.root / 'pairs.csv', self.root / 'calibration.csv', self.config)
+                embeddings.assert_not_called()
+                self.assertFalse((self.root / 'pairs.csv').exists())
+                self.assertFalse((self.root / 'calibration.csv').exists())
+
+    def test_calibration_accepts_exactly_the_available_pairs(self):
+        config = copy.deepcopy(self.config)
+        config['deduplication']['calibration_pairs_minimum'] = 1
+        model = config['deduplication']['embedding_model']
+        rows = [{'source_dataset': 'phenocam', 'source_subset': '', 'source_id': str(i),
+                 'local_path': f'{i}.jpg', 'source_sha256': str(i) * 64,
+                 'decoded_sha256': str(i) * 64, 'phash': str(i) * 16} for i in range(2)]
+        embeddings = self.root / 'embeddings.npz'
+        np.savez(embeddings, identities=np.asarray(['phenocam::0', 'phenocam::1']),
+                 embeddings=np.eye(2, dtype=np.float32),
+                 model_identity=np.asarray(f"{model['identifier']}@sha256:{model['sha256']}"))
+        calibration = self.root / 'calibration.csv'
+        with patch('dataset.builder.embeddings.pairs._load_downloads', return_value=rows):
+            result = duplicate_pairs(self.root / 'input.csv', embeddings,
+                                     self.root / 'pairs.csv', calibration, config)
+        self.assertEqual(result['calibration_pairs'], 1)
+        with calibration.open() as source:
+            pairs = list(csv.DictReader(source))
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual({pairs[0]['left_identity'], pairs[0]['right_identity']},
+                         {'phenocam::0', 'phenocam::1'})
 
     def test_workspace_paths_stay_inside_dataset_boundary(self):
         dataset_root = Path(__file__).resolve().parents[1]

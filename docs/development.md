@@ -70,6 +70,10 @@ Run artifacts stay under `output/training/<run>/`. Delivery goes to that run's
 Failed or partial runs are preserved. Running the same workflow can reuse
 completed stages only when their recorded inputs still match; an incomplete
 training or partial export requires inspection or a new run name.
+Preflight also freezes the checksum inventory covering human annotations.
+Training and evaluation reject a changed inventory, including when the image
+manifest is unchanged. Receipts without this annotation identity cannot be
+resumed; preserve the old run and choose a new run name.
 
 Standalone validation does not require training:
 

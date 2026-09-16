@@ -19,7 +19,10 @@ data. Labels and metadata are tracked; image bytes, source pools, CVAT credentia
 and generated workstation YAML stay outside Git. Do not treat this catalog as an
 entirely public image distribution.
 
-`config/dataset.json` fixes the manifest digest, counts and 80-class mapping.
+`config/dataset.json` fixes the manifest and checksum-inventory digests, counts
+and 80-class mapping. The inventory pins human labels as well as image bytes;
+changing labels and recomputing their checksums requires an explicit catalog
+configuration revision.
 `data/metadata/source-images.csv` is the authoritative catalog;
 `data/labels/` holds each reviewed label file once. `provenance.json` maps every
 migrated image and label to its original path and unchanged SHA-256.
@@ -81,6 +84,15 @@ Operational mining uses `config/mining.json` and the configured `specialized`
 model. Paired diagnostic commands use `--baseline-index` and `--candidate-index`;
 these are explicit prediction inputs, not dependencies on older shipped models.
 Existing CVAT task names and local workspace paths preserve annotation history.
+
+Mining screening refuses `sealed_test` rows before reading images unless the
+configuration declares `test_status: opened` and `--split sealed_test` is
+explicitly selected. For development, pass `--split operational_dev` and/or
+`--split operational_mining`. In both ONNX and teacher screening, `--resume`
+reuses completed records and retries failed records after checking their input
+identities. Operational CVAT imports reject non-integer image/category IDs and
+references. SSCD calibration rejects a pool with fewer distinct image pairs
+than the configured minimum before generating review outputs.
 
 Open `viewer.html`, select `data/`, then choose one of the five splits. It stays
 local and does not upload images. Training instructions are in

@@ -55,6 +55,7 @@ class ArtifactTests(unittest.TestCase):
             f'{sha256_file(p)}  {p.relative_to(self.catalog).as_posix()}\n' for p in sorted(files)))
         self.config.write_text(json.dumps({'schema_version': 1,
             'manifest_sha256': sha256_file(manifest), 'splits': {'train': 1, 'val': 1},
+            'checksums_sha256': sha256_file(self.catalog / 'metadata/checksums.sha256'),
             'annotations': 2, 'names': {'0': 'person'}}))
 
     def test_committed_catalog_is_complete_without_private_images(self):
@@ -101,6 +102,24 @@ class ArtifactTests(unittest.TestCase):
         self.freeze()
         with self.assertRaisesRegex(DatasetError, 'separation'):
             verify(self.catalog, self.config)
+
+    def test_label_and_inventory_changes_require_a_new_catalog_identity(self):
+        original = verify(self.catalog, self.config)
+        name = self.rows[0]['label_path']
+        label = self.catalog / name
+        old_digest = sha256_file(label)
+        label.write_text('0 0.5 0.5 0.50 0.50\n')
+        inventory = self.catalog / 'metadata/checksums.sha256'
+        inventory.write_text(inventory.read_text().replace(
+            f'{old_digest}  {name}', f'{sha256_file(label)}  {name}'))
+        for options in ({}, {'images': False}, {'decode': False}):
+            with self.subTest(options=options), self.assertRaisesRegex(DatasetError, 'inventory changed'):
+                verify(self.catalog, self.config, **options)
+        # An explicitly revised catalog has a distinct annotation identity.
+        self.freeze()
+        revised = verify(self.catalog, self.config)
+        self.assertEqual(original['manifest_sha256'], revised['manifest_sha256'])
+        self.assertNotEqual(original['checksums_sha256'], revised['checksums_sha256'])
 
     def test_ultralytics_split_caches_do_not_change_catalog_verification(self):
         for split in ('train', 'val'):

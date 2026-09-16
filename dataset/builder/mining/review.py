@@ -88,12 +88,16 @@ def import_reviewed(selection_path, bundle_dir, export_path, output_dir, task_id
     final = _coco(export_path)
     initial = json.loads((bundle_dir / "instances_default.json").read_text(encoding="utf-8"))
     category_rows = final.get("categories", [])
-    categories = {int(row["id"]): row["name"] for row in category_rows}
+    image_rows = final.get("images", [])
+    # Never coerce references: fractional, string and boolean IDs can alias integers.
+    if any(type(row.get("id")) is not int for row in (*category_rows, *image_rows)):
+        raise DatasetError("CVAT image and category IDs must be integers")
+    categories = {row["id"]: row["name"] for row in category_rows}
     expected = set(config["classes"]) | {"ambiguous"}
     if len(categories) != len(category_rows) or set(categories.values()) != expected:
         raise DatasetError("CVAT export categories do not match the v3 contract")
-    images = {int(row["id"]): row for row in final.get("images", [])}
-    if len(images) != len(final.get("images", [])) or {Path(row["file_name"]).name for row in images.values()} != set(by_name):
+    images = {row["id"]: row for row in image_rows}
+    if len(images) != len(image_rows) or len(images) != len(by_name) or {Path(row["file_name"]).name for row in images.values()} != set(by_name):
         raise DatasetError("CVAT export images do not match the bundle")
 
     ambiguous = set()
@@ -101,10 +105,10 @@ def import_reviewed(selection_path, bundle_dir, export_path, output_dir, task_id
     seen = set()
     for annotation in final.get("annotations", []):
         try:
-            image_id, category_id = int(annotation["image_id"]), int(annotation["category_id"])
+            image_id, category_id = annotation["image_id"], annotation["category_id"]
         except (KeyError, TypeError, ValueError) as error:
             raise DatasetError("CVAT export contains a malformed annotation") from error
-        if image_id not in images or category_id not in categories:
+        if type(image_id) is not int or type(category_id) is not int or image_id not in images or category_id not in categories:
             raise DatasetError("CVAT annotation references an unknown image or category")
         if categories[category_id] == "ambiguous":
             ambiguous.add(image_id)

@@ -22,6 +22,10 @@ def _pairs_for_equal(rows, field):
 
 def duplicate_pairs(download_manifest, embeddings_path, output_pairs, calibration_path, config):
     rows = _load_downloads(download_manifest)
+    minimum = int(config["deduplication"]["calibration_pairs_minimum"])
+    # Distinct unordered pairs are finite; reject impossible quotas before sampling.
+    if len(rows) * (len(rows) - 1) // 2 < minimum:
+        raise DatasetError("not enough distinct pairs for SSCD calibration")
     with np.load(embeddings_path, allow_pickle=False) as archive:
         identities = archive["identities"].astype(str)
         embeddings = archive["embeddings"].astype(np.float32)
@@ -113,7 +117,6 @@ def duplicate_pairs(download_manifest, embeddings_path, output_pairs, calibratio
                     "note": "",
                 }
             )
-    minimum = int(config["deduplication"]["calibration_pairs_minimum"])
     top_heap = []
     top_limit = max(minimum, 200)
     top_target = min(minimum, max(len(calibration), minimum // 2))
