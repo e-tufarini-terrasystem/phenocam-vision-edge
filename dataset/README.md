@@ -16,7 +16,7 @@ labels preserved. There is no dependency on materializing older dataset versions
 
 Total: 2,672 images and 13,467 annotations. Images include private operational
 data. Labels and metadata are tracked; image bytes, source pools, CVAT credentials
-and generated workstation YAML remain local. Do not treat this catalog as an
+and generated workstation YAML stay outside Git. Do not treat this catalog as an
 entirely public image distribution.
 
 `config/dataset.json` fixes the manifest digest, counts and 80-class mapping.
@@ -35,6 +35,22 @@ The approved local pool stores each compiled JPEG as `<sha256>.jpg`, including
 frozen derived crops. Preserve this pool or restore it from an authorized backup.
 The acquisition tools can download public originals and prepare review tasks;
 they cannot recreate human decisions or provide private images on a fresh clone.
+
+The approved pool is hosted in the private Hugging Face dataset
+[`etufarini-terrasystem/phenocam`](https://huggingface.co/datasets/etufarini-terrasystem/phenocam).
+Downloading requires a work account with read access. On a fresh workstation,
+authenticate with `hf auth login`, then download the pool using the separately
+installed Hugging Face CLI:
+
+```sh
+hf download etufarini-terrasystem/phenocam --repo-type dataset \
+  --revision main --include 'images/*.jpg' \
+  --local-dir dataset/workspace/sources/approved
+```
+
+For a frozen remote snapshot, replace `main` with its full Hugging Face commit
+SHA. In either case, the artifact commands below validate the downloaded bytes
+against the catalog pinned in this repository.
 
 From the repository root:
 
