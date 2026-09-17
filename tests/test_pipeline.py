@@ -63,6 +63,10 @@ class InferenceTests(unittest.TestCase):
             "configuration": patch(
                 "phenocam.inference.pipeline.enabled_class_names", return_value=("person", "car")
             ),
+            "identity": patch(
+                "phenocam.inference.pipeline.model_identity",
+                return_value=("yolo26n-phenocam", "0.1.6"),
+            ),
             "session": patch("phenocam.inference.pipeline.create_session", return_value=self.session),
             "contract": patch("phenocam.inference.pipeline.model_contract", return_value=self.contract),
             "class_ids": patch("phenocam.inference.pipeline.model_class_ids", return_value=(0, 2)),
@@ -123,6 +127,7 @@ class InferenceTests(unittest.TestCase):
             self.paths[2],
             self.paths[3],
         )
+        mocks["identity"].assert_called_once_with(self.paths[0])
         mocks["metadata"].assert_called_once_with(
             self.paths[4],
             (self.enabled_detection,),
@@ -130,6 +135,8 @@ class InferenceTests(unittest.TestCase):
             self.contract[4],
             self.paths[2],
             self.paths[3],
+            model_id="yolo26n-phenocam",
+            model_version="0.1.6",
         )
         mocks["delete"].assert_not_called()
 
@@ -160,18 +167,40 @@ class InferenceTests(unittest.TestCase):
                     privacy,
                 )
                 mocks["metadata"].assert_not_called()
+                mocks["identity"].assert_not_called()
                 mocks["delete"].assert_not_called()
 
     def test_metadata_runs_once_after_outputs(self):
         events = []
         mocks, patchers = self.boundaries()
         mocks["output"].side_effect = lambda *args: events.append("output")
-        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
+        mocks["metadata"].side_effect = lambda *args, **kwargs: events.append("metadata")
         try:
             process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertEqual(events, ["output", "metadata"])
+
+    def test_invalid_model_identity_prevents_inference_and_all_mutations(self):
+        mocks, patchers = self.boundaries()
+        mocks["identity"].side_effect = InferenceError()
+        try:
+            with self.assertRaises(InferenceError):
+                process_image(*self.paths, True, self.input_identity, self.metadata_identity)
+        finally:
+            self.stop_boundaries(patchers)
+        for name in ("session", "load", "runtime", "output", "metadata", "delete"):
+            mocks[name].assert_not_called()
+
+    def test_selected_model_identity_reaches_metadata(self):
+        mocks, patchers = self.boundaries()
+        mocks["identity"].return_value = ("different-model", "2.3.4")
+        try:
+            process_image(*self.paths)
+        finally:
+            self.stop_boundaries(patchers)
+        self.assertEqual(mocks["metadata"].call_args.kwargs,
+                         {"model_id": "different-model", "model_version": "2.3.4"})
 
     def test_enabled_detection_deletes_without_writing_products(self):
         for metadata in (None, self.paths[4]):
@@ -449,7 +478,8 @@ class InferenceTests(unittest.TestCase):
                 mocks["output"].assert_not_called()
                 mocks["delete"].assert_not_called()
                 mocks["metadata"].assert_called_once_with(
-                    self.paths[4], detections, ("person", "car"), self.contract[4], None, None
+                    self.paths[4], detections, ("person", "car"), self.contract[4], None, None,
+                    model_id="yolo26n-phenocam", model_version="0.1.6",
                 )
 
     def test_real_files_are_untouched_without_enabled_detections(self):

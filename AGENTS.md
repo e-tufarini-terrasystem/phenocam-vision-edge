@@ -143,6 +143,20 @@ After editing, verify whether the change reduced or increased conceptual complex
   or require Git at runtime.
 - Keep software and model versions independent. A software release alone does
   not justify changing `model_version` or the model artifacts.
+- Keep the bundled model identity in `models/yolo26n-phenocam.json`:
+  `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6` for the
+  historical v6 artifact. In this experimental model series, revision vN uses
+  `0.1.N`; this is a project convention, not the software release number or
+  the Ultralytics exporter version. Change the series only by explicit decision.
+- Keep the stable model filenames independent of the revision. Record a new
+  version and matching hashes for a new model artifact; never assign the same
+  model identity/version to different ONNX bytes. Preserve historical provenance
+  and acceptance status. This identity correction does not change model bytes.
+- Detection metadata must obtain model identity from the selected ONNX file's
+  sibling JSON receipt, after validating its fields and `onnx_sha256` against
+  the selected file. Do not duplicate identity constants in runtime code or
+  infer versions from filenames. An absent receipt yields `unknown`; an invalid
+  or mismatched receipt with `--meta` must fail before output writes or deletion.
 - Update current installation commands, metadata examples, and release-related
   test expectations together. Preserve historical release references.
 - For commits declaring a version, the declaration, packaging argument, archive
@@ -151,8 +165,10 @@ After editing, verify whether the change reduced or increased conceptual complex
 - Package the exact commit selected for release using `scripts/package.py`;
   never bypass its version check or execute source code to read its version.
 - Before publication, require passing CI for that commit, verify the archive
-  and checksum, and check that its code writes the intended `software_version`
-  to a temporary `.meta` file.
+  and checksum, and check that its code writes the intended `software_version`,
+  `model_id`, and `model_version` to a temporary `.meta` file. Verify the packaged
+  model bytes against the receipt; a model version update alone does not prove
+  a quality improvement or authorize promotion out of experimental status.
 - Publish corrections as a new patch release. Do not move existing release tags
   or replace published assets. Preserve experimental/prerelease status unless
   promotion is explicitly authorized and supported by validation.

@@ -1,4 +1,6 @@
 {
+  "model_id": "yolo26n-phenocam",
+  "model_version": "0.1.6",
   "display_name": "YOLO26n specializzato per PhenoCam",
   "pt": "models/yolo26n-phenocam.pt",
   "pt_sha256": "76ca4a80abd559c9d5df378052ad31480bf42f8af301372733c2b6ddb602fed0",

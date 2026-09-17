@@ -196,9 +196,9 @@ order:
 [detection]
 detected=true|false
 software_name=phenocam-detection
-software_version=0.2.2
-model_id=yolo26n
-model_version=0.1.0
+software_version=0.2.3
+model_id=yolo26n-phenocam
+model_version=0.1.6
 annotated_image=<CLI path of image produced this execution, or empty>
 privacy_image=<CLI path of image produced this execution, or empty>
 classes=<comma-separated detected classes or empty>
@@ -213,6 +213,23 @@ The packager checks it against the requested archive version using the selected
 commit, without executing that commit's code. Historical commits without this
 declaration remain packageable. `model_version` is independent of the software
 version. Previously distributed archives are not changed by this correction.
+
+With `--meta`, `model_id` and `model_version` come from the selected ONNX file's
+sibling `.json` receipt (the same filename with its extension replaced).
+The runtime validates the identity and checks `onnx_sha256` against the selected
+model before inference, image writes, or conditional deletion. It never uses
+the receipt's path fields to select a model. The receipt is limited to 64 KiB;
+`model_id` is 1–64 ASCII letters, digits, dots, underscores or hyphens, beginning
+with a letter or digit. `model_version` uses `MAJOR.MINOR.PATCH`, without leading
+zeros, within 32 characters. The digest is 64 lowercase hexadecimal characters.
+An absent receipt yields `model_id=unknown` and `model_version=unknown`.
+A present but invalid or mismatched receipt fails with `error: inference failed`
+and status `1`. Without `--meta`, the receipt is not read.
+
+The bundled model's historical revision v6 is version `0.1.6` in the project's
+experimental `0.1.N` model series. Its stable filename remains
+`yolo26n-phenocam.onnx`. This corrects identity only: the weights, ONNX bytes,
+historical provenance and experimental acceptance status are unchanged.
 
 With no enabled final detection, metadata contains `detected=false`,
 `total_count=0`, and empty `annotated_image` and `privacy_image` values, even

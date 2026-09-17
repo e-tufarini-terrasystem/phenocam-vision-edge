@@ -38,6 +38,8 @@ class MetadataTests(unittest.TestCase):
             self.model_names,
             annotated,
             privacy,
+            model_id="yolo26n-phenocam",
+            model_version="0.1.6",
         )
 
     def test_multiple_classes_use_canonical_order_and_selected_counts(self):
@@ -58,6 +60,8 @@ class MetadataTests(unittest.TestCase):
             model_names,
             Path("relative annotated.jpg"),
             Path("relative privacy.jpg"),
+            model_id="yolo26n-phenocam",
+            model_version="0.1.6",
         )
 
         self.assertEqual(
@@ -67,8 +71,8 @@ class MetadataTests(unittest.TestCase):
             "detected=true\n"
             "software_name=phenocam-detection\n"
             f"software_version={__version__}\n"
-            "model_id=yolo26n\n"
-            "model_version=0.1.0\n"
+            "model_id=yolo26n-phenocam\n"
+            "model_version=0.1.6\n"
             "annotated_image=relative annotated.jpg\n"
             "privacy_image=relative privacy.jpg\n"
             "classes=person,car,traffic light\n"
@@ -87,8 +91,8 @@ class MetadataTests(unittest.TestCase):
             "detected=false\n"
             "software_name=phenocam-detection\n"
             f"software_version={__version__}\n"
-            "model_id=yolo26n\n"
-            "model_version=0.1.0\n"
+            "model_id=yolo26n-phenocam\n"
+            "model_version=0.1.6\n"
             "annotated_image=\n"
             "privacy_image=\n"
             "classes=\n"

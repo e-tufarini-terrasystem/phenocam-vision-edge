@@ -14,7 +14,7 @@ from phenocam.source import delete_source, validate_deletion_identities
 from .detections import deduplicate, normalize_rows
 from .errors import InferenceError
 from .output import write_outputs
-from .runtime import create_session, model_contract, run_tensor
+from .runtime import create_session, model_contract, model_identity, run_tensor
 from .views import iter_views, load_image
 
 
@@ -33,6 +33,9 @@ def process_image(
 
     enabled_names = enabled_class_names()
     try:
+        if metadata_path is not None:
+            # Validate identity before any inference, product write or deletion.
+            model_id, model_version = model_identity(model_path)
         session = create_session(model_path)
         input_name, output_name, width, height, model_names = model_contract(session)
     except (ModelClassesError, InferenceError):
@@ -88,5 +91,7 @@ def process_image(
             model_names,
             annotated_output_path if detected else None,
             privacy_output_path if detected else None,
+            model_id=model_id,
+            model_version=model_version,
         )
     return elapsed
