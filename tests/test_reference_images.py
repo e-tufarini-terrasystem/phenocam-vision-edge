@@ -54,44 +54,38 @@ class ReferenceImageTests(unittest.TestCase):
             self.skipTest(f"reference image is unavailable: {name}")
         model_path = ROOT / "models" / "yolo26n-phenocam.onnx"
         captured = {}
-        real_write_outputs = pipeline.write_outputs
+        real_deduplicate = pipeline.deduplicate
 
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / name
 
-            def capturing_write_outputs(
-                image,
-                detections,
-                enabled_ids,
-                model_names,
-                annotated_destination,
-                privacy_destination,
-            ):
-                captured["detections"] = detections
+            def capturing_deduplicate(detections, model_names):
+                # Observe the final result even when no image should be written.
+                final = real_deduplicate(detections, model_names)
+                captured["detections"] = final
                 captured["model_names"] = model_names
-                real_write_outputs(
-                    image,
-                    detections,
-                    enabled_ids,
-                    model_names,
-                    annotated_destination,
-                    privacy_destination,
-                )
+                return final
 
             with patch(
-                "phenocam.inference.pipeline.write_outputs",
-                side_effect=capturing_write_outputs,
+                "phenocam.inference.pipeline.deduplicate",
+                side_effect=capturing_deduplicate,
             ):
                 duration = pipeline.process_image(
                     model_path, source_path, output_path, None
                 )
 
             self.assertIsInstance(duration, float)
-            self.assertTrue(output_path.is_file())
-            self.assertGreater(output_path.stat().st_size, 0)
-            with Image.open(output_path) as output:
-                self.assertEqual(output.format, "JPEG")
-                self.assertEqual(output.size, (4608, 2592))
+            enabled_ids = pipeline.model_class_ids(
+                captured["model_names"], pipeline.enabled_class_names()
+            )
+            detected = any(
+                detection.class_id in enabled_ids for detection in captured["detections"]
+            )
+            self.assertEqual(output_path.exists(), detected)
+            if detected:
+                with Image.open(output_path) as output:
+                    self.assertEqual(output.format, "JPEG")
+                    self.assertEqual(output.size, (4608, 2592))
 
         detections = captured["detections"]
         model_names = captured["model_names"]

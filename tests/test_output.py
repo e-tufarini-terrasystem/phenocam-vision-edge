@@ -4,6 +4,8 @@ Synthetic images and narrow Pillow mocks exercise the final output boundary
 without ONNX. Later cases also cover exact privacy geometry and filtering.
 """
 
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -194,20 +196,76 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(annotated_image.getpixel((20, 20)), (255, 70, 40))
             self.assertEqual(privacy_image.getpixel((20, 20)), (10, 20, 30))
 
-    def test_post_save_verification_failures_have_fixed_empty_error(self):
+    def test_failed_writes_preserve_existing_file_and_remove_temporaries(self):
         destination = self.root / "annotated.png"
-        checks = (
-            ("missing", patch.object(Path, "is_file", return_value=False)),
-            (
-                "empty",
-                patch.object(Path, "stat", return_value=SimpleNamespace(st_size=0)),
-            ),
+
+        def partial_save(image, stream, **kwargs):
+            stream.write(b"incomplete image")
+            raise OSError("private encoding failure")
+
+        failures = (
+            patch("PIL.Image.Image.save", side_effect=partial_save, autospec=True),
+            patch("PIL.Image.Image.save", return_value=None),
+            patch("phenocam.inference.output.os.fsync", side_effect=OSError("private fsync")),
+            patch("phenocam.inference.output.os.fchmod", side_effect=OSError("private mode")),
+            patch("phenocam.inference.output.os.replace", side_effect=OSError("private replace")),
         )
-        for name, check in checks:
-            with self.subTest(name=name), check:
-                with self.assertRaises(OutputWriteError) as raised:
-                    write_outputs(self.source, (), (), self.names, destination, None)
+        for index, failure in enumerate(failures):
+            with self.subTest(failure=index):
+                destination.write_bytes(b"original")
+                with failure, self.assertRaises(OutputWriteError) as raised:
+                    write_outputs(
+                        self.source, self.detections, (0,), self.names, destination, None
+                    )
                 self.assertEqual(str(raised.exception), "")
+                self.assertEqual(destination.read_bytes(), b"original")
+                self.assertEqual(set(self.root.iterdir()), {destination})
+
+    def test_replace_is_called_only_after_complete_image_is_written(self):
+        destination = self.root / "annotated.png"
+        destination.write_bytes(b"original")
+        original_replace = os.replace
+
+        def check_then_replace(temporary, target):
+            self.assertEqual(destination.read_bytes(), b"original")
+            self.assertEqual(temporary.parent, destination.parent.resolve())
+            with Image.open(temporary) as image:
+                self.assertEqual(image.getpixel((20, 20)), (255, 70, 40))
+            original_replace(temporary, target)
+
+        with patch("phenocam.inference.output.os.replace", side_effect=check_then_replace):
+            write_outputs(self.source, self.detections, (0,), self.names, destination, None)
+        self.assertEqual(set(self.root.iterdir()), {destination})
+
+    def test_replacement_preserves_existing_permission_bits(self):
+        destination = self.root / "annotated.png"
+        destination.write_bytes(b"original")
+        destination.chmod(0o640)
+        write_outputs(self.source, self.detections, (0,), self.names, destination, None)
+        self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o640)
+
+    def test_requested_extension_controls_format_and_temporary_files_are_removed(self):
+        for suffix, expected in ((".JPG", "JPEG"), (".png", "PNG"), (".webp", "WEBP"),
+                                 (".bmp", "BMP"), (".tiff", "TIFF")):
+            with self.subTest(suffix=suffix):
+                destination = self.root / f"image{suffix}"
+                write_outputs(self.source, self.detections, (0,), self.names, destination, None)
+                with Image.open(destination) as image:
+                    self.assertEqual(image.format, expected)
+                    self.assertEqual(image.size, self.source.size)
+                destination.unlink()
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_output_symlink_to_unrelated_file_keeps_link_and_replaces_target(self):
+        target = self.root / "target"
+        target.write_bytes(b"original")
+        destination = self.root / "annotated.png"
+        destination.symlink_to(target)
+        write_outputs(self.source, self.detections, (0,), self.names, destination, None)
+        self.assertTrue(destination.is_symlink())
+        with Image.open(target) as image:
+            self.assertEqual(image.format, "PNG")
+            self.assertEqual(image.getpixel((20, 20)), (255, 70, 40))
 
     def test_privacy_failure_keeps_completed_annotated_file(self):
         annotated = self.root / "annotated.png"

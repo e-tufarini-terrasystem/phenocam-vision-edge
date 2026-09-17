@@ -1,14 +1,15 @@
 """Own the complete single-image, sixteen-view inference transaction.
 
 The original normalized RGB source supplies every view and requested final
-image product. All sixteen views precede global suppression, output persistence,
-optional metadata commit, and optional source deletion in that strict order.
+image product. All sixteen views precede global suppression. Enabled final
+detections trigger either input/metadata deletion or image persistence followed
+by metadata commit. Deletion takes precedence and never writes products.
 The returned duration includes only ONNX execution time.
 """
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
 from phenocam.metadata import update_detection_metadata
-from phenocam.source import SourceDeleteError, delete_source
+from phenocam.source import MetadataDeleteError, SourceDeleteError, delete_source
 
 from .detections import deduplicate, normalize_rows
 from .errors import InferenceError
@@ -25,6 +26,7 @@ def process_image(
     metadata_path=None,
     delete_input_on_detection=False,
     input_identity=None,
+    metadata_identity=None,
 ) -> float:
     if delete_input_on_detection and (
         type(input_identity) is not tuple
@@ -32,6 +34,12 @@ def process_image(
         or any(type(value) is not int for value in input_identity)
     ):
         raise SourceDeleteError()
+    if delete_input_on_detection and metadata_path is not None and (
+        type(metadata_identity) is not tuple
+        or len(metadata_identity) != 2
+        or any(type(value) is not int for value in metadata_identity)
+    ):
+        raise MetadataDeleteError()
 
     enabled_names = enabled_class_names()
     try:
@@ -67,27 +75,30 @@ def process_image(
     except Exception:
         raise InferenceError() from None
 
-    write_outputs(
-        source_image,
-        detections,
-        enabled_ids,
-        model_names,
-        annotated_output_path,
-        privacy_output_path,
+    detected = any(
+        detection.class_id in enabled_ids for detection in detections
     )
+    if delete_input_on_detection and detected:
+        # No image or metadata write may precede or follow this deletion branch.
+        delete_source(input_path, input_identity, metadata_path, metadata_identity)
+        return elapsed
+    if detected:
+        write_outputs(
+            source_image,
+            detections,
+            enabled_ids,
+            model_names,
+            annotated_output_path,
+            privacy_output_path,
+        )
     if metadata_path is not None:
-        # The same final collection and selection now commit both result forms.
+        # Paths describe products of this execution, never stale existing files.
         update_detection_metadata(
             metadata_path,
             detections,
             enabled_names,
             model_names,
-            annotated_output_path,
-            privacy_output_path,
+            annotated_output_path if detected else None,
+            privacy_output_path if detected else None,
         )
-    if delete_input_on_detection and any(
-        detection.class_id in enabled_ids for detection in detections
-    ):
-        # Every requested durable product has committed before source mutation.
-        delete_source(input_path, input_identity)
     return elapsed

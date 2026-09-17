@@ -3,13 +3,16 @@ Define and validate the command-line boundary for the application.
 
 CLI values are untrusted input. Downstream code may rely on the returned paths
 identifying valid input/model files, an optional validated metadata file, at
-least one requested final action, existing output parents, and pairwise-distinct
-file identities. The result also carries deletion intent and the validated,
-immutable input identity. Metadata-bound output paths cannot inject lines.
+least one image, metadata, or deletion action and existing output parents. Outputs are
+distinct, but one may name the input directly. Deletion takes precedence over
+image writes. The result carries deletion intent and validated file identities
+for input and optional metadata. Metadata-bound output paths cannot inject lines.
 """
 
 from argparse import ArgumentParser
 from dataclasses import dataclass
+import os
+import stat
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -23,6 +26,7 @@ class Arguments:
     meta: Optional[Path]
     delete_input_on_detection: bool
     input_identity: tuple[int, int]
+    metadata_identity: Optional[tuple[int, int]] = None
 
 
 class ArgumentValidationError(ValueError):
@@ -31,7 +35,7 @@ class ArgumentValidationError(ValueError):
 
 def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
     parser = ArgumentParser(
-        description="Create selected annotated/privacy products from one local image."
+        description="Detect objects in one local image and write images or metadata, or delete the input."
     )
     parser.add_argument("--input", required=True, type=Path, help="local input image")
     parser.add_argument("--annotated-output", type=Path, help="annotated output image")
@@ -41,7 +45,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> Arguments:
     parser.add_argument(
         "--delete-input-on-detection",
         action="store_true",
-        help="delete input when an enabled class is detected",
+        help="delete input and supplied metadata instead of writing outputs on detection",
     )
     values = parser.parse_args(argv)
     return validate_arguments(
@@ -91,9 +95,12 @@ def validate_arguments(
     if (
         annotated_output_path is None
         and privacy_output_path is None
+        and metadata_path is None
         and not delete_input_on_detection
     ):
-        raise ArgumentValidationError("error: at least one output path is required")
+        raise ArgumentValidationError(
+            "error: at least one output path, metadata path, or input deletion is required"
+        )
 
     outputs = (annotated_output_path, privacy_output_path)
     for output_path in outputs:
@@ -107,16 +114,29 @@ def validate_arguments(
     for output_path in outputs:
         if output_path is None:
             continue
-        # Resolution catches equivalent spellings and symlinks before output exists.
+        # Only a direct source path may be replaced; distinct link aliases remain
+        # invalid because atomic replacement changes one directory entry only.
         if _same_file(input_path, output_path):
-            raise ArgumentValidationError("error: input and output paths must differ")
+            if (
+                input_path.is_symlink()
+                or output_path.is_symlink()
+                or os.path.abspath(input_path) != os.path.abspath(output_path)
+            ):
+                raise ArgumentValidationError("error: input and output paths must differ")
 
     if annotated_output_path is not None and privacy_output_path is not None:
         if _same_file(annotated_output_path, privacy_output_path):
             raise ArgumentValidationError("error: output paths must differ")
 
+    metadata_identity = None
     if metadata_path is not None:
-        if metadata_path.is_symlink() or not metadata_path.is_file():
+        try:
+            metadata_stat = metadata_path.stat(follow_symlinks=False)
+        except OSError:
+            raise ArgumentValidationError(
+                "error: metadata file does not exist or is not a file"
+            ) from None
+        if not stat.S_ISREG(metadata_stat.st_mode):
             raise ArgumentValidationError(
                 "error: metadata file does not exist or is not a file"
             )
@@ -137,6 +157,8 @@ def validate_arguments(
             raise ArgumentValidationError(
                 "error: metadata path must differ from input, model, and output paths"
             )
+        if delete_input_on_detection:
+            metadata_identity = (metadata_stat.st_dev, metadata_stat.st_ino)
 
     return Arguments(
         input=input_path,
@@ -146,4 +168,5 @@ def validate_arguments(
         meta=metadata_path,
         delete_input_on_detection=delete_input_on_detection,
         input_identity=(input_stat.st_dev, input_stat.st_ino),
+        metadata_identity=metadata_identity,
     )

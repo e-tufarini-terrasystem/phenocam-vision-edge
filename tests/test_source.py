@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from phenocam.source import SourceDeleteError, delete_source
+from phenocam.source import MetadataDeleteError, SourceDeleteError, delete_source
 
 _DEFAULT_IDENTITY = object()
 
@@ -116,6 +116,84 @@ class SourceTests(unittest.TestCase):
                 delete_source(self.source, self.identity)
 
         self.assertEqual(self.source.read_bytes(), b"image")
+
+    def test_metadata_is_deleted_only_after_input(self):
+        metadata = self.root / "source.meta"
+        metadata.write_bytes(b"metadata")
+        current = metadata.stat()
+        events = []
+        original_unlink = Path.unlink
+
+        def unlink(path):
+            events.append(path)
+            original_unlink(path)
+
+        with patch.object(Path, "unlink", unlink):
+            delete_source(self.source, self.identity, metadata, (current.st_dev, current.st_ino))
+        self.assertEqual(events, [self.source, metadata])
+        self.assertFalse(self.source.exists())
+        self.assertFalse(metadata.exists())
+
+    def test_input_failure_preserves_metadata(self):
+        metadata = self.root / "source.meta"
+        metadata.write_bytes(b"metadata")
+        current = metadata.stat()
+        with patch.object(Path, "unlink", side_effect=OSError("private")) as unlink:
+            with self.assertRaises(SourceDeleteError) as error:
+                delete_source(self.source, self.identity, metadata, (current.st_dev, current.st_ino))
+        self.assertNotIsInstance(error.exception, MetadataDeleteError)
+        unlink.assert_called_once()
+        self.assertEqual(metadata.read_bytes(), b"metadata")
+        self.assertEqual(self.source.read_bytes(), b"image")
+
+    def test_metadata_failure_keeps_metadata_after_input_deletion(self):
+        metadata = self.root / "source.meta"
+        metadata.write_bytes(b"metadata")
+        current = metadata.stat()
+        original_unlink = Path.unlink
+
+        def unlink(path):
+            if path == metadata:
+                raise OSError("private metadata path")
+            original_unlink(path)
+
+        with patch.object(Path, "unlink", unlink), self.assertRaises(MetadataDeleteError) as error:
+            delete_source(self.source, self.identity, metadata, (current.st_dev, current.st_ino))
+        self.assertEqual(str(error.exception), "")
+        self.assertFalse(self.source.exists())
+        self.assertEqual(metadata.read_bytes(), b"metadata")
+
+    def test_replaced_metadata_is_never_deleted(self):
+        metadata = self.root / "source.meta"
+        target = self.root / "replacement.meta"
+        target.write_bytes(b"replacement")
+        for replacement in ("regular", "symlink"):
+            with self.subTest(replacement=replacement):
+                self.source.write_bytes(b"image")
+                source_stat = self.source.stat()
+                metadata.write_bytes(b"metadata")
+                current = metadata.stat()
+                with metadata.open("rb"):
+                    metadata.unlink()
+                    if replacement == "regular":
+                        metadata.write_bytes(b"replacement")
+                    else:
+                        metadata.symlink_to(target)
+                    with self.assertRaises(MetadataDeleteError):
+                        delete_source(
+                            self.source, (source_stat.st_dev, source_stat.st_ino),
+                            metadata, (current.st_dev, current.st_ino),
+                        )
+                self.assertFalse(self.source.exists())
+                self.assertEqual(metadata.read_bytes(), b"replacement")
+                self.assertEqual(target.read_bytes(), b"replacement")
+                metadata.unlink()
+
+    def test_invalid_metadata_identity_is_rejected_before_any_deletion(self):
+        for identity in (None, (1,), [1, 2], (True, 2)):
+            with self.subTest(identity=identity), self.assertRaises(MetadataDeleteError):
+                delete_source(self.source, self.identity, self.root / "source.meta", identity)
+            self.assertEqual(self.source.read_bytes(), b"image")
 
 
 if __name__ == "__main__":

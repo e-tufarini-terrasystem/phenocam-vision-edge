@@ -14,8 +14,8 @@ installation path. Detailed operation and development guidance live in docs/.
 Phenocam Vision Edge detects people and vehicles in local PhenoCam images with
 the included YOLO26n ONNX model. It runs directly on a Raspberry Pi without
 sending images to an external service and produces annotated images,
-privacy-blurred images, or both. It can also delete an input after an enabled
-class is detected.
+privacy-blurred images, or both. It can instead delete the input and explicitly
+supplied metadata when an enabled class is detected.
 
 ## Why Phenocam Vision Edge?
 
@@ -120,10 +120,14 @@ conditional input deletion.
 | Annotated image | `--annotated-output` | Draws enabled detections and labels. |
 | Privacy image | `--privacy-output` | Blurs expanded regions without labels. |
 | Detection metadata | `--meta` | Atomically updates an existing `.meta` file. |
-| Conditional deletion | `--delete-input-on-detection` | Removes the input only after an enabled final detection and all requested products succeed. |
+| Conditional deletion | `--delete-input-on-detection` | On an enabled final detection, deletes the input then the supplied `--meta`, without generating images or updating metadata. |
 
-Deletion is disabled by default. At least one image output or conditional
-deletion is required; metadata alone is not a final action.
+Deletion is disabled by default. At least one image output, metadata update,
+or conditional deletion is required. `--meta` can be used alone with `--input`
+and `--model` to update detection results without writing images.
+When deletion is triggered, existing outputs remain untouched. Without `--meta`,
+no metadata file is deleted. If metadata deletion fails after input deletion,
+the input cannot be restored and the command reports an error.
 
 ## Releases and main
 
