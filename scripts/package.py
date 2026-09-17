@@ -154,6 +154,13 @@ def build(version, reference, output_directory):
         raise PackageError("release asset already exists")
 
     contents = source_files(reference)
+    package = contents.get("phenocam/__init__.py", b"")
+    # Require one literal declaration in new commits; never execute source code.
+    # Historical commits without a version declaration remain packageable.
+    if b"__version__" in package:
+        versions = re.findall(rb'^__version__ = "([^"\r\n]+)"\r?$', package, re.MULTILINE)
+        if package.count(b"__version__") != 1 or versions != [version.encode("ascii")]:
+            raise PackageError("package version must match the requested release version")
     temporary_paths = []
     completed_paths = []
     try:

@@ -124,8 +124,8 @@ order:
 [detection]
 detected=true|false
 software_name=phenocam-detection
-software_version=0.1.0
-model_id=yolo26n-phenocam
+software_version=0.2.1
+model_id=yolo26n
 model_version=0.1.0
 annotated_image=<CLI path or empty>
 privacy_image=<CLI path or empty>
@@ -133,6 +133,14 @@ classes=<comma-separated detected classes or empty>
 <class-key>_count=<positive integer, detected classes only>
 total_count=<sum, or 0>
 ```
+
+`software_version` comes from `phenocam.__version__`, defined once in
+`phenocam/__init__.py`. Keep its declaration in the literal form
+`__version__ = "MAJOR.MINOR.PATCH"` and update it before creating a release.
+The packager checks it against the requested archive version using the selected
+commit, without executing that commit's code. Historical commits without this
+declaration remain packageable. `model_version` is independent of the software
+version. Previously distributed archives are not changed by this correction.
 
 Output paths retain their CLI spelling. A metadata failure keeps completed
 images and the previous metadata file available, returns status `1`, and
