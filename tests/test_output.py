@@ -237,6 +237,25 @@ class OutputTests(unittest.TestCase):
             write_outputs(self.source, self.detections, (0,), self.names, destination, None)
         self.assertEqual(set(self.root.iterdir()), {destination})
 
+    def test_truncated_jpeg_preserves_original_and_removes_temporary(self):
+        destination = self.root / "input.jpg"
+        self.source.save(destination)
+        original = destination.read_bytes()
+
+        def incomplete_save(image, stream, **kwargs):
+            # Keep a readable JPEG header but truncate the encoded pixel data.
+            stream.write(original[:-20])
+
+        with patch("PIL.Image.Image.save", autospec=True, side_effect=incomplete_save):
+            with self.assertRaises(OutputWriteError) as raised:
+                write_outputs(
+                    self.source, self.detections, (0,), self.names, destination, None
+                )
+
+        self.assertEqual(str(raised.exception), "")
+        self.assertEqual(destination.read_bytes(), original)
+        self.assertEqual(set(self.root.iterdir()), {destination})
+
     def test_replacement_preserves_existing_permission_bits(self):
         destination = self.root / "annotated.png"
         destination.write_bytes(b"original")

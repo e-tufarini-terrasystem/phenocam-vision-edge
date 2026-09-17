@@ -9,7 +9,7 @@ The returned duration includes only ONNX execution time.
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
 from phenocam.metadata import update_detection_metadata
-from phenocam.source import MetadataDeleteError, SourceDeleteError, delete_source
+from phenocam.source import delete_source, validate_deletion_identities
 
 from .detections import deduplicate, normalize_rows
 from .errors import InferenceError
@@ -28,18 +28,8 @@ def process_image(
     input_identity=None,
     metadata_identity=None,
 ) -> float:
-    if delete_input_on_detection and (
-        type(input_identity) is not tuple
-        or len(input_identity) != 2
-        or any(type(value) is not int for value in input_identity)
-    ):
-        raise SourceDeleteError()
-    if delete_input_on_detection and metadata_path is not None and (
-        type(metadata_identity) is not tuple
-        or len(metadata_identity) != 2
-        or any(type(value) is not int for value in metadata_identity)
-    ):
-        raise MetadataDeleteError()
+    if delete_input_on_detection:
+        validate_deletion_identities(input_identity, metadata_path, metadata_identity)
 
     enabled_names = enabled_class_names()
     try:
@@ -75,9 +65,7 @@ def process_image(
     except Exception:
         raise InferenceError() from None
 
-    detected = any(
-        detection.class_id in enabled_ids for detection in detections
-    )
+    detected = any(detection.class_id in enabled_ids for detection in detections)
     if delete_input_on_detection and detected:
         # No image or metadata write may precede or follow this deletion branch.
         delete_source(input_path, input_identity, metadata_path, metadata_identity)

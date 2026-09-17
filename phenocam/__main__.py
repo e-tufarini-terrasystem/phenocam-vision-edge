@@ -21,14 +21,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         arguments = parse_arguments(argv)
         inference_seconds = process_image(
-            arguments.model,
-            arguments.input,
-            arguments.annotated_output,
-            arguments.privacy_output,
-            arguments.meta,
-            arguments.delete_input_on_detection,
-            arguments.input_identity,
-            arguments.metadata_identity,
+            model_path=arguments.model,
+            input_path=arguments.input,
+            annotated_output_path=arguments.annotated_output,
+            privacy_output_path=arguments.privacy_output,
+            metadata_path=arguments.meta,
+            delete_input_on_detection=arguments.delete_input_on_detection,
+            input_identity=arguments.input_identity,
+            metadata_identity=arguments.metadata_identity,
         )
     except (ArgumentValidationError, ClassConfigurationError, ModelClassesError) as error:
         print(str(error), file=sys.stderr)

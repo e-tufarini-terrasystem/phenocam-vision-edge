@@ -122,8 +122,10 @@ detection deletes the input, while no detection leaves it untouched. All
 explicit paths are still validated, including output directories.
 
 Each image is encoded to a temporary file in its destination directory,
-verified, then atomically replaces its destination. Encoding, verification,
-or replacement failures preserve that destination's previous contents.
+verified and fully decoded, then atomically replaces its destination. Encoding,
+verification, decoding, or replacement failures preserve that destination's
+previous contents. Full decoding also rejects truncated JPEG pixel data that
+the format verification alone may accept.
 Existing permission bits are retained; new image files have private permissions
 (`0600`). Replacement requires write permission on the destination directory
 and changes the file identity: other hard links retain the old contents.

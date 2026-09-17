@@ -125,6 +125,9 @@ def _save_output(image, output_path):
         # Verify before replacing: a failed encode must leave the original intact.
         with Image.open(temporary_path) as saved:
             saved.verify()
+        # JPEG verify() does not decode pixels; reopen to reject truncated data.
+        with Image.open(temporary_path) as saved:
+            saved.load()
         os.replace(temporary_path, destination)
         temporary_path = None
     finally:

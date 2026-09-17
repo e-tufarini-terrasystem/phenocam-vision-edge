@@ -48,20 +48,20 @@ class RunTests(unittest.TestCase):
         ) as process:
             status, stdout, stderr = self.call_main(["ignored"])
         process.assert_called_once_with(
-            self.arguments.model,
-            self.arguments.input,
-            self.arguments.annotated_output,
-            self.arguments.privacy_output,
-            self.arguments.meta,
-            self.arguments.delete_input_on_detection,
-            self.arguments.input_identity,
-            self.arguments.metadata_identity,
+            model_path=self.arguments.model,
+            input_path=self.arguments.input,
+            annotated_output_path=self.arguments.annotated_output,
+            privacy_output_path=self.arguments.privacy_output,
+            metadata_path=self.arguments.meta,
+            delete_input_on_detection=self.arguments.delete_input_on_detection,
+            input_identity=self.arguments.input_identity,
+            metadata_identity=self.arguments.metadata_identity,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 1.234 s\n", "")
         )
 
-    def test_each_output_combination_is_delegated_once_in_path_order(self):
+    def test_each_output_combination_is_delegated_once(self):
         combinations = (
             (None, None),
             (Path("annotated.jpg"), None),
@@ -84,14 +84,14 @@ class RunTests(unittest.TestCase):
             ), patch("phenocam.__main__.process_image", return_value=0.5) as process:
                 status, stdout, stderr = self.call_main([])
             process.assert_called_once_with(
-                arguments.model,
-                arguments.input,
-                annotated,
-                privacy,
-                arguments.meta,
-                arguments.delete_input_on_detection,
-                arguments.input_identity,
-                arguments.metadata_identity,
+                model_path=arguments.model,
+                input_path=arguments.input,
+                annotated_output_path=annotated,
+                privacy_output_path=privacy,
+                metadata_path=arguments.meta,
+                delete_input_on_detection=arguments.delete_input_on_detection,
+                input_identity=arguments.input_identity,
+                metadata_identity=arguments.metadata_identity,
             )
             self.assertEqual(
                 (status, stdout, stderr), (0, "Execution time: 0.500 s\n", "")
@@ -114,14 +114,14 @@ class RunTests(unittest.TestCase):
             status, stdout, stderr = self.call_main([])
 
         process.assert_called_once_with(
-            arguments.model,
-            arguments.input,
-            None,
-            None,
-            arguments.meta,
-            True,
-            arguments.input_identity,
-            arguments.metadata_identity,
+            model_path=arguments.model,
+            input_path=arguments.input,
+            annotated_output_path=None,
+            privacy_output_path=None,
+            metadata_path=arguments.meta,
+            delete_input_on_detection=True,
+            input_identity=arguments.input_identity,
+            metadata_identity=arguments.metadata_identity,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 0.250 s\n", "")

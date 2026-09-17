@@ -19,12 +19,12 @@ class MetadataDeleteError(SourceDeleteError):
     """Report a metadata deletion failure without exposing private details."""
 
 
-def delete_source(input_path, expected_identity, metadata_path=None, metadata_identity=None):
-    # Explicit order and error types share the same identity/type safety checks.
-    entries = ((input_path, expected_identity, SourceDeleteError),)
+def validate_deletion_identities(input_identity, metadata_path=None, metadata_identity=None):
+    """Reject malformed identities before inference or any filesystem mutation."""
+    identities = ((input_identity, SourceDeleteError),)
     if metadata_path is not None:
-        entries += ((metadata_path, metadata_identity, MetadataDeleteError),)
-    for _, identity, error in entries:
+        identities += ((metadata_identity, MetadataDeleteError),)
+    for identity, error in identities:
         if (
             type(identity) is not tuple
             or len(identity) != 2
@@ -32,6 +32,13 @@ def delete_source(input_path, expected_identity, metadata_path=None, metadata_id
         ):
             raise error()
 
+
+def delete_source(input_path, expected_identity, metadata_path=None, metadata_identity=None):
+    validate_deletion_identities(expected_identity, metadata_path, metadata_identity)
+    # Validate both identities before deleting the input; then check each entry.
+    entries = ((input_path, expected_identity, SourceDeleteError),)
+    if metadata_path is not None:
+        entries += ((metadata_path, metadata_identity, MetadataDeleteError),)
     for path, identity, error in entries:
         try:
             current = path.stat(follow_symlinks=False)
