@@ -66,8 +66,10 @@ with `python3-venv`, and `curl`, `tar`, and `sha256sum`.
 
 Install the operating-system prerequisites separately before installing the
 application. The versioned command below never invokes `sudo`, `apt`, or another
-system package manager. Run it from the directory that should contain the
-installation:
+system package manager. The release downloads are public and require no GitHub
+account or token. Run the command from the parent directory where you want to
+create `phenocam-vision-edge-0.2.0/`; that installation directory must not already
+exist:
 
 ### Versioned installation (v0.2.0)
 
@@ -88,20 +90,6 @@ Success leaves the configured application at
 and `output/`. The archive and checksum remain in the current directory. The
 checksum detects corruption or a mismatched download; it is not a publisher
 signature.
-
-### Private repository access
-
-The URLs above require public access. While the repository is private, use the
-GitHub CLI authenticated with an account that can read it to download the assets:
-
-```sh
-[ ! -e phenocam-vision-edge-0.2.0 ] && \
-gh release download v0.2.0 --repo e-tufarini-terrasystem/phenocam-vision-edge \
-  --pattern 'phenocam-vision-edge-0.2.0.tar.gz*' && \
-sha256sum -c phenocam-vision-edge-0.2.0.tar.gz.sha256 && \
-tar -xzf phenocam-vision-edge-0.2.0.tar.gz && \
-./phenocam-vision-edge-0.2.0/scripts/installer.sh
-```
 
 ## First inference
 
