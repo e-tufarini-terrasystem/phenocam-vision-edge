@@ -196,7 +196,7 @@ order:
 [detection]
 detected=true|false
 software_name=phenocam-detection
-software_version=0.2.1
+software_version=0.2.2
 model_id=yolo26n
 model_version=0.1.0
 annotated_image=<CLI path of image produced this execution, or empty>
