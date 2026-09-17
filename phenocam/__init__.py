@@ -1,3 +1,3 @@
 """Mark the top-level application package without importing runtime domains."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"

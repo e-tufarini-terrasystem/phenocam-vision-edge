@@ -14,8 +14,6 @@ from pathlib import Path
 from phenocam import __version__
 
 SOFTWARE_NAME = "phenocam-detection"
-MODEL_ID = "yolo26n"
-MODEL_VERSION = "0.1.0"
 
 _LINE_ENDING = re.compile(r"\r\n|\r|\n")
 _SECTION_HEADER = re.compile(r"\[([^\[\]]+)\]")
@@ -62,6 +60,8 @@ def _detection_section(
     annotated_output_path,
     privacy_output_path,
     line_ending,
+    model_id,
+    model_version,
 ):
     counts = {name: 0 for name in enabled_names}
     for detection in detections:
@@ -76,8 +76,8 @@ def _detection_section(
         f"detected={'true' if total_count else 'false'}",
         f"software_name={SOFTWARE_NAME}",
         f"software_version={__version__}",
-        f"model_id={MODEL_ID}",
-        f"model_version={MODEL_VERSION}",
+        f"model_id={model_id}",
+        f"model_version={model_version}",
         f"annotated_image={annotated_output_path or ''}",
         f"privacy_image={privacy_output_path or ''}",
         f"classes={','.join(detected_names)}",
@@ -105,8 +105,11 @@ def update_detection_metadata(
     model_names,
     annotated_output_path,
     privacy_output_path,
+    *,
+    model_id,
+    model_version,
 ):
-    """Replace all exact detection sections with one current summary."""
+    """Write final detections and the model identity validated by the runtime."""
     temporary_path = None
     descriptor = None
     committed = False
@@ -128,6 +131,8 @@ def update_detection_metadata(
                 annotated_output_path,
                 privacy_output_path,
                 line_ending,
+                model_id,
+                model_version,
             )
         ).encode("utf-8")
 

@@ -3,7 +3,10 @@
 All runtime objects and clocks are test doubles; no test loads a real model.
 """
 
+import hashlib
+import json
 import os
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +15,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from phenocam.inference.errors import InferenceError
-from phenocam.inference.runtime import _thread_count, create_session, model_contract, run_tensor
+from phenocam.inference.runtime import _thread_count, create_session, model_contract, model_identity, run_tensor
 from phenocam.classes.selection import ModelClassesError
 
 
@@ -32,6 +35,62 @@ def valid_session():
         }
     )
     return session
+
+
+class ModelIdentityTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.model = Path(directory.name) / "renamed.onnx"
+        self.model.write_bytes(b"selected model")
+        self.receipt = self.model.with_suffix(".json")
+        self.identity = {
+            "model_id": "another-model",
+            "model_version": "1.2.3",
+            "onnx_sha256": hashlib.sha256(self.model.read_bytes()).hexdigest(),
+            "onnx": "ignored/path.onnx",
+        }
+
+    def test_identity_comes_from_matching_receipt_not_filename(self):
+        self.receipt.write_text(json.dumps(self.identity))
+        self.assertEqual(model_identity(self.model), ("another-model", "1.2.3"))
+
+    def test_absent_receipt_has_unknown_identity(self):
+        self.assertEqual(model_identity(self.model), ("unknown", "unknown"))
+
+    def test_model_replacement_invalidates_receipt(self):
+        self.receipt.write_text(json.dumps(self.identity))
+        self.model.write_bytes(b"different model")
+        with self.assertRaises(InferenceError) as error:
+            model_identity(self.model)
+        self.assertEqual(str(error.exception), "")
+
+    def test_invalid_receipt_is_rejected(self):
+        invalid = [b"not json", b"\xff", b"[]", b"null", b"{}", b" " * 65537]
+        for key, values in (
+            ("model_id", (None, "", "x\ninjected=true", "../model", "x" * 65)),
+            ("model_version", (None, 6, "v6", "01.1.6", "0.1", "0.1.6\n", "1" * 33)),
+            ("onnx_sha256", (None, "", "0" * 64, "G" * 64)),
+        ):
+            invalid.extend(json.dumps({**self.identity, key: value}).encode() for value in values)
+        for raw in invalid:
+            with self.subTest(raw=raw[:80]):
+                self.receipt.write_bytes(raw)
+                with self.assertRaises(InferenceError):
+                    model_identity(self.model)
+
+    def test_non_file_and_dangling_receipts_are_rejected(self):
+        self.receipt.mkdir()
+        with self.assertRaises(InferenceError):
+            model_identity(self.model)
+        self.receipt.rmdir()
+        self.receipt.symlink_to(self.receipt.parent / "absent.json")
+        with self.assertRaises(InferenceError):
+            model_identity(self.model)
+
+    def test_bundled_model_matches_declared_identity_and_digest(self):
+        model = Path(__file__).resolve().parents[1] / "models/yolo26n-phenocam.onnx"
+        self.assertEqual(model_identity(model), ("yolo26n-phenocam", "0.1.6"))
 
 
 class RuntimeTests(unittest.TestCase):

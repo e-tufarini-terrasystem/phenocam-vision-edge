@@ -1,11 +1,15 @@
 """Own the quiet ONNX Runtime session, model contract, and timed execution.
 
-This boundary knows model tensors and runtime options, but not source image
+This boundary knows model identity, tensors and runtime options, but not source image
 geometry, detection post-processing, class selection, or output rendering.
 """
 
 import ast
+import hashlib
+import json
 import os
+import re
+import stat
 from pathlib import Path
 from time import perf_counter
 
@@ -59,6 +63,47 @@ def create_session(model_path: Path):
             sess_options=options,
             providers=("CPUExecutionProvider",),
         )
+    except Exception:
+        raise InferenceError() from None
+
+
+def model_identity(model_path):
+    """Read a bounded sibling receipt and bind its identity to the ONNX bytes."""
+    model_path = Path(model_path)
+    receipt_path = model_path.with_suffix(".json")
+    try:
+        try:
+            receipt_stat = receipt_path.stat()
+        except FileNotFoundError:
+            if receipt_path.is_symlink():
+                raise ValueError
+            return "unknown", "unknown"
+        if not stat.S_ISREG(receipt_stat.st_mode):
+            raise ValueError
+        with receipt_path.open("rb") as source:
+            raw = source.read(65537)
+        if len(raw) > 65536:
+            raise ValueError
+        receipt = json.loads(raw.decode("utf-8", errors="strict"))
+        identifier = receipt["model_id"]
+        version = receipt["model_version"]
+        digest = receipt["onnx_sha256"]
+        # Only single-line ASCII identity values may enter the INI metadata.
+        if (
+            not isinstance(identifier, str)
+            or re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}", identifier) is None
+            or not isinstance(version, str)
+            or len(version) > 32
+            or re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version) is None
+            or not isinstance(digest, str)
+            or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        ):
+            raise ValueError
+        # Never follow paths from the untrusted receipt; hash the selected model.
+        with model_path.open("rb") as source:
+            if hashlib.file_digest(source, "sha256").hexdigest() != digest:
+                raise ValueError
+        return identifier, version
     except Exception:
         raise InferenceError() from None
 
