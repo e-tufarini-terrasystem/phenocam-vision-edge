@@ -13,7 +13,7 @@ from phenocam.arguments import ArgumentValidationError, parse_arguments
 from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.inference.pipeline import process_image
 from phenocam.metadata import MetadataWriteError
-from phenocam.source import SourceDeleteError
+from phenocam.source import MetadataDeleteError, SourceDeleteError
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -21,13 +21,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         arguments = parse_arguments(argv)
         inference_seconds = process_image(
-            arguments.model,
-            arguments.input,
-            arguments.annotated_output,
-            arguments.privacy_output,
-            arguments.meta,
-            arguments.delete_input_on_detection,
-            arguments.input_identity,
+            model_path=arguments.model,
+            input_path=arguments.input,
+            annotated_output_path=arguments.annotated_output,
+            privacy_output_path=arguments.privacy_output,
+            metadata_path=arguments.meta,
+            delete_input_on_detection=arguments.delete_input_on_detection,
+            input_identity=arguments.input_identity,
+            metadata_identity=arguments.metadata_identity,
         )
     except (ArgumentValidationError, ClassConfigurationError, ModelClassesError) as error:
         print(str(error), file=sys.stderr)
@@ -40,6 +41,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     except MetadataWriteError:
         print("error: metadata file could not be updated", file=sys.stderr)
+        return 1
+    except MetadataDeleteError:
+        print("error: metadata file could not be deleted", file=sys.stderr)
         return 1
     except SourceDeleteError:
         print("error: input image could not be deleted", file=sys.stderr)

@@ -153,9 +153,8 @@ class ArgumentTests(unittest.TestCase):
         self.assertIsNone(arguments.privacy_output)
         self.assertTrue(arguments.delete_input_on_detection)
 
-    def test_metadata_only_without_deletion_still_requires_an_output(self):
-        self.assert_validation_error(
-            "error: at least one output path is required",
+    def test_metadata_only_without_deletion_is_accepted(self):
+        arguments = parse_arguments(
             [
                 "--input",
                 str(self.input),
@@ -165,6 +164,26 @@ class ArgumentTests(unittest.TestCase):
                 str(self.metadata),
             ],
         )
+        self.assertIsNone(arguments.annotated_output)
+        self.assertIsNone(arguments.privacy_output)
+        self.assertEqual(arguments.meta, self.metadata)
+        self.assertFalse(arguments.delete_input_on_detection)
+        self.assertEqual(self.input.read_bytes(), b"image")
+        self.assertEqual(self.metadata.read_bytes(), b"metadata")
+
+    def test_metadata_only_still_validates_the_metadata_file(self):
+        wrong_extension = self.root / "image.txt"
+        wrong_extension.write_bytes(b"metadata")
+        for path, error in (
+            (self.root / "missing.meta", "error: metadata file does not exist or is not a file"),
+            (self.root, "error: metadata file does not exist or is not a file"),
+            (wrong_extension, "error: metadata file must use the .meta extension"),
+        ):
+            with self.subTest(path=path):
+                self.assert_validation_error(
+                    error,
+                    ["--input", str(self.input), "--model", str(self.model), "--meta", str(path)],
+                )
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
     def test_input_symlink_is_accepted_only_without_deletion(self):
@@ -310,9 +329,9 @@ class ArgumentTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 2)
         self.assertIn("usage:", stderr.getvalue())
 
-    def test_missing_outputs_has_fixed_semantic_error(self):
+    def test_missing_actions_has_fixed_semantic_error(self):
         self.assert_validation_error(
-            "error: at least one output path is required",
+            "error: at least one output path, metadata path, or input deletion is required",
             ["--input", str(self.input), "--model", str(self.model)],
         )
 
@@ -404,18 +423,89 @@ class ArgumentTests(unittest.TestCase):
             self.argv(output=self.root, output_option="--privacy-output"),
         )
 
-    def test_same_normalized_path_has_fixed_error(self):
-        output = self.input.parent / "." / self.input.name
-        self.assert_validation_error(
-            "error: input and output paths must differ", self.argv(output=output)
-        )
+    def test_direct_and_normalized_input_replacement_is_accepted(self):
+        (self.root / "nested").mkdir()
+        original = self.input.read_bytes()
+        for option in ("--annotated-output", "--privacy-output"):
+            for output in (self.input, self.root / "nested" / ".." / self.input.name):
+                with self.subTest(option=option, output=output):
+                    arguments = parse_arguments(self.argv(output=output, output_option=option))
+                    self.assertEqual(getattr(arguments, option[2:].replace("-", "_")), output)
+                    self.assertEqual(self.input.read_bytes(), original)
 
-    def test_privacy_same_normalized_path_has_fixed_error(self):
-        output = self.input.parent / "." / self.input.name
+    def test_input_replacement_with_deletion_is_accepted(self):
+        for option in ("--annotated-output", "--privacy-output"):
+            with self.subTest(option=option):
+                arguments = parse_arguments(
+                    self.argv(output=self.input, output_option=option)
+                    + ["--delete-input-on-detection"],
+                )
+                self.assertTrue(arguments.delete_input_on_detection)
+                self.assertEqual(self.input.read_bytes(), b"image")
+
+    def test_deletion_captures_metadata_identity_without_modifying_files(self):
+        arguments = parse_arguments(
+            self.argv() + ["--meta", str(self.metadata), "--delete-input-on-detection"]
+        )
+        current = self.metadata.stat()
+        self.assertEqual(arguments.metadata_identity, (current.st_dev, current.st_ino))
+        self.assertEqual(self.metadata.read_bytes(), b"metadata")
+
+    def test_metadata_identity_stat_failure_is_sanitized(self):
+        real_stat = Path.stat
+
+        def failing_stat(path, *, follow_symlinks=True):
+            if path == self.metadata and not follow_symlinks:
+                raise OSError("private path")
+            return real_stat(path, follow_symlinks=follow_symlinks)
+
+        with patch.object(Path, "stat", failing_stat):
+            self.assert_validation_error(
+                "error: metadata file does not exist or is not a file",
+                self.argv() + ["--meta", str(self.metadata), "--delete-input-on-detection"],
+            )
+
+    def test_only_one_product_may_replace_input(self):
+        self.assert_validation_error(
+            "error: output paths must differ",
+            self.argv(output=self.input) + ["--privacy-output", str(self.input)],
+        )
+        for annotated, privacy in ((self.input, self.output), (self.output, self.input)):
+            with self.subTest(annotated=annotated, privacy=privacy):
+                arguments = parse_arguments(
+                    self.argv(output=annotated) + ["--privacy-output", str(privacy)]
+                )
+                self.assertEqual(arguments.annotated_output, annotated)
+                self.assertEqual(arguments.privacy_output, privacy)
+
+    def test_input_hard_link_aliases_are_rejected(self):
+        os.link(self.input, self.output)
+        for option in ("--annotated-output", "--privacy-output"):
+            with self.subTest(option=option):
+                self.assert_validation_error(
+                    "error: input and output paths must differ",
+                    self.argv(output_option=option),
+                )
+
+    def test_input_alias_through_symbolic_directory_is_rejected(self):
+        alias = self.root / "alias"
+        alias.symlink_to(self.root, target_is_directory=True)
         self.assert_validation_error(
             "error: input and output paths must differ",
-            self.argv(output=output, output_option="--privacy-output"),
+            self.argv(output=alias / self.input.name),
         )
+
+    def test_symbolic_input_cannot_be_replaced_via_same_path_or_target(self):
+        target = self.root / "target.jpg"
+        self.input.rename(target)
+        self.input.symlink_to(target)
+        for option in ("--annotated-output", "--privacy-output"):
+            for output in (self.input, target):
+                with self.subTest(option=option, output=output):
+                    self.assert_validation_error(
+                        "error: input and output paths must differ",
+                        self.argv(output=output, output_option=option),
+                    )
 
     def test_normalized_output_identity_has_fixed_error(self):
         (self.root / "nested").mkdir()

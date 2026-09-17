@@ -12,12 +12,17 @@ from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 import numpy as np
+from PIL import Image
 
+from phenocam.arguments import parse_arguments
 from phenocam.inference.errors import InferenceError, OutputWriteError
+from phenocam.inference.output import write_outputs
 from phenocam.inference.pipeline import process_image
 from phenocam.inference.runtime import run_tensor as timed_run_tensor
+from phenocam.inference.views import load_image
+from phenocam.metadata import update_detection_metadata
 from phenocam.metadata import MetadataWriteError
-from phenocam.source import SourceDeleteError
+from phenocam.source import MetadataDeleteError, SourceDeleteError, delete_source
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 
 
@@ -39,6 +44,7 @@ class InferenceTests(unittest.TestCase):
         )
         self.session = Mock()
         self.input_identity = (17, 23)
+        self.metadata_identity = (17, 24)
         self.enabled_detection = SimpleNamespace(class_id=0)
         self.disabled_detection = SimpleNamespace(class_id=7)
         self.contract = (
@@ -167,85 +173,24 @@ class InferenceTests(unittest.TestCase):
             self.stop_boundaries(patchers)
         self.assertEqual(events, ["output", "metadata"])
 
-    def test_enabled_detection_deletes_after_outputs_and_metadata(self):
-        events = []
-        mocks, patchers = self.boundaries()
-        mocks["output"].side_effect = lambda *args: events.append("output")
-        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
-        mocks["delete"].side_effect = lambda *args: events.append("delete")
-        try:
-            process_image(*self.paths, True, self.input_identity)
-        finally:
-            self.stop_boundaries(patchers)
-
-        self.assertEqual(events, ["output", "metadata", "delete"])
-        mocks["delete"].assert_called_once_with(self.paths[1], self.input_identity)
-
-    def test_disabled_or_absent_final_detections_do_not_delete(self):
-        for detections in ((self.disabled_detection,), ()):
-            with self.subTest(detections=detections):
-                mocks, patchers = self.boundaries()
-                mocks["nms"].return_value = detections
-                try:
-                    process_image(*self.paths, True, self.input_identity)
-                finally:
-                    self.stop_boundaries(patchers)
-                mocks["delete"].assert_not_called()
-
-    def test_deletion_only_mode_still_runs_outputs_boundary(self):
-        mocks, patchers = self.boundaries()
-        try:
-            process_image(
-                self.paths[0],
-                self.paths[1],
-                None,
-                None,
-                None,
-                True,
-                self.input_identity,
-            )
-        finally:
-            self.stop_boundaries(patchers)
-
-        mocks["output"].assert_called_once_with(
-            self.image,
-            (self.enabled_detection,),
-            (0, 2),
-            self.contract[4],
-            None,
-            None,
-        )
-        mocks["metadata"].assert_not_called()
-        mocks["delete"].assert_called_once_with(self.paths[1], self.input_identity)
-
-    def test_metadata_without_outputs_commits_before_deletion(self):
-        events = []
-        mocks, patchers = self.boundaries()
-        mocks["output"].side_effect = lambda *args: events.append("output")
-        mocks["metadata"].side_effect = lambda *args: events.append("metadata")
-        mocks["delete"].side_effect = lambda *args: events.append("delete")
-        try:
-            process_image(
-                self.paths[0],
-                self.paths[1],
-                None,
-                None,
-                self.paths[4],
-                True,
-                self.input_identity,
-            )
-        finally:
-            self.stop_boundaries(patchers)
-
-        self.assertEqual(events, ["output", "metadata", "delete"])
-        mocks["metadata"].assert_called_once_with(
-            self.paths[4],
-            (self.enabled_detection,),
-            ("person", "car"),
-            self.contract[4],
-            None,
-            None,
-        )
+    def test_enabled_detection_deletes_without_writing_products(self):
+        for metadata in (None, self.paths[4]):
+            for outputs in ((None, None), (self.paths[2], self.paths[3])):
+                with self.subTest(metadata=metadata, outputs=outputs):
+                    mocks, patchers = self.boundaries()
+                    try:
+                        elapsed = process_image(
+                            self.paths[0], self.paths[1], *outputs, metadata,
+                            True, self.input_identity, self.metadata_identity,
+                        )
+                    finally:
+                        self.stop_boundaries(patchers)
+                    self.assertAlmostEqual(elapsed, sum(index / 10 for index in range(16)))
+                    mocks["output"].assert_not_called()
+                    mocks["metadata"].assert_not_called()
+                    mocks["delete"].assert_called_once_with(
+                        self.paths[1], self.input_identity, metadata, self.metadata_identity,
+                    )
 
     def test_deletion_requires_valid_identity_before_configuration(self):
         invalid_identities = (None, (1,), (1, 2, 3), [1, 2], (True, 2), (1, False))
@@ -268,19 +213,81 @@ class InferenceTests(unittest.TestCase):
                 configuration.assert_not_called()
                 session.assert_not_called()
 
-    def test_deletion_error_is_preserved_after_products(self):
+    def test_metadata_deletion_requires_identity_before_inference(self):
+        with patch("phenocam.inference.pipeline.create_session") as session:
+            with self.assertRaises(MetadataDeleteError):
+                process_image(*self.paths, True, self.input_identity)
+        session.assert_not_called()
+
+    def test_real_conditional_deletion_preserves_outputs_and_uses_only_explicit_metadata(self):
+        self.paths[0].write_bytes(b"model")
+        for detections in ((), (self.disabled_detection,), (self.enabled_detection,)):
+            detected = detections == (self.enabled_detection,)
+            for include_metadata in (False, True):
+                for output_mode in ("missing", "existing", "input"):
+                    with self.subTest(
+                        detections=detections, metadata=include_metadata, output=output_mode,
+                    ):
+                        self.paths[1].write_bytes(b"original input")
+                        self.paths[4].write_bytes(b"[camera]\nname=original\n")
+                        self.paths[2].unlink(missing_ok=True)
+                        if output_mode == "existing":
+                            self.paths[2].write_bytes(b"previous output")
+                        annotated = self.paths[1] if output_mode == "input" else self.paths[2]
+                        argv = [
+                            "--input", str(self.paths[1]), "--model", str(self.paths[0]),
+                            "--annotated-output", str(annotated),
+                            "--privacy-output", str(self.paths[3]), "--delete-input-on-detection",
+                        ]
+                        if include_metadata:
+                            argv.extend(["--meta", str(self.paths[4])])
+                        arguments = parse_arguments(argv)
+                        mocks, patchers = self.boundaries()
+                        mocks["nms"].return_value = detections
+                        mocks["delete"].side_effect = delete_source
+                        mocks["metadata"].side_effect = update_detection_metadata
+                        mocks["output"].side_effect = write_outputs
+                        try:
+                            process_image(
+                                arguments.model, arguments.input, arguments.annotated_output,
+                                arguments.privacy_output, arguments.meta,
+                                arguments.delete_input_on_detection, arguments.input_identity,
+                                arguments.metadata_identity,
+                            )
+                        finally:
+                            self.stop_boundaries(patchers)
+                        mocks["output"].assert_not_called()
+                        self.assertEqual(self.paths[1].exists(), not detected)
+                        if not detected:
+                            self.assertEqual(self.paths[1].read_bytes(), b"original input")
+                        self.assertFalse(self.paths[3].exists())
+                        self.assertEqual(self.paths[2].exists(), output_mode == "existing")
+                        if output_mode == "existing":
+                            self.assertEqual(self.paths[2].read_bytes(), b"previous output")
+                        if detected and include_metadata:
+                            self.assertFalse(self.paths[4].exists())
+                            mocks["metadata"].assert_not_called()
+                        elif include_metadata:
+                            metadata = self.paths[4].read_text()
+                            self.assertIn("detected=false\n", metadata)
+                            self.assertIn("total_count=0\n", metadata)
+                            self.assertIn("annotated_image=\nprivacy_image=\n", metadata)
+                        else:
+                            self.assertEqual(self.paths[4].read_bytes(), b"[camera]\nname=original\n")
+
+    def test_deletion_error_is_preserved_without_writing_products(self):
         mocks, patchers = self.boundaries()
         expected = SourceDeleteError("private detail")
         mocks["delete"].side_effect = expected
         try:
             with self.assertRaises(SourceDeleteError) as error:
-                process_image(*self.paths, True, self.input_identity)
+                process_image(*self.paths, True, self.input_identity, self.metadata_identity)
         finally:
             self.stop_boundaries(patchers)
 
         self.assertIs(error.exception, expected)
-        mocks["output"].assert_called_once()
-        mocks["metadata"].assert_called_once()
+        mocks["output"].assert_not_called()
+        mocks["metadata"].assert_not_called()
 
     def test_views_are_consumed_and_normalized_sequentially(self):
         events = []
@@ -376,7 +383,7 @@ class InferenceTests(unittest.TestCase):
                 mocks["runtime"].side_effect = results
                 try:
                     with self.assertRaises(InferenceError):
-                        process_image(*self.paths, True, self.input_identity)
+                        process_image(*self.paths, True, self.input_identity, self.metadata_identity)
                 finally:
                     self.stop_boundaries(patchers)
                 self.assertEqual(mocks["runtime"].call_count, failing_index + 1)
@@ -422,7 +429,7 @@ class InferenceTests(unittest.TestCase):
         mocks["normalize"].side_effect = ValueError("private detail")
         try:
             with self.assertRaises(InferenceError) as error:
-                process_image(*self.paths, True, self.input_identity)
+                process_image(*self.paths, True, self.input_identity, self.metadata_identity)
         finally:
             self.stop_boundaries(patchers)
         self.assertNotIn("private detail", str(error.exception))
@@ -430,15 +437,139 @@ class InferenceTests(unittest.TestCase):
         mocks["metadata"].assert_not_called()
         mocks["delete"].assert_not_called()
 
-    def test_zero_detections_still_reaches_output(self):
-        mocks, patchers = self.boundaries()
-        mocks["normalize"].side_effect = [() for _ in range(16)]
-        mocks["nms"].return_value = ()
-        try:
-            process_image(*self.paths)
-        finally:
-            self.stop_boundaries(patchers)
-        mocks["output"].assert_called_once()
+    def test_absent_or_disabled_detections_skip_images_and_clear_metadata_paths(self):
+        for detections in ((), (self.disabled_detection,)):
+            with self.subTest(detections=detections):
+                mocks, patchers = self.boundaries()
+                mocks["nms"].return_value = detections
+                try:
+                    process_image(*self.paths, True, self.input_identity, self.metadata_identity)
+                finally:
+                    self.stop_boundaries(patchers)
+                mocks["output"].assert_not_called()
+                mocks["delete"].assert_not_called()
+                mocks["metadata"].assert_called_once_with(
+                    self.paths[4], detections, ("person", "car"), self.contract[4], None, None
+                )
+
+    def test_real_files_are_untouched_without_enabled_detections(self):
+        for detections in ((), (self.disabled_detection,)):
+            for replace_input in (False, True):
+                for existing_output in (False, True):
+                    with self.subTest(
+                        detections=detections, replace_input=replace_input,
+                        existing_output=existing_output,
+                    ):
+                        self.paths[1].write_bytes(b"original input")
+                        self.paths[4].write_text("[detection]\ndetected=true\nannotated_image=old\n")
+                        self.paths[2].unlink(missing_ok=True)
+                        if existing_output:
+                            self.paths[2].write_bytes(b"old output")
+                        annotated = self.paths[1] if replace_input else self.paths[2]
+                        mocks, patchers = self.boundaries()
+                        mocks["nms"].return_value = detections
+                        mocks["output"].side_effect = write_outputs
+                        mocks["metadata"].side_effect = update_detection_metadata
+                        try:
+                            process_image(
+                                self.paths[0], self.paths[1], annotated,
+                                self.paths[3], self.paths[4],
+                            )
+                        finally:
+                            self.stop_boundaries(patchers)
+                        self.assertEqual(self.paths[1].read_bytes(), b"original input")
+                        self.assertEqual(self.paths[2].exists(), existing_output)
+                        if existing_output:
+                            self.assertEqual(self.paths[2].read_bytes(), b"old output")
+                        self.assertFalse(self.paths[3].exists())
+                        metadata = self.paths[4].read_text()
+                        self.assertIn("detected=false\n", metadata)
+                        self.assertIn("total_count=0\n", metadata)
+                        self.assertIn("annotated_image=\nprivacy_image=\n", metadata)
+                        self.assertNotIn("old", metadata)
+
+    def test_metadata_only_updates_results_without_image_writes_or_deletion(self):
+        self.paths[0].write_bytes(b"model placeholder")
+        Image.new("RGB", (80, 60), (10, 20, 30)).save(self.paths[1])
+        original = self.paths[1].read_bytes()
+        cases = (
+            ((), False),
+            ((self.disabled_detection,), False),
+            ((self.enabled_detection, self.disabled_detection), True),
+        )
+        for detections, detected in cases:
+            with self.subTest(detected=detected, detections=detections):
+                self.paths[4].write_text("[camera]\nname=test\n[detection]\nannotated_image=old\n")
+                arguments = parse_arguments([
+                    "--input", str(self.paths[1]), "--model", str(self.paths[0]),
+                    "--meta", str(self.paths[4]),
+                ])
+                mocks, patchers = self.boundaries()
+                mocks["load"].side_effect = load_image
+                mocks["nms"].return_value = detections
+                mocks["output"].side_effect = write_outputs
+                mocks["metadata"].side_effect = update_detection_metadata
+                try:
+                    process_image(
+                        arguments.model, arguments.input, arguments.annotated_output,
+                        arguments.privacy_output, arguments.meta,
+                        arguments.delete_input_on_detection, arguments.input_identity,
+                    )
+                finally:
+                    self.stop_boundaries(patchers)
+                mocks["delete"].assert_not_called()
+                self.assertEqual(self.paths[1].read_bytes(), original)
+                self.assertEqual(set(self.root.iterdir()), {self.paths[0], self.paths[1], self.paths[4]})
+                metadata = self.paths[4].read_text()
+                self.assertTrue(metadata.startswith("[camera]\nname=test\n"))
+                self.assertIn(f"detected={str(detected).lower()}\n", metadata)
+                self.assertIn(f"total_count={int(detected)}\n", metadata)
+                self.assertIn("annotated_image=\nprivacy_image=\n", metadata)
+                self.assertIn("classes=person\nperson_count=1\n" if detected else "classes=\n", metadata)
+                self.assertNotIn("old", metadata)
+
+    def test_real_input_replacement_keeps_products_independent(self):
+        detection = SimpleNamespace(
+            class_id=0, x1=20, y1=20, x2=50, y2=45, confidence=0.9,
+        )
+        # PNG makes exact pixel comparisons independent of lossy JPEG encoding.
+        input_path = self.root / "source.png"
+        other_path = self.root / "other.png"
+        self.paths[0].write_bytes(b"model placeholder")
+        for replace_with in ("annotated", "privacy"):
+            with self.subTest(replace_with=replace_with):
+                source = Image.new("RGB", (80, 60), (10, 20, 30))
+                source.putpixel((30, 30), (255, 255, 255))
+                source.save(input_path)
+                self.paths[4].write_bytes(b"")
+                annotated, privacy = (
+                    (input_path, other_path) if replace_with == "annotated"
+                    else (other_path, input_path)
+                )
+                arguments = parse_arguments([
+                    "--input", str(input_path), "--model", str(self.paths[0]),
+                    "--annotated-output", str(annotated), "--privacy-output", str(privacy),
+                    "--meta", str(self.paths[4]),
+                ])
+                mocks, patchers = self.boundaries()
+                mocks["load"].side_effect = load_image
+                mocks["nms"].return_value = (detection,)
+                mocks["output"].side_effect = write_outputs
+                mocks["metadata"].side_effect = update_detection_metadata
+                try:
+                    process_image(
+                        arguments.model, arguments.input, arguments.annotated_output,
+                        arguments.privacy_output, arguments.meta,
+                    )
+                finally:
+                    self.stop_boundaries(patchers)
+                with Image.open(annotated) as marked, Image.open(privacy) as blurred:
+                    self.assertEqual(marked.getpixel((20, 20)), (255, 70, 40))
+                    self.assertEqual(blurred.getpixel((20, 20)), (10, 20, 30))
+                    self.assertNotEqual(blurred.getpixel((30, 30)), (255, 255, 255))
+                metadata = self.paths[4].read_text()
+                self.assertIn(f"annotated_image={annotated}\n", metadata)
+                self.assertIn(f"privacy_image={privacy}\n", metadata)
 
     def test_output_error_is_preserved(self):
         mocks, patchers = self.boundaries()
@@ -446,7 +577,7 @@ class InferenceTests(unittest.TestCase):
         mocks["output"].side_effect = expected
         try:
             with self.assertRaises(OutputWriteError) as error:
-                process_image(*self.paths, True, self.input_identity)
+                process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)
@@ -459,7 +590,7 @@ class InferenceTests(unittest.TestCase):
         mocks["metadata"].side_effect = expected
         try:
             with self.assertRaises(MetadataWriteError) as error:
-                process_image(*self.paths, True, self.input_identity)
+                process_image(*self.paths)
         finally:
             self.stop_boundaries(patchers)
         self.assertIs(error.exception, expected)

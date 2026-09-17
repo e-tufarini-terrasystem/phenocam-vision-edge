@@ -2,12 +2,17 @@
 
 Geometry and detection validation are complete before this boundary. This file
 creates independent annotated/privacy products and writes them deterministically.
+The pipeline decides whether detections warrant writing any products.
 ``write_outputs`` is the single boundary mapping failures to the fixed error.
 """
 
 from math import ceil, floor
+import os
+from pathlib import Path
+import stat
+import tempfile
 
-from PIL import ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .errors import OutputWriteError
 
@@ -99,6 +104,35 @@ def _render_privacy(image, detections, selected):
 
 
 def _save_output(image, output_path):
-    image.save(output_path)
-    if not output_path.is_file() or output_path.stat().st_size == 0:
-        raise OutputWriteError()
+    temporary_path = None
+    try:
+        output_path = Path(output_path)
+        # Preserve the requested format and ordinary output symlink behavior.
+        # CLI validation has already rejected symbolic aliases of the input.
+        image_format = Image.registered_extensions()[output_path.suffix.lower()]
+        destination = output_path.resolve()
+        mode = stat.S_IMODE(destination.stat().st_mode) if destination.exists() else None
+        with tempfile.NamedTemporaryFile(
+            prefix=".phenocam-", suffix=output_path.suffix,
+            dir=destination.parent, delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            image.save(temporary, format=image_format)
+            temporary.flush()
+            if mode is not None:
+                os.fchmod(temporary.fileno(), mode)
+            os.fsync(temporary.fileno())
+        # Verify before replacing: a failed encode must leave the original intact.
+        with Image.open(temporary_path) as saved:
+            saved.verify()
+        # JPEG verify() does not decode pixels; reopen to reject truncated data.
+        with Image.open(temporary_path) as saved:
+            saved.load()
+        os.replace(temporary_path, destination)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass

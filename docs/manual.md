@@ -77,8 +77,9 @@ Run inference on every supported image directly inside `input/`:
 ```
 
 The script creates `output/` when needed and writes
-`<stem>_annotated.<ext>` in one process per input, preserving extension
-spelling. Privacy output remains available through the direct CLI. If a regular
+`<stem>_annotated.<ext>` only when an enabled final detection remains, in one
+process per input, preserving extension spelling. Privacy output remains
+available through the direct CLI. If a regular
 non-symlink
 `input/<stem>.meta` exists, it is passed through `--meta`; a missing match is
 not created and does not fail that image.
@@ -89,7 +90,10 @@ experimental status is unchanged. The current comparison is recorded in
 `docs/status/model-comparison-2026-09-15.md`; specialized-model Raspberry Pi
 timing still requires a target-device run.
 
-Existing files are overwritten. Processing continues after individual
+Existing outputs are atomically replaced when an enabled final detection
+remains; otherwise they are left untouched and no new image is created.
+Metadata still records the current detection result, with empty image paths
+when no image was produced. Processing continues after individual
 failures, but the script exits with status `1` if any image fails or none is
 supported. The batch script never enables `--delete-input-on-detection`.
 

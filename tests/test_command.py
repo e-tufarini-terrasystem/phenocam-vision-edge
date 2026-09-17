@@ -19,7 +19,7 @@ from phenocam.inference.errors import InferenceError, OutputWriteError
 from phenocam.__main__ import main
 from phenocam.classes.selection import ClassConfigurationError, ModelClassesError
 from phenocam.metadata import MetadataWriteError
-from phenocam.source import SourceDeleteError
+from phenocam.source import MetadataDeleteError, SourceDeleteError
 
 
 class RunTests(unittest.TestCase):
@@ -32,6 +32,7 @@ class RunTests(unittest.TestCase):
             meta=Path("input.meta"),
             delete_input_on_detection=False,
             input_identity=(17, 23),
+            metadata_identity=(17, 24),
         )
 
     def call_main(self, argv=None):
@@ -47,20 +48,22 @@ class RunTests(unittest.TestCase):
         ) as process:
             status, stdout, stderr = self.call_main(["ignored"])
         process.assert_called_once_with(
-            self.arguments.model,
-            self.arguments.input,
-            self.arguments.annotated_output,
-            self.arguments.privacy_output,
-            self.arguments.meta,
-            self.arguments.delete_input_on_detection,
-            self.arguments.input_identity,
+            model_path=self.arguments.model,
+            input_path=self.arguments.input,
+            annotated_output_path=self.arguments.annotated_output,
+            privacy_output_path=self.arguments.privacy_output,
+            metadata_path=self.arguments.meta,
+            delete_input_on_detection=self.arguments.delete_input_on_detection,
+            input_identity=self.arguments.input_identity,
+            metadata_identity=self.arguments.metadata_identity,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 1.234 s\n", "")
         )
 
-    def test_each_output_combination_is_delegated_once_in_path_order(self):
+    def test_each_output_combination_is_delegated_once(self):
         combinations = (
+            (None, None),
             (Path("annotated.jpg"), None),
             (None, Path("privacy.jpg")),
             (Path("annotated.jpg"), Path("privacy.jpg")),
@@ -74,19 +77,21 @@ class RunTests(unittest.TestCase):
                 self.arguments.meta,
                 self.arguments.delete_input_on_detection,
                 self.arguments.input_identity,
+                self.arguments.metadata_identity,
             )
             with self.subTest(annotated=annotated, privacy=privacy), patch(
                 "phenocam.__main__.parse_arguments", return_value=arguments
             ), patch("phenocam.__main__.process_image", return_value=0.5) as process:
                 status, stdout, stderr = self.call_main([])
             process.assert_called_once_with(
-                arguments.model,
-                arguments.input,
-                annotated,
-                privacy,
-                arguments.meta,
-                arguments.delete_input_on_detection,
-                arguments.input_identity,
+                model_path=arguments.model,
+                input_path=arguments.input,
+                annotated_output_path=annotated,
+                privacy_output_path=privacy,
+                metadata_path=arguments.meta,
+                delete_input_on_detection=arguments.delete_input_on_detection,
+                input_identity=arguments.input_identity,
+                metadata_identity=arguments.metadata_identity,
             )
             self.assertEqual(
                 (status, stdout, stderr), (0, "Execution time: 0.500 s\n", "")
@@ -101,6 +106,7 @@ class RunTests(unittest.TestCase):
             self.arguments.meta,
             True,
             self.arguments.input_identity,
+            self.arguments.metadata_identity,
         )
         with patch(
             "phenocam.__main__.parse_arguments", return_value=arguments
@@ -108,13 +114,14 @@ class RunTests(unittest.TestCase):
             status, stdout, stderr = self.call_main([])
 
         process.assert_called_once_with(
-            arguments.model,
-            arguments.input,
-            None,
-            None,
-            arguments.meta,
-            True,
-            arguments.input_identity,
+            model_path=arguments.model,
+            input_path=arguments.input,
+            annotated_output_path=None,
+            privacy_output_path=None,
+            metadata_path=arguments.meta,
+            delete_input_on_detection=True,
+            input_identity=arguments.input_identity,
+            metadata_identity=arguments.metadata_identity,
         )
         self.assertEqual(
             (status, stdout, stderr), (0, "Execution time: 0.250 s\n", "")
@@ -125,7 +132,7 @@ class RunTests(unittest.TestCase):
             "error: input image does not exist or is not a file",
             "error: model does not exist or is not a file",
             "error: model must be an ONNX file",
-            "error: at least one output path is required",
+            "error: at least one output path, metadata path, or input deletion is required",
             "error: input image must not be a symbolic link when deletion is enabled",
             "error: output directory does not exist",
             "error: output path must be a file",
@@ -232,6 +239,16 @@ class RunTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("usage:", stderr.getvalue())
         process.assert_not_called()
+
+    def test_metadata_delete_error_has_fixed_diagnostic_without_timing(self):
+        error = MetadataDeleteError("private path")
+        with patch(
+            "phenocam.__main__.parse_arguments", return_value=self.arguments
+        ), patch("phenocam.__main__.process_image", side_effect=error):
+            status, stdout, stderr = self.call_main([])
+        self.assertEqual(
+            (status, stdout, stderr), (1, "", "error: metadata file could not be deleted\n")
+        )
 
     def test_unknown_option_keeps_argparse_status_two_and_stderr_usage(self):
         stdout = io.StringIO()
