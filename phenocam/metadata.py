@@ -11,9 +11,9 @@ import stat
 import tempfile
 from pathlib import Path
 
+from phenocam import __version__
 
 SOFTWARE_NAME = "phenocam-detection"
-SOFTWARE_VERSION = "0.1.0"
 MODEL_ID = "yolo26n"
 MODEL_VERSION = "0.1.0"
 
@@ -75,7 +75,7 @@ def _detection_section(
         "[detection]",
         f"detected={'true' if total_count else 'false'}",
         f"software_name={SOFTWARE_NAME}",
-        f"software_version={SOFTWARE_VERSION}",
+        f"software_version={__version__}",
         f"model_id={MODEL_ID}",
         f"model_version={MODEL_VERSION}",
         f"annotated_image={annotated_output_path or ''}",

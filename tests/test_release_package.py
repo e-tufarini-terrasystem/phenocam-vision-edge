@@ -147,6 +147,47 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertEqual(first[0].read_bytes(), second[0].read_bytes())
         self.assertEqual(first[1].read_bytes(), second[1].read_bytes())
 
+    def test_version_comes_from_selected_commit_without_executing_it(self):
+        package = self.repository / "phenocam/__init__.py"
+        source = b'__version__ = "0.2.0"\nraise RuntimeError("must not execute")\n'
+        package.write_bytes(source)
+        self.git("add", "phenocam/__init__.py")
+        self.commit("declare version")
+        reference = self.git("rev-parse", "HEAD").stdout.decode().strip()
+        package.write_bytes(b'__version__ = "0.3.0"\n')
+        self.git("add", "phenocam/__init__.py")
+        self.commit("next version")
+        package.write_bytes(b'__version__ = "0.4.0"\n')
+
+        result = self.run_packager(version="0.2.0", reference=reference)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with tarfile.open(self.output / "phenocam-vision-edge-0.2.0.tar.gz") as archive:
+            self.assertEqual(
+                archive.extractfile("phenocam-vision-edge-0.2.0/phenocam/__init__.py").read(),
+                source,
+            )
+
+    def test_mismatched_or_malformed_package_versions_leave_no_assets(self):
+        for source in (
+            b'__version__ = "0.2.0"\n',
+            b'__version__ = "01.0.0"\n',
+            b'__version__ = 100\n',
+            b'__version__ = "0.1.0" + ".extra"\n',
+            b'__version__ = "0.1.0"\n__version__ = "0.2.0"\n',
+            b'__version__ = "0.1.0"\n__version__ += ".extra"\n',
+        ):
+            with self.subTest(source=source):
+                (self.repository / "phenocam/__init__.py").write_bytes(source)
+                self.git("add", "phenocam/__init__.py")
+                self.commit("invalid version")
+                result = self.run_packager()
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(
+                    result.stderr,
+                    "error: package version must match the requested release version\n",
+                )
+                self.assertEqual(tuple(self.output.iterdir()), ())
+
     def test_missing_required_file_identifies_path_and_leaves_no_assets(self):
         (self.repository / "assets/logo.svg").unlink()
         self.git("add", "-u")

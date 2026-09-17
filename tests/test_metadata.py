@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from phenocam import __version__
 from phenocam.metadata import MetadataWriteError, update_detection_metadata
 
 
@@ -65,7 +66,7 @@ class MetadataTests(unittest.TestCase):
             "[detection]\n"
             "detected=true\n"
             "software_name=phenocam-detection\n"
-            "software_version=0.1.0\n"
+            f"software_version={__version__}\n"
             "model_id=yolo26n\n"
             "model_version=0.1.0\n"
             "annotated_image=relative annotated.jpg\n"
@@ -85,7 +86,7 @@ class MetadataTests(unittest.TestCase):
             "[detection]\n"
             "detected=false\n"
             "software_name=phenocam-detection\n"
-            "software_version=0.1.0\n"
+            f"software_version={__version__}\n"
             "model_id=yolo26n\n"
             "model_version=0.1.0\n"
             "annotated_image=\n"

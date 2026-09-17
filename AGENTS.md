@@ -134,6 +134,29 @@ Before editing, identify:
 
 After editing, verify whether the change reduced or increased conceptual complexity. If complexity increased, explain why it was unavoidable. If a feature request conflicts with simplicity, prefer the smallest version that still satisfies the explicitly authorized request.
 
+## Release Versioning
+
+- Keep the software version in one runtime source: `phenocam/__init__.py`,
+  with exactly one literal declaration `__version__ = "MAJOR.MINOR.PATCH"`.
+- Before committing a release, update that declaration to the intended version.
+  Detection metadata must use it; do not add another runtime version constant
+  or require Git at runtime.
+- Keep software and model versions independent. A software release alone does
+  not justify changing `model_version` or the model artifacts.
+- Update current installation commands, metadata examples, and release-related
+  test expectations together. Preserve historical release references.
+- For commits declaring a version, the declaration, packaging argument, archive
+  name, and release tag (`vMAJOR.MINOR.PATCH`) must agree. Preserve packaging
+  compatibility for historical commits without the declaration.
+- Package the exact commit selected for release using `scripts/package.py`;
+  never bypass its version check or execute source code to read its version.
+- Before publication, require passing CI for that commit, verify the archive
+  and checksum, and check that its code writes the intended `software_version`
+  to a temporary `.meta` file.
+- Publish corrections as a new patch release. Do not move existing release tags
+  or replace published assets. Preserve experimental/prerelease status unless
+  promotion is explicitly authorized and supported by validation.
+
 ## Non-Goals
 
 - No fashionable abstractions for their own sake.
