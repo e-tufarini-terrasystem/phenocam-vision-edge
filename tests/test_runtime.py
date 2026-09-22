@@ -52,8 +52,8 @@ class ModelIdentityTests(unittest.TestCase):
         self.receipt.write_text(json.dumps(self.identity))
         self.assertEqual(model_identity(self.model), ("another-model", "1.2.3"))
 
-    def test_absent_receipt_has_unknown_id_and_initial_version(self):
-        self.assertEqual(model_identity(self.model), ("unknown", "0.1.0"))
+    def test_absent_receipt_has_unknown_identity_and_version(self):
+        self.assertEqual(model_identity(self.model), ("unknown", "unknown"))
 
     def test_model_replacement_invalidates_receipt(self):
         self.receipt.write_text(json.dumps(self.identity))

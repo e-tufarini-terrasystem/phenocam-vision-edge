@@ -41,7 +41,7 @@ The [stable v0.1.0 release](https://github.com/e-tufarini-terrasystem/phenocam-v
 remains available with its original requirements and model.
 
 Published releases are frozen. The current source tree has later changes,
-including a different fallback for missing model receipts; see
+including the optional base ONNX model and its receipt; see
 [release and source differences](docs/cli.md#release-and-source-differences).
 
 ## Supported environments

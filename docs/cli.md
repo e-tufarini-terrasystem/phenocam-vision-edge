@@ -8,16 +8,16 @@ Commands below run from the installation or source repository root.
 ## Release and source differences
 
 This guide describes the current source. The frozen `v0.2.3` release uses the
-same CLI and conditional output behavior, but its missing-receipt fallback differs:
+same CLI, conditional output behavior and model identity validation:
 
 | Selected model receipt | Published `v0.2.3` | Current source |
 |---|---|---|
-| Absent, with `--meta` | `model_id=unknown`, `model_version=unknown` | `model_id=unknown`, `model_version=0.1.0` |
+| Absent, with `--meta` | `model_id=unknown`, `model_version=unknown` | Same |
 | Valid bundled receipt | `yolo26n-phenocam`, `0.1.6` | `yolo26n-phenocam`, `0.1.6` |
 | Invalid or mismatched, with `--meta` | Fail before inference or writes/deletion | Same |
 
-Without a receipt, no model hash is checked; `0.1.0` is a conventional initial
-value, not a verified revision. Published archives are unchanged. The optional
+Without a receipt, no model hash is checked; both identity and version remain
+`unknown`. Published archives are unchanged. The optional
 base ONNX and its receipt are available in the current source repository, not
 in the specialized-model runtime archive.
 

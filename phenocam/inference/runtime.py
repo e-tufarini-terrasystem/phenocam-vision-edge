@@ -66,7 +66,7 @@ def create_session(model_path: Path):
 def model_identity(model_path):
     """Return receipt identity after checking the selected ONNX hash.
 
-    A missing receipt returns ("unknown", "0.1.0"); an invalid one raises
+    A missing receipt returns ("unknown", "unknown"); an invalid one raises
     InferenceError. Read at most 64 KiB plus one byte to detect oversize files.
     """
     model_path = Path(model_path)
@@ -77,8 +77,7 @@ def model_identity(model_path):
         except FileNotFoundError:
             if receipt_path.is_symlink():
                 raise ValueError
-            # Without a receipt, 0.1.0 is a convention, not a verified revision.
-            return "unknown", "0.1.0"
+            return "unknown", "unknown"
         if not stat.S_ISREG(receipt_stat.st_mode):
             raise ValueError
         with receipt_path.open("rb") as source:
