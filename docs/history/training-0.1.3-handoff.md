@@ -11,7 +11,7 @@
 > Aggiornamento 2 settembre 2026: il task 11 è stato completato, esportato e
 > importato. Il build affiancato, ora denominato dataset 0.1.3 expanded, contiene 18
 > nuove immagini PhenoCam revisionate. Lo stato corrente e i conteggi verificati
-> sono in `docs/status/training-0.1.3.md`; il testo seguente resta la fotografia
+> sono in `docs/history/training-0.1.3.md`; il testo seguente resta la fotografia
 > storica dell'handoff.
 
 ## Stato attuale
@@ -246,7 +246,7 @@ Il readback COCO da CVAT coincide per conteggi, classi e geometrie, con scarto
 massimo `0,0093` pixel. Le proposte restano da revisionare e non fanno ancora
 parte del dataset 0.1.3.
 
-Il report `docs/status/dataset-0.1.3-review.md` misura
+Il report `docs/history/dataset-0.1.3-review.md` misura
 composizione, bias e leakage prima di ogni modifica. La pipeline pronta per il
 post-review assegna ogni immagine a `included`, `reserved` o `rejected`, limita
 il primo ingresso a 18 frame (8 per sito dominante, uno per camera-day), applica

@@ -171,9 +171,10 @@ This normalization does not imply past release publication or change runtime
 receipts. Earlier specialized models remain in Git history; only `0.1.6` is
 maintained in the current checkout. The optional base model is a separate identity.
 
-The repository's `docs/status/` retains experimental protocols, measured results,
-annotation decisions and handoffs. Its 0.1.6 training report records the original
-80% cross-view coverage; the 15 September comparison uses 50% at confidence 0.47.
+The repository's `docs/status/` contains the training report, latest comparison
+and annotation record for model 0.1.6. Earlier reports, plans and handoffs are
+preserved in `docs/history/`. The 0.1.6 training report records the original 80%
+cross-view coverage; the 15 September comparison uses 50% at confidence 0.47.
 Do not combine those measurements or describe historical tests as new blind tests.
 Raw evidence under ignored `output/` and `dataset/workspace/` needs the original
 local artifacts or an authorized backup; it is not distributed with a clone.
@@ -329,7 +330,7 @@ python3 -m venv .venv-export
 
 The included and tested ONNX model 0.1.4 does not need to be exported
 on the Raspberry Pi. The frozen evaluation is documented in
-`docs/status/training-0.1.4.md`; target-device latency remains
+`docs/history/training-0.1.4.md`; target-device latency remains
 pending because a Raspberry Pi was not reachable during the cycle.
 
 ### Optional 0.1.2 training on Apple Silicon

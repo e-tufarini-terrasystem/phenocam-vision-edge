@@ -320,7 +320,7 @@ iniziali, con 14 aggiunte e nessuna rimozione: 188 `car`, 16 `truck`, 1 `bus` e
 1 `person`.
 
 Il report pre-modifica completo è
-`docs/status/dataset-0.1.3-review.md`. La pipeline post-review
+`docs/history/dataset-0.1.3-review.md`. La pipeline post-review
 ha conservato tutte le 40 decisioni umane e selezionato 18 immagini
 con tetto di 8 per sito, una per camera-day e SSCD `<0,95`, quindi materializza
 solo le righe `included`. Le altre restano `reserved` o `rejected` con una

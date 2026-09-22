@@ -177,7 +177,7 @@ The local dataset 0.1.5 experiment artifact preserves 0.1.4, adds the completed
 27-image PKLot review, and aligns selected training crops with the runtime
 geometry. Its measured composition, leakage boundary, and training protocol are
 recorded in
-[`../docs/status/training-0.1.5-plan.md`](../docs/status/training-0.1.5-plan.md).
+[`../docs/history/training-0.1.5-plan.md`](../docs/history/training-0.1.5-plan.md).
 
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
@@ -283,7 +283,7 @@ remain authoritative; baseline detections may prioritize review but cannot
 establish ground truth or verify a negative.
 
 The first parking-lot source evaluation is recorded in
-[`../docs/status/parking-sources.md`](../docs/status/parking-sources.md).
+[`../docs/history/parking-sources.md`](../docs/history/parking-sources.md).
 Only the completed official-PKLot task 17 is admitted to dataset 0.1.5; the open
 task 13 and its automatic suggestions remain outside every training artifact.
 
@@ -309,14 +309,14 @@ accepting data.
 - [`docs/0.1.3/README.md`](docs/0.1.3/README.md) and
   [`docs/0.1.3/creation.md`](docs/0.1.3/creation.md): canonical 0.1.3
   composition, split methodology, and reproducibility;
-- [`../docs/status/dataset-0.1.3-split.md`](../docs/status/dataset-0.1.3-split.md):
+- [`../docs/history/dataset-0.1.3-split.md`](../docs/history/dataset-0.1.3-split.md):
   measured split report, evidence, and limitations;
 - [`docs/plan-en.md`](docs/plan-en.md): normative build contract;
 - [`docs/plan-it.md`](docs/plan-it.md): concise Italian plan;
 - [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
 - [`docs/status/public-dataset-2026-08-28.md`](docs/status/public-dataset-2026-08-28.md): completed state and boundary;
 - `docs/status/` and `docs/history/`: preserved development history;
-- [`../docs/status/dataset-0.1.3-review.md`](../docs/status/dataset-0.1.3-review.md):
+- [`../docs/history/dataset-0.1.3-review.md`](../docs/history/dataset-0.1.3-review.md):
   measured pre-expansion audit and quantitative admission policy.
 
 </details>
