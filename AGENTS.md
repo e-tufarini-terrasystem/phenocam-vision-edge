@@ -143,6 +143,9 @@ After editing, verify whether the change reduced or increased conceptual complex
   or require Git at runtime.
 - Keep software and model versions independent. A software release alone does
   not justify changing `model_version` or the model artifacts.
+- Software stability and model acceptance are independent. A stable software
+  release may bundle an experimental model when its status and limitations are
+  clearly documented. Software promotion does not change model acceptance status.
 - Keep the bundled model identity in `models/yolo26n-phenocam.json`:
   `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6` for the
   historical v6 artifact. In this experimental model series, revision vN uses
@@ -171,8 +174,9 @@ After editing, verify whether the change reduced or increased conceptual complex
   model bytes against the receipt; a model version update alone does not prove
   a quality improvement or authorize promotion out of experimental status.
 - Publish corrections as a new patch release. Do not move existing release tags
-  or replace published assets. Preserve experimental/prerelease status unless
-  promotion is explicitly authorized and supported by validation.
+  or replace published assets. Track software prerelease status and model
+  experimental status separately; promotion of either requires explicit
+  authorization and validation appropriate to that component.
 
 ## Non-Goals
 

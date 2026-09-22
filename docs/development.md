@@ -17,8 +17,12 @@ Model bytes are unchanged. The runtime JSON receipt contains only `model_id`,
 `model_version` and `onnx_sha256`. Acceptance status and provenance remain in the
 [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-v6-experiment.md)
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md).
-The model is experimental, with no demonstrated overall improvement or completed
-Pi qualification. The original COCO `models/yolo26n.pt` initializes fresh training;
+The model remains experimental, with no demonstrated overall improvement.
+Software `v0.2.3` is considered stable by the maintainer following manual testing
+on Raspberry Pi, as recorded in the [README](../README.md#supported-environments).
+Runtime testing on the device and evaluation of model accuracy are separate;
+the release's manual test does not qualify later source changes.
+The original COCO `models/yolo26n.pt` initializes fresh training;
 its ONNX and receipt are also tracked for optional diagnostic inference.
 
 Code responsibilities:
@@ -134,6 +138,9 @@ It writes under `output/export/`; it does not replace the shipped specialized
 model. Keep each `(model_id, model_version)` bound to exactly one ONNX SHA-256.
 A new export with different bytes needs a new version and matching receipt.
 Software releases alone do not change model versions or experimental status.
+A stable software release may bundle an experimental model when its status and
+limitations are clearly documented. Software promotion does not change the
+model's acceptance status or historical evaluation results.
 
 Software version lives once in `phenocam/__init__.py`, in literal form
 `__version__ = "MAJOR.MINOR.PATCH"`. Before a release, update that declaration and

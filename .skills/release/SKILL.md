@@ -20,6 +20,10 @@ Preserve the release invariant: one qualified source commit, one immutable
 annotated tag, one deterministic allowlisted runtime archive, and one adjacent
 SHA-256 record.
 
+Keep software stability separate from model acceptance. A stable software release
+may bundle an experimental model when its status and limitations are explicit.
+Software promotion does not change model versions, acceptance, or historical results.
+
 ## Authority boundary
 
 A request to prepare a release authorizes local version edits, validation, a
@@ -117,6 +121,11 @@ and the named reference images.
 Verify installation, real inference, output images, and the reference-image
 suite without skips. Missing Pi hardware or fixtures may defer tagging and
 publication but must never be reported as `PASS`.
+
+Record software status, model status, and target-device evidence separately in
+the README and release notes. Attribute maintainer-reported manual tests as such;
+record hardware, environment, and checks only when supplied or directly verified.
+Do not infer a full qualification pass or model accuracy from a runtime smoke test.
 
 Any source change after qualification creates a new candidate and invalidates
 earlier CI, Raspberry Pi, and artifact evidence.

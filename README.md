@@ -18,13 +18,16 @@ Image outputs are produced only when an enabled final detection remains;
 otherwise existing images stay unchanged. Deletion is opt-in and takes precedence
 over output writes. See the [operating guide](docs/cli.md) for the complete behavior.
 
-## Experimental release v0.2.3
+## Stable software release v0.2.3
+
+Software release **v0.2.3** is considered stable by the maintainer following
+manual testing on Raspberry Pi. This status applies to the software runtime.
 
 The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`
 (the unchanged historical v6 artifact). Its sibling JSON identifies the model
 and its ONNX SHA-256. The model remains **experimental**: training acceptance
-criteria were not all met, overall improvement was not demonstrated, and
-qualification of this exact version on Raspberry Pi is pending.
+criteria were not all met, and overall improvement was not demonstrated.
+Software stability does not establish detection accuracy.
 
 The [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-v6-experiment.md)
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md)
@@ -46,15 +49,18 @@ including a different fallback for missing model receipts; see
 | Use | Platform | Python | Verification scope |
 |---|---|---|---|
 | Stable `v0.1.0` | Raspberry Pi OS 64-bit (`aarch64`) | 3.11 or newer | Historical release |
-| Experimental `v0.2.3` / current source | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 | Target-device qualification pending |
+| Stable software `v0.2.3` | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 | Maintainer-reported manual testing on Raspberry Pi |
+| Current source | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 | Later source changes are not covered by the release's manual test |
 | Current source | macOS on Apple Silicon | 3.13 | Manual source setup |
 | CI | Ubuntu x86-64 | 3.13 | Tests and shell syntax; no Pi qualification |
 
-The target is a Raspberry Pi 3 with 1 GB RAM. Earlier runtime tests on that
-hardware do not qualify the current model. For source installation, use the
+The target is a Raspberry Pi 3 with 1 GB RAM. The manual test report does not
+specify the Pi model, OS/Python versions, or individual checks performed;
+the table lists supported environments, not a recorded test configuration.
+For source installation, use the
 [operating guide](docs/cli.md#manual-setup-from-source).
 
-## Quick install: experimental v0.2.3
+## Quick install: v0.2.3
 
 Prerequisites: Raspberry Pi OS 64-bit, Python 3.13 with `python3-venv`,
 `curl`, `tar`, and `sha256sum`. Install OS prerequisites separately; this
