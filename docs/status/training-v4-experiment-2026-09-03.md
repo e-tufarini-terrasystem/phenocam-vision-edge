@@ -1,5 +1,8 @@
 # YOLO26n training v4 — registro sperimentale
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Stato iniziale: revisione training completata; preparazione della validation
 PhenoCam positiva prima del training. TEST-ID e TEST-OOD restano sigillati.
 

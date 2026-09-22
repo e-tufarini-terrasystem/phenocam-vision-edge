@@ -1,5 +1,8 @@
 # Training v6 — protocollo e risultati
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Nota di consolidamento: il modello storico `yolo26n-v6` è distribuito come
 `yolo26n-phenocam`, versione `0.1.6`, con byte PT e ONNX invariati e stato
 **sperimentale**. La scheda runtime contiene soltanto identità, versione e hash
@@ -23,8 +26,8 @@ base `models/yolo26n.pt`, sull'intero `dataset/dataset-v6/dataset.yaml`.
 I quattro training, la selezione ONNX e le repliche sono completati.
 Il candidato è congelato come **sperimentale**: falliscono incremento medio
 F1, stabilità minima F1 e limite di perdita mAP Open Images. Artefatti prodotti
-e verificati il 14 settembre 2026: [PT](../../models/yolo26n-v6.pt),
-[ONNX](../../models/yolo26n-v6.onnx), [metadati](../../models/yolo26n-v6.json).
+e verificati il 14 settembre 2026: [PT](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/da14b7d6317d1d158859999947b819f26c332f11/models/yolo26n-v6.pt),
+[ONNX](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/da14b7d6317d1d158859999947b819f26c332f11/models/yolo26n-v6.onnx), [metadati](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/da14b7d6317d1d158859999947b819f26c332f11/models/yolo26n-v6.json).
 Il modello operativo resta invariato. Nessun push o pubblicazione.
 
 ## Avanzamento verificato
@@ -40,14 +43,14 @@ di selezione.
 | neck-head, freeze 10 | 17 | 26 | 16 | 0,53512 | 4.120,98 s | 5,83 GB | 3,44 GB |
 | neck-head, freeze 10 | 73 | 28 | 18 | 0,54959 | 4.931,81 s | 4,82 GB | 3,09 GB |
 
-La [ricevuta head/42](../../output/training-v6/receipts/head-seed42.json)
+La ricevuta head/42 (`output/training-v6/receipts/head-seed42.json`, local evidence)
 è `completed`. Verificati tutti gli otto checkpoint conservati, le 30 righe
 finite del CSV e l'hash invariato del base. `best.pt` ha SHA-256
 `f7d79cd121dbd832c2dfedcec8707d1c8e30be34334c9ee97bc6cf5436e5d460`;
 `last.pt` ha SHA-256
 `50beafaad4e21774434650b4d2f49d2fee190e0d08b3d73fbba3a923011509bb`.
 
-La [ricevuta neck-head/42](../../output/training-v6/receipts/neck-head-seed42.json)
+La ricevuta neck-head/42 (`output/training-v6/receipts/neck-head-seed42.json`, local evidence)
 è `completed`: early stopping dopo dieci epoche senza superare il massimo
 dell'epoca 3. Verificati tutti i cinque checkpoint, le 13 righe finite del CSV
 e la terminazione effettiva del processo. `best.pt` ha SHA-256
@@ -68,10 +71,10 @@ precision, recall e F1 provengono dalla pipeline ONNX a 16 viste.
 | v5 | 0,48 | 0,42500 | 0,48671 | 0,45377 | 0,53165 | 0,53890 |
 
 Rapporti completi, con risultati per classe e sorgente:
-[base ONNX](../../output/training-v6/evaluation/base-onnx/runtime/runtime-metrics.json),
-[v5 ONNX](../../output/training-v6/evaluation/v5-onnx/runtime/runtime-metrics.json),
-[base mAP](../../output/training-v6/evaluation/base-pt/standard/standard-metrics.json),
-[v5 mAP](../../output/training-v6/evaluation/v5-pt/standard/standard-metrics.json).
+base ONNX (`output/training-v6/evaluation/base-onnx/runtime/runtime-metrics.json`, local evidence),
+v5 ONNX (`output/training-v6/evaluation/v5-onnx/runtime/runtime-metrics.json`, local evidence),
+base mAP (`output/training-v6/evaluation/base-pt/standard/standard-metrics.json`, local evidence),
+v5 mAP (`output/training-v6/evaluation/v5-pt/standard/standard-metrics.json`, local evidence).
 I recall di riferimento v5 sono 1,0 su PhenoCam (2/2 box) e 0,35556 su PKLot
 (16/45 box); i tre seed v6 devono rispettarli individualmente.
 
@@ -84,7 +87,7 @@ I recall di riferimento v5 sono 1,0 su PhenoCam (2/2 box) e 0,35556 su PKLot
 | neck-head / best | 0,45 | 0,47479 | 0,46217 | **0,46839** | 0,52107 |
 | neck-head / last | 0,30 | 0,32237 | 0,50102 | 0,39231 | 0,51261 |
 
-La [scelta registrata](../../output/training-v6/candidate.json) è
+La scelta registrata (`output/training-v6/candidate.json`, local evidence) è
 `neck-head/best`, soglia 0,45. Un controllo indipendente dei 204 abbinamenti
 checkpoint/soglia conferma il massimo e le regole di parità; tutti i rapporti
 contengono 206 immagini e gli stessi hash del codice effettivo.
@@ -94,13 +97,13 @@ il risultato sarà sperimentale anche se le repliche fossero migliori.
 Il recall PhenoCam resta 1,0 e quello PKLot sale a 0,66667 (30/45 box).
 
 Il seed 17 è completato: 26 epoche, early stopping, massimo all'epoca 16.
-La [ricevuta](../../output/training-v6/receipts/neck-head-seed17.json) e tutti
+La ricevuta (`output/training-v6/receipts/neck-head-seed17.json`, local evidence) e tutti
 gli otto checkpoint sono stati verificati, insieme alle 26 righe finite del
 CSV e alla terminazione del processo. `best.pt` ha SHA-256
 `8850773e86c56b7f7afa4d51a0a7ec7d31fa42319b1b96b8e161736d33e903bd`.
 È partito dal base con stato optimizer vuoto, scheduler −1 e tutti i 2.020
 esempi; i parametri coincidono con quelli del seed 42, salvo il seed.
-La sua [valutazione ONNX](../../output/training-v6/evaluation/neck-head-seed17-best-onnx/runtime/runtime-metrics.json)
+La sua valutazione ONNX (`output/training-v6/evaluation/neck-head-seed17-best-onnx/runtime/runtime-metrics.json`, local evidence)
 è completa sulle 206 immagini, alla sola soglia 0,45: precision 0,35788,
 recall 0,42740, F1 0,38956 (−0,06420 contro v5). Il recall PhenoCam resta
 1,0; PKLot sale a 0,77778 (35/45 box). La mAP Open Images è 0,53061
@@ -111,7 +114,7 @@ sui primi due seed.
 Il seed 73 è completato, quarto e ultimo slot: 28 epoche, early stopping,
 massimo all'epoca 18. Verificati nuovamente base, optimizer senza stato,
 scheduler −1, 2.020 immagini e parametri identici salvo il seed. La
-[ricevuta](../../output/training-v6/receipts/neck-head-seed73.json), tutti gli
+ricevuta (`output/training-v6/receipts/neck-head-seed73.json`, local evidence), tutti gli
 otto checkpoint e le 28 righe finite del CSV sono stati verificati.
 `best.pt` ha SHA-256
 `32cb8fc5f469cd5f1f7af2b38456b56985c1b551ecb08eaf04754e0ce5cbbff3`.
@@ -138,7 +141,7 @@ v5 −0,02162 e deviazione standard campionaria 0,03980. Falliscono incremento
 medio ≥0,005, nessun seed sotto v5 e perdita mAP Open Images ≤0,01 per ogni
 seed. Passano i recall PhenoCam e PKLot per tutti e tre i seed.
 
-La [selezione congelata](../../output/training-v6/frozen-selection.json)
+La selezione congelata (`output/training-v6/frozen-selection.json`, local evidence)
 mantiene il seed 42, checkpoint `neck-head/best`, soglia 0,45, stato
 `experimental`, senza promozione. PT SHA-256
 `76ca4a80abd559c9d5df378052ad31480bf42f8af301372733c2b6ddb602fed0`;
@@ -178,7 +181,7 @@ scendono sia F1 sia mAP. Questo risultato non giustifica una promozione.
 
 Export statico ONNX opset 20, input `[1,3,640,640]`, output `[1,300,6]`,
 80 classi COCO identiche al base, ONNX checker superato e valori finiti.
-Il [rapporto di verifica](../../output/training-v6/verification/contract.json)
+Il rapporto di verifica (`output/training-v6/verification/contract.json`, local evidence)
 confronta PT CPU e ONNX su tre immagini positive validation, una per sorgente:
 48 viste e 101 rilevazioni abbinate sopra confidenza 0,20. IoU minimo
 0,99262 (limite 0,99), differenza massima di confidenza 0,000004143
@@ -214,7 +217,7 @@ Su TEST-OOD, separando lo stress estremo `raspberrypi2.local`, F1 v5/v6
 I risultati storici favorevoli non annullano i gate falliti sulla validation
 e sui seed. Su TEST-ID la F1 sale, ma recall e mAP scendono.
 Rapporti completi per classe e sorgente in `output/training-v6/final/` e
-nei [metadati consegnati](../../models/yolo26n-v6.json).
+nei [metadati consegnati](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/da14b7d6317d1d158859999947b819f26c332f11/models/yolo26n-v6.json).
 
 ### Audit e consegna
 
@@ -223,15 +226,15 @@ Il workflow è terminato con codice 0. Tempo monotono totale 17.950,14 s
 training completati. Il tentativo iniziale fallito è conservato separatamente;
 le pause del seed 73 rendono molto maggiore il tempo di calendario.
 
-- [Audit indipendente](../../output/training-v6/audit-final.json): quattro
+- Audit indipendente (`output/training-v6/audit-final.json`, local evidence): quattro
   inizializzazioni nuove dal base, 29 checkpoint verificati, 204 combinazioni
   di selezione e 35 valutazioni complete; gate ricalcolati e cronologia del
   congelamento verificata per tutti i benchmark.
-- [Integrità finale](../../output/training-v6/integrity-final.json): fingerprint
+- Integrità finale (`output/training-v6/integrity-final.json`, local evidence): fingerprint
   atteso invariato, 2.232 immagini decodificate, 7.119 label valide, 2.004
   immagini v5 ereditate identiche; modelli precedenti, codice e ambiente
   coincidono con gli hash del preflight.
-- [Test finali](../../output/training-v6/logs/tests-final.log): 258 test,
+- Test finali (`output/training-v6/logs/tests-final.log`, local evidence): 258 test,
   7 skip, esito positivo in 16,16 s, con autoinstall disabilitato.
 - I sette cache preesistenti v3/v5 sono identici al backup. I tre cache
   derivati generati da v6 sono archiviati fuori dal dataset in

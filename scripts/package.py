@@ -28,7 +28,8 @@ REQUIRED = (
     "scripts/batch.sh",
     "scripts/installer.sh",
 )
-DOCUMENTATION = ("docs/cli.md", "docs/development.md", "docs/manual.md")
+# Include the license and retain optional manuals when packaging historical commits.
+DOCUMENTATION = ("LICENSE", "docs/cli.md", "docs/development.md", "docs/manual.md")
 
 
 class PackageError(RuntimeError):

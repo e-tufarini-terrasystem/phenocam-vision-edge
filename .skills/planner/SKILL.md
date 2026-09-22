@@ -49,7 +49,7 @@ Before any implementation, provide:
 8. decisions needed to prevent implementation drift.
 
 Orchestration files must remain within 200 productive lines. Apply category K
-or I only to the narrow constructs defined by `AGENTS.md`, with the exact marker.
+only to the numeric kernels defined by `AGENTS.md`, with the exact marker.
 Every file must have one responsibility. Create folders only for domains with
 multiple files, and split a domain into a folder rather than prefix-named
 siblings.

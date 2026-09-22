@@ -1,5 +1,8 @@
 # Creation of the public dataset (v2)
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## Data origin and acquisition
 
 The public dataset combines Open Images V7 and PhenoCam Network v3. Open Images

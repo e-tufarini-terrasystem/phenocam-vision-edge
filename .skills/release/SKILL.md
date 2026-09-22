@@ -55,7 +55,7 @@ tags.
 
 ## Preflight
 
-1. Read `AGENTS.md`, `README.md`, `docs/development.md`, `docs/manual.md`,
+1. Read `AGENTS.md`, `README.md`, `docs/development.md`, `docs/cli.md`,
    `requirements/runtime.txt`, `scripts/installer.sh`, `scripts/package.py`,
    packaging tests, and changes since the previous version tag.
 2. Identify the branch, upstream, `HEAD`, previous tag, target remote, and every
@@ -95,8 +95,10 @@ Run the deterministic local gates with the Python 3.13 runtime environment:
 
 ```sh
 .venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s dataset/tests -v
 sh -n scripts/batch.sh
 sh -n scripts/installer.sh
+for script in dataset/commands/*.sh; do sh -n "$script"; done
 git diff --check
 ```
 
@@ -110,7 +112,8 @@ tagging. CI on Ubuntu x86-64 proves deterministic Python and shell checks only.
 Skipped reference-image tests are `external verification`, not inference proof.
 
 Before publication, qualify the same candidate on the target Raspberry Pi with
-Python 3.13, the bundled `models/yolo26n.onnx`, and the named reference images.
+Python 3.13, the bundled `models/yolo26n-phenocam.onnx`, its sibling receipt,
+and the named reference images.
 Verify installation, real inference, output images, and the reference-image
 suite without skips. Missing Pi hardware or fixtures may defer tagging and
 publication but must never be reported as `PASS`.

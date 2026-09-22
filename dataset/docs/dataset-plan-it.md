@@ -7,6 +7,9 @@ fonti, composizione, controlli e separazione dei dati interni.
 
 # Dataset esterno misto: sintesi dell'iterazione 1
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Stato: specifica approvata il 2026-08-26. La versione inglese
 [`dataset-plan-en.md`](dataset-plan-en.md) è normativa in caso di ambiguità.
 

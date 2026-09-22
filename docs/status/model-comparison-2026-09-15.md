@@ -1,5 +1,8 @@
 # Nuova valutazione: YOLO26n base, precedente v5 e nuovo v6
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Valutazione eseguita il 15 settembre 2026. Tre artefatti già fissati, stessa pipeline e nuova esecuzione completa: nessun riaddestramento o ricerca della soglia.
 
 ## Conclusione

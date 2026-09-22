@@ -1,5 +1,8 @@
 # Base contro v6: auto e parcheggi con deduplicazione al 50%
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Confronto del 14 settembre 2026.
 
 V6 migliora nettamente su PKLot e moderatamente sul parcheggio difficile di `raspberrypi2.local`. Su TS02 il bilancio è quasi invariato; nelle scene generiche del TEST-ID le auto peggiorano. Il vantaggio è quindi concreto ma dipende dalla scena. Non basta, da solo, a dichiarare raggiunta una soglia di qualità operativa.
@@ -85,9 +88,9 @@ V6 supera la base con entrambe le confidenze e con entrambe le coperture. Il van
 
 Tutte le 8 valutazioni sono terminate con successo. Lo script di analisi verifica hash di codice, modelli e manifest, numero di immagini e soglie; ricostruisce i conteggi per immagine dagli errori e dalle annotazioni, verificando la corrispondenza esatta dei totali e di ogni classe con i JSON del valutatore.
 
-- [Protocollo congelato](../../output/base-v6-coverage50-2026-09-14/protocol.json), [comandi](../../output/base-v6-coverage50-2026-09-14/commands.json), [ambiente](../../output/base-v6-coverage50-2026-09-14/environment.txt).
-- [Metriche complete e audit](../../output/base-v6-coverage50-2026-09-14/analysis.json), [confronto per gruppo](../../output/base-v6-coverage50-2026-09-14/paired-groups.csv), [confronto storico della copertura](../../output/base-v6-coverage50-2026-09-14/validation-coverage-comparison.json).
-- [Analisi riproducibile](../../output/base-v6-coverage50-2026-09-14/analyze.py): eseguire `.venv/bin/python output/base-v6-coverage50-2026-09-14/analyze.py` dalla radice del repository.
+- Protocollo congelato (`output/base-v6-coverage50-2026-09-14/protocol.json`, local evidence), comandi (`output/base-v6-coverage50-2026-09-14/commands.json`, local evidence), ambiente (`output/base-v6-coverage50-2026-09-14/environment.txt`, local evidence).
+- Metriche complete e audit (`output/base-v6-coverage50-2026-09-14/analysis.json`, local evidence), confronto per gruppo (`output/base-v6-coverage50-2026-09-14/paired-groups.csv`, local evidence), confronto storico della copertura (`output/base-v6-coverage50-2026-09-14/validation-coverage-comparison.json`, local evidence).
+- Analisi riproducibile (`output/base-v6-coverage50-2026-09-14/analyze.py`, local evidence): eseguire `.venv/bin/python output/base-v6-coverage50-2026-09-14/analyze.py` dalla radice del repository.
 - I comandi di inferenza richiedono `YOLO_NUM_THREADS=4 YOLO_AUTOINSTALL=false`; per ripeterli usare nuove directory di output, preservando questi risultati.
 - I JSON e gli `errors.csv` originali sono nelle sottocartelle `{val,pklot_holdout,test_id,test_ood}/{base,v6}` della directory di evidenze.
 - **Attenzione alle immagini di validation:** il valutatore salva `errors.csv` e `worst-examples` alla migliore delle due soglie fornite, qui 0,47 per entrambi. I numeri primari a 0,35 vengono dai JSON; la ricostruzione appaiata esclude la validation. Nei tre benchmark storici gli errori e le immagini usano invece la sola soglia 0,35.

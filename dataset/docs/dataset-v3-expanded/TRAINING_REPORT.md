@@ -1,5 +1,8 @@
 # YOLO26n training report — v3-extended
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Status: model selected and exported on 2026-09-02; test evaluation was stopped
 at the user's request. The repository calls the material
 dataset `dataset-v3-expanded`; this report uses the request's `v3-extended` name

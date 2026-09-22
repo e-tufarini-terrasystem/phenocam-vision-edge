@@ -1,21 +1,25 @@
 <!--
-This document owns the inference architecture, model compatibility contract,
-local verification procedure, and optional model-export workflow.
+Own the current development workflow and preserve earlier implementation context.
 -->
 
 # Development
+
+For a source checkout and the runtime environment, follow the
+[operating guide](cli.md#manual-setup-from-source). Workstation commands below
+require the full source repository; dataset and training tools are not shipped
+in the runtime archive.
 
 ## Current workflow
 
 The repository maintains one model: **YOLO26n specialized for PhenoCam**.
 `models/yolo26n-phenocam.{pt,onnx,json}` replace the former v6 filenames.
-Model bytes are unchanged. The metadata records its experimental acceptance
-status and links to the original training and comparison reports. The original
-COCO `models/yolo26n.pt` remains solely as fresh training initialization.
-
-The runtime still uses sixteen views, confidence 0.47, IoU 0.50 and smaller-box
-coverage 0.50 between different views. Its enabled classes are person, car,
-motorcycle, bus and truck. Consolidation changes no detection or output rules.
+Model bytes are unchanged. The runtime JSON receipt contains only `model_id`,
+`model_version` and `onnx_sha256`. Acceptance status and provenance remain in the
+[training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-v6-experiment.md)
+and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md).
+The model is experimental, with no demonstrated overall improvement or completed
+Pi qualification. The original COCO `models/yolo26n.pt` initializes fresh training;
+its ONNX and receipt are also tracked for optional diagnostic inference.
 
 Code responsibilities:
 
@@ -38,12 +42,12 @@ python3.13 -m venv .venv-export
 
 Reconstruct the catalog's local images using the approved SHA-256-addressed pool,
 then verify them. The pool includes frozen crops; public downloads alone cannot
-recreate human annotations or private images. See [dataset instructions](../dataset/README.md).
+recreate human annotations or private images. See [dataset instructions](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
 
 ```sh
-.venv/bin/python -m dataset.builder.artifact hydrate \
+.venv-export/bin/python -m dataset.builder.artifact hydrate \
   --sources dataset/workspace/sources/approved/images
-.venv/bin/python -m dataset.builder.artifact verify
+.venv-export/bin/python -m dataset.builder.artifact verify
 ```
 
 Hydration refuses an existing image directory. If images are already present,
@@ -84,16 +88,20 @@ YOLO_NUM_THREADS=4 .venv/bin/python -m training.evaluation \
 ```
 
 Benchmark splits require a frozen receipt for the exact model and threshold.
-They are historical benchmarks, not new independent validation. The generic
-COCO checkpoint can be exported for diagnostics with `scripts/export/fp32.py`;
-that optional output stays under `output/export/`.
+They are historical benchmarks, not new independent validation.
 
-Verification from the repository root:
+## Verification
+
+From the repository root with the runtime environment:
 
 ```sh
 .venv/bin/python -m pip install -r requirements/test.txt
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python -m unittest discover -s dataset/tests -v
+sh -n scripts/batch.sh
+sh -n scripts/installer.sh
+for script in dataset/commands/*.sh; do sh -n "$script"; done
+git diff --check
 ```
 
 CI runs both suites and checks all maintained shell scripts. Dataset tests use
@@ -101,7 +109,65 @@ fixtures and the committed catalog, so private images and the training stack
 are not required. Image integration cases remain optional when their named
 reference inputs are absent.
 
+## Runtime architecture
+
+One ONNX session processes the EXIF-normalized RGB source sequentially: one full
+view, then fifteen crops. Horizontal/square inputs use a `5×3` grid; vertical
+inputs use `3×5`, with 20% nominal overlap. Crop boxes map back to the source
+before global suppression and enabled-class filtering.
+
+The model must expose the standard 80 COCO classes and an end-to-end float
+output with six columns (box, confidence, class). Input and output metadata and
+runtime tensors are validated. The shipped model uses `1×3×640×640` input and
+`1×300×6` output. Filesystem effects and failure ordering are specified in the
+[operating guide](cli.md#outputs-and-conditional-deletion).
+
+## Model export and release identity
+
+Optional base export runs on the workstation, after creating `.venv-export`:
+
+```sh
+.venv-export/bin/python scripts/export/fp32.py
+```
+
+It writes under `output/export/`; it does not replace the shipped specialized
+model. Keep each `(model_id, model_version)` bound to exactly one ONNX SHA-256.
+A new export with different bytes needs a new version and matching receipt.
+Software releases alone do not change model versions or experimental status.
+
+Software version lives once in `phenocam/__init__.py`, in literal form
+`__version__ = "MAJOR.MINOR.PATCH"`. Before a release, update that declaration and
+current installation/metadata examples together. `scripts/package.py` reads the
+selected commit without executing its code and rejects an archive version that
+disagrees; historical commits without the declaration remain supported.
+
+```sh
+.venv/bin/python scripts/package.py VERSION COMMIT EXISTING_OUTPUT_DIRECTORY
+```
+
+Replace all three arguments with the intended version, immutable commit and an
+existing destination outside the repository. The packager selects runtime files,
+README, CLI/development guides and `LICENSE` when present in that commit;
+historical `docs/manual.md` is included only for commits that still contain it.
+It excludes dataset, training, tests and report artifacts. Updated packaging does
+not alter previously published archives. Publication requires the exact commit's
+CI, archive/checksum and temporary `.meta` identity checks; target-device evidence
+must remain explicit. See `AGENTS.md` and `.skills/release/SKILL.md` in the source
+repository for the release procedure and authorization boundaries.
+
+## Historical evidence
+
+The repository's `docs/status/` retains experimental protocols, measured results,
+annotation decisions and handoffs. Its v6 training report records the original
+80% cross-view coverage; the 15 September comparison uses 50% at confidence 0.47.
+Do not combine those measurements or describe historical tests as new blind tests.
+Raw evidence under ignored `output/` and `dataset/workspace/` needs the original
+local artifacts or an authorized backup; it is not distributed with a clone.
+
 ## Historical workflow before consolidation
+
+<details>
+<summary>Pre-consolidation development context and commands (da14b7d)</summary>
 
 The following material preserves development context at commit `da14b7d`.
 Versioned model paths, notebooks, build commands and dataset names below describe
@@ -111,7 +177,7 @@ files can be read with `git show da14b7d:<path>`; the local backup branch is
 original model, threshold, code and dataset identities.
 
 
-## Inference architecture
+### Inference architecture
 
 The v5 reference model is `models/yolo26n-v5.onnx`, with an end-to-end ONNX
 graph. Pass this path explicitly with `--model` when using v5; older models
@@ -141,11 +207,11 @@ The v6 experiment completed four independent training runs from the base.
 Its selected `models/yolo26n-v6.onnx` remains experimental because it failed
 the validation acceptance criteria. `scripts/batch.sh` currently selects this
 experimental v6 model explicitly; this setting does not change its acceptance
-status. The [v6 training report](status/training-v6-experiment.md) records its
+status. The [v6 training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-v6-experiment.md) records its
 fixed protocol, environment, commands, metrics, and verification evidence.
 Checkpoints, logs, and completed run receipts are under `output/training-v6/`.
 
-## Occlusion calibration
+### Occlusion calibration
 
 Historical results below use cross-view coverage 0.80. On 2026-09-14 the
 runtime coverage threshold was changed to 0.50 at the user's request;
@@ -217,7 +283,7 @@ YOLO_NUM_THREADS=4 .venv/bin/python -m scripts.runtime_evaluation.evaluate \
   --output output/occlusion-validation
 ```
 
-## Verification
+### Historical verification
 
 Run the complete test suite from the project directory with the runtime
 environment:
@@ -236,7 +302,7 @@ they verify valid annotated outputs and the final suppression-domain overlap
 contract. Person and car counts are not asserted because they are not ground
 truth or a measurement of accuracy, precision, recall, or mAP.
 
-## Optional model export
+### Optional model export
 
 Export is a workstation task because Ultralytics brings a much larger Python
 stack. Install it in a separate environment only when regeneration is needed:
@@ -252,7 +318,7 @@ on the Raspberry Pi. The frozen evaluation is documented in
 `docs/status/training-v4-experiment-2026-09-03.md`; target-device latency remains
 pending because a Raspberry Pi was not reachable during the cycle.
 
-## Optional v2 training on Apple Silicon
+### Optional v2 training on Apple Silicon
 
 `notebooks/training-v2.ipynb` fine-tunes the committed checkpoint through MPS, keeps its
 80-class COCO runtime contract, compares both checkpoints on a deterministic
@@ -272,7 +338,7 @@ stay under ignored `output/training-v2/`. Validation in the notebook reuses part
 of the public training dataset and does not satisfy the pending operational
 validation on internal deployment imagery.
 
-## V3 training notebooks
+### V3 training notebooks
 
 Both v3 notebooks start from the original COCO checkpoint rather than v2. This
 prevents a v2 training image from leaking into the canonical TEST-ID benchmark.
@@ -292,7 +358,7 @@ private operational images remain excluded from training. Outputs stay under
 ignored `output/training-v3*/`, while accepted checkpoints and ONNX exports are
 copied to `models/`.
 
-## V3 operational mining
+### V3 operational mining
 
 V3 keeps the read-only operational root outside the committed configuration.
 Set it only in the current shell, then create the deterministic inventory and
@@ -414,3 +480,5 @@ cd dataset
 The final artifact exposes Train, Validation, TEST-ID and TEST-OOD. Internal
 frames remain TEST-OOD and never enter training. Open `dataset/viewer.html`,
 select `dataset-v3`, and use the split selector to inspect each subset.
+
+</details>

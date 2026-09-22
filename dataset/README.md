@@ -1,5 +1,10 @@
 # Phenocam Vision training data
 
+Run commands from the repository root after the
+[runtime source setup](../docs/cli.md#manual-setup-from-source). Restoring the
+catalog uses the runtime dependencies only; acquisition and CVAT use their
+separate workstation environment.
+
 ## Current canonical dataset
 
 Use `dataset/data/`. It contains the reviewed former v6 training/validation
@@ -33,6 +38,8 @@ Ultralytics creates local `labels/<split>.cache` files even with image caching
 disabled. Verification permits these regular files only for configured splits;
 it still rejects cache symlinks, unexpected files, and changed images or labels.
 Caches are ignored by Git and are not copied into rebuilt artifacts.
+
+## Image access and reconstruction
 
 The approved local pool stores each compiled JPEG as `<sha256>.jpg`, including
 frozen derived crops. Preserve this pool or restore it from an authorized backup.
@@ -79,6 +86,19 @@ Training/validation/test membership, parent image identity and site-day groups
 remain separate. New annotations require an explicit catalog revision and audit;
 there is no automatic admission of downloaded or model-annotated images.
 
+## Acquisition and annotation
+
+The maintained acquisition tools have a separate environment:
+
+```sh
+dataset/commands/dataset-builder.sh setup
+```
+
+Use the [annotation guide](docs/annotation-guide-it.md) for CVAT, the current
+five-target policy and the older six-class campaigns. The original public
+negatives retain `single_reviewer_waiver`; they were not independently verified.
+New review decisions do not modify the frozen catalog without an explicit revision.
+
 Source-specific download commands remain under `python -m dataset.builder`.
 Operational mining uses `config/mining.json` and the configured `specialized`
 model. Paired diagnostic commands use `--baseline-index` and `--candidate-index`;
@@ -94,11 +114,21 @@ identities. Operational CVAT imports reject non-integer image/category IDs and
 references. SSCD calibration rejects a pool with fewer distinct image pairs
 than the configured minimum before generating review outputs.
 
-Open `viewer.html`, select `data/`, then choose one of the five splits. It stays
+## Dataset viewer
+
+Open [viewer.html](viewer.html), select `dataset/data/`, then choose a split. It stays
 local and does not upload images. Training instructions are in
 [the development guide](../docs/development.md#current-workflow).
 
+
 ## Historical acquisition and annotation context
+
+The following records earlier datasets, not the current `dataset/data` contract.
+The English/Italian dataset plans describe iteration 1; versioned dataset guides
+and status reports preserve the decisions and waivers of their respective cycles.
+
+<details>
+<summary>Public v2/v3 acquisition, annotation and retired build commands (da14b7d)</summary>
 
 The following describes the pre-consolidation pipeline at `da14b7d`. Intermediate
 artifacts, model versions and historical commands are preserved as context;
@@ -115,12 +145,12 @@ reviewed operational imagery as TEST-OOD.
 Unreviewed V3 mining data and local paths remain under the ignored `workspace/`
 boundary.
 
-The canonical training artifact is [`training-dataset/`](training-dataset/).
+The historical public training artifact was `training-dataset/` (local, ignored).
 Its versioned composition and limitations are documented in
 [`docs/dataset-v2/README.md`](docs/dataset-v2/README.md), which is copied to
 `training-dataset/README.md` during materialization.
 
-## Current status
+### Historical dataset status
 
 The 2,000-frame YOLO dataset is complete with status
 `completed_with_single_reviewer_waiver`:
@@ -146,7 +176,7 @@ recorded in
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
 
-## Directory layout
+### Directory layout
 
 - `training-dataset/`: ignored, materialized YOLO dataset ready for training;
 - `dataset-v3/`: ignored, final leakage-aware YOLO v3 artifact;
@@ -180,7 +210,7 @@ Credentials stay outside the training artifact. In particular,
 `workspace/annotation/cvat/credentials.json`, `.env`, and CVAT state must never
 be copied into `training-dataset/` or committed.
 
-## Builder commands
+### Builder commands
 
 Run commands from the repository root:
 
@@ -205,7 +235,7 @@ destination. Move or archive an existing artifact deliberately before rebuilding
 it. `build-v3` defaults to the intermediate `dataset-v3-source/`; the partition
 command creates the final artifact atomically.
 Reviewed public PhenoCam additions enter training only through the audited
-`included/reserved/rejected` selection described in `docs/development.md` and
+`included/reserved/rejected` selection described in `../docs/development.md` and
 must be requested explicitly with `--include-public-expansion`; they do not
 silently alter the canonical 2,240-image v3 dataset.
 
@@ -215,7 +245,7 @@ Run the tests directly with:
 dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 ```
 
-## Dataset viewer
+### Historical viewer
 
 Open [`viewer.html`](viewer.html) in a browser and select
 `dataset/dataset-v3/`. The Train, Validation, Test, Test ID, and Test OOD
@@ -229,7 +259,7 @@ for copying; use the left and right arrow keys to move between images. Zoom with
 the mouse wheel, the controls below the image, or the `+`, `-`, and `0` keys.
 Drag an enlarged image with the primary mouse button to pan it.
 
-## Annotation commands
+### Annotation commands
 
 CVAT Community `v2.71.0` is pinned in the ignored workspace:
 
@@ -262,7 +292,7 @@ The first parking-lot source evaluation is recorded in
 Only the completed official-PKLot task 17 is admitted to `dataset-v5`; the open
 task 13 and its automatic suggestions remain outside every training artifact.
 
-## Data sources and security boundary
+### Data sources and security boundary
 
 NASA Earthdata credentials may be configured in ignored `dataset/.env` as
 `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`, or in a mode-`0600` `.netrc`.
@@ -276,7 +306,7 @@ image decoding, dimensions, checksums, required columns, source identity, unique
 integer COCO image IDs, box geometry, licenses, and review completeness before
 accepting data.
 
-## Documentation
+### Documentation
 
 - [`docs/dataset-v2/README.md`](docs/dataset-v2/README.md) and
   [`docs/dataset-v2/CREATION.md`](docs/dataset-v2/CREATION.md): public v2
@@ -293,3 +323,5 @@ accepting data.
 - `docs/status/` and `docs/history/`: preserved development history;
 - [`../docs/status/training-v3-expansion-review-2026-09-01.md`](../docs/status/training-v3-expansion-review-2026-09-01.md):
   measured pre-expansion audit and quantitative admission policy.
+
+</details>

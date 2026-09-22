@@ -1,5 +1,8 @@
 # Creation of dataset v3
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## Origin and acquisition
 
 Dataset v3 starts from the verified 2,000-image public v2 artifact and adds 240

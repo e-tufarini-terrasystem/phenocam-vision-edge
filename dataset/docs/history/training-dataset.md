@@ -5,6 +5,9 @@ PhenoCam/Agrocam orientato al rilevamento preventivo di persone e veicoli.
 
 # Piano tecnico per un dataset PhenoCam/Agrocam orientato alla tutela della privacy
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 > Stato: piano aggiornato sulle informazioni disponibili, senza modificare codice
 > e senza avviare addestramenti.
 

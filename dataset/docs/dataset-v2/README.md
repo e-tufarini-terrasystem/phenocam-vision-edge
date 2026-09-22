@@ -1,5 +1,8 @@
 # Phenocam Vision public dataset (v2)
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## Overview
 
 Version 2 is the public training artifact used as the reproducible base of
@@ -89,8 +92,8 @@ second independent negative reviewer was unavailable.
 ## Use
 
 The training notebook reads `dataset/training-dataset`. To rebuild or validate
-the public artifact, follow [CREATION.md](CREATION.md). Full historical build
-evidence remains in [../history/training-dataset.md](../history/training-dataset.md).
+the public artifact, follow [CREATION.md](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/docs/dataset-v2/CREATION.md). Full historical build
+evidence remains in [../history/training-dataset.md](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/docs/history/training-dataset.md).
 
 Known limitations are the missing validation/test split, the single-reviewer
 waiver, strong source imbalance by class, and the absence of operational-domain

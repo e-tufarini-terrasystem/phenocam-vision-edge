@@ -1,5 +1,8 @@
 # V6 — primo batch operativo per annotazione
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Stato: correzioni completate in CVAT e dataset v6 materializzato. Inclusi 57
 frame interni; 3 frame ambigui conservati in CVAT ed esclusi dal dataset.
 Autorizzazione: eliminare le copie identiche e creare i task sul CVAT Docker locale.
@@ -97,8 +100,8 @@ una possibile duplicazione e la tassonomia di muletto e mezzi parzialmente visib
 Rapporto locale con ID delle shape, frame CVAT a base zero, link diretti e
 ritagli originale/annotato:
 
-- [Rapporto visuale HTML](../../dataset/workspace/training-v6/review-2026-09-11/review.html).
-- [Risultati strutturati e hash degli snapshot](../../dataset/workspace/training-v6/review-2026-09-11/review.json).
+- Rapporto visuale HTML (`dataset/workspace/training-v6/review-2026-09-11/review.html`, local evidence).
+- Risultati strutturati e hash degli snapshot (`dataset/workspace/training-v6/review-2026-09-11/review.json`, local evidence).
 - Nella stessa cartella: snapshot `task-18.json`, `task-19.json`, `task-20.json`,
   verifica `geometry.json` e anteprime di tutti i frame.
 
@@ -130,7 +133,7 @@ Export finali e backup in `dataset/workspace/annotation/exports/`, prefissi
 `v6-task20-final-20260911`. Il suffisso `final2` include la rifinitura dei bordi
 superiori delle tre auto aggiunte. Gli export precedenti sono conservati.
 
-Artefatto: [dataset/dataset-v6/dataset.yaml](../../dataset/dataset-v6/dataset.yaml).
+Artefatto: dataset/dataset-v6/dataset.yaml (`dataset/dataset-v6/dataset.yaml`, local evidence).
 Ricostruzione, quando la destinazione non esiste:
 
 ```sh
@@ -150,7 +153,7 @@ e 171 crop generati con le regole v5. Totale 7.119 box, incluse 551 box nelle
 nuove immagini intere e 166 nelle nuove viste crop. Le classi COCO e il relativo
 ordine restano quelli di v5. Nessun training è stato avviato.
 
-L'[audit](../../dataset/dataset-v6/metadata/audit.json) passa i controlli su
+L'audit (`dataset/dataset-v6/metadata/audit.json`, local evidence) passa i controlli su
 hash, immagini e identità duplicate, geometria, corrispondenza COCO/snapshot,
 esclusioni e separazione dei gruppi. La verifica finale confronta tutti i file
 immagine/label ereditati con v5 e controlla tutte le 7.119 righe YOLO. Nessun

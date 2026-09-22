@@ -1,5 +1,8 @@
 # Ciclo multi-sito PhenoCam — gate di revisione
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Data di avvio: 2026-09-03.
 
 Stato: investigazione e preparazione del gate. Nessun dato di TEST-ID,

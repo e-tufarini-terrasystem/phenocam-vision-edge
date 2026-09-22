@@ -1,5 +1,8 @@
 # Stato conclusivo del dataset pubblico
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Stato di riferimento: 28 agosto 2026.
 
 ## Principio operativo

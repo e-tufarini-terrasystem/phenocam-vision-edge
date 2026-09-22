@@ -1,5 +1,8 @@
 # Phenocam Vision dataset v3
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## Overview
 
 Dataset v3 is the canonical leakage-aware YOLO detection dataset for training,

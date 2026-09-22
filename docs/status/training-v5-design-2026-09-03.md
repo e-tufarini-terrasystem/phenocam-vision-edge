@@ -1,5 +1,8 @@
 # Dataset e training v5 — decisione misurata
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Stato: dataset materializzato e verificato; training, test ed export conclusi.
 L'esito misurato è in
 [`training-v5-experiment-2026-09-07.md`](training-v5-experiment-2026-09-07.md).

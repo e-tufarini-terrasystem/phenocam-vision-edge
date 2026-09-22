@@ -1,5 +1,8 @@
 # Valutazione sorgenti parcheggio — gate CVAT
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Data: 2026-09-03.
 
 Stato: due gate PKLot auto-annotati con YOLO26x sono disponibili in CVAT;

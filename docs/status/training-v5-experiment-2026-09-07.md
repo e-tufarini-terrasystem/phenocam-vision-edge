@@ -1,5 +1,8 @@
 # Training v5 — esito finale
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Data: 2026-09-07.
 
 Stato: **v5 promossa con un trade-off dichiarato**. Il modello di deployment è

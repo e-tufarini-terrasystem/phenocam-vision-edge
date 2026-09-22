@@ -133,10 +133,10 @@ exit 1
         assets.mkdir()
         for relative in (
             "README.md",
+            "LICENSE",
             "assets/logo.svg",
             "docs/cli.md",
             "docs/development.md",
-            "docs/manual.md",
             "models/yolo26n-phenocam.onnx",
             "models/yolo26n-phenocam.json",
             "requirements/runtime.txt",

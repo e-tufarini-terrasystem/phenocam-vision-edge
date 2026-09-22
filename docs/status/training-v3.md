@@ -1,5 +1,8 @@
 # Stato training v3
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## 2026-08-31 — Fase 0 completata
 
 - Obiettivo: stabilizzare il modello v2 e il viewer del dataset.

@@ -1,5 +1,8 @@
 # Revisione pre-ampliamento del dataset v3
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 > Errata corrige del 2 settembre 2026: una box `bus` del frame
 > `raspberrypi2.local--2025-11-11T091905--be026e5d2e7d.jpg` racchiudeva un
 > edificio. La correzione elimina soltanto quella box e riduce di uno i conteggi

@@ -1,5 +1,8 @@
 # Report di analisi e split del dataset v3
 
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Data della misura: 2026-09-02. Stato: split materializzato e verificato.
 
 ## Confini dell'evidenza
