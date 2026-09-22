@@ -1,4 +1,4 @@
-"""Review: records responsibility extracted without changing the data contract."""
+"""Open Images review fields, source identities, and model-conflict priorities."""
 
 
 

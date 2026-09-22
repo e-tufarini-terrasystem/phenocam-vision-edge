@@ -1,4 +1,4 @@
-"""Embeddings: pairs responsibility extracted without changing the data contract."""
+"""Generate duplicate candidates and calibration pairs from hashes and SSCD similarity."""
 
 import heapq
 import itertools

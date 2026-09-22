@@ -1,4 +1,4 @@
-"""Phenocam: catalog responsibility extracted without changing the data contract."""
+"""Index PhenoCam archives through NASA CMR and retrieve site metadata."""
 
 import json
 import urllib.request

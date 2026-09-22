@@ -1,4 +1,4 @@
-"""Selection: diversity responsibility extracted without changing the data contract."""
+"""Select diverse candidates with deterministic ties and optional group quotas."""
 
 from collections import Counter
 import numpy as np
@@ -25,6 +25,8 @@ def _identity(row):
 
 
 class _FarthestSelector:
+    """Greedily minimize similarity to the nearest selected unit embedding."""
+
     def __init__(
         self,
         rows,
@@ -68,6 +70,7 @@ class _FarthestSelector:
         self.selected_set.add(chosen)
         if self.group_keys is not None:
             self.group_counts[self.group_keys[chosen]] += 1
+        # With unit embeddings, the largest dot product is the nearest selected image.
         similarities = self.embeddings @ self.embeddings[chosen]
         self.maximum_similarity = np.maximum(self.maximum_similarity, similarities)
         return chosen

@@ -1,9 +1,4 @@
-"""Verify package-local and documented release installation paths.
-
-Tests replace ``uname`` and ``python3`` through a temporary ``PATH``, avoid
-network access, and assert effects only inside disposable package layouts. The
-same command environment exercises the exact README bootstrap sequence.
-"""
+"""Verify installer and README bootstrap behavior with local assets and fake commands."""
 
 import hashlib
 import os
@@ -18,11 +13,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGER = ROOT / "scripts/package.py"
-ARCHIVE_NAME = "phenocam-vision-edge-0.2.3.tar.gz"
+ARCHIVE_NAME = "phenocam-vision-edge-0.2.4.tar.gz"
 CHECKSUM_NAME = f"{ARCHIVE_NAME}.sha256"
 ARCHIVE_URL = (
     "https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/"
-    f"releases/download/v0.2.3/{ARCHIVE_NAME}"
+    f"releases/download/v0.2.4/{ARCHIVE_NAME}"
 )
 CHECKSUM_URL = f"{ARCHIVE_URL}.sha256"
 
@@ -118,7 +113,7 @@ exit 1
 
     def documented_command(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        section = readme.split("### Versioned installation (v0.2.3)", 1)[1]
+        section = readme.split("### Versioned installation (v0.2.4)", 1)[1]
         section = re.split(r"\n### |\n## ", section, maxsplit=1)[0]
         blocks = re.findall(r"```sh\n(.*?)```", section, flags=re.DOTALL)
         self.assertEqual(len(blocks), 1)
@@ -133,10 +128,10 @@ exit 1
         assets.mkdir()
         for relative in (
             "README.md",
+            "LICENSE",
             "assets/logo.svg",
             "docs/cli.md",
             "docs/development.md",
-            "docs/manual.md",
             "models/yolo26n-phenocam.onnx",
             "models/yolo26n-phenocam.json",
             "requirements/runtime.txt",
@@ -159,7 +154,7 @@ exit 1
             check=True,
         )
         result = subprocess.run(
-            ["python3", str(PACKAGER), "0.2.3", "HEAD", str(assets)],
+            ["python3", str(PACKAGER), "0.2.4", "HEAD", str(assets)],
             cwd=source,
             capture_output=True,
             text=True,
@@ -293,7 +288,7 @@ exit 1
             checksum.as_uri(),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        installed = destination / "phenocam-vision-edge-0.2.3"
+        installed = destination / "phenocam-vision-edge-0.2.4"
         self.assertTrue((installed / "README.md").is_file())
         self.assertTrue((installed / "models/yolo26n-phenocam.onnx").is_file())
         self.assertTrue(os.access(installed / ".venv/bin/python", os.X_OK))
@@ -304,7 +299,7 @@ exit 1
 
     def test_documented_command_preserves_existing_destination(self):
         archive, checksum = self.release_assets()
-        destination = self.root / "bootstrap/phenocam-vision-edge-0.2.3"
+        destination = self.root / "bootstrap/phenocam-vision-edge-0.2.4"
         destination.mkdir(parents=True)
         marker = destination / "marker"
         marker.write_text("keep", encoding="utf-8")
@@ -323,7 +318,7 @@ exit 1
         result, destination = self.run_documented_command(missing, checksum.as_uri())
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((destination / CHECKSUM_NAME).exists())
-        self.assertFalse((destination / "phenocam-vision-edge-0.2.3").exists())
+        self.assertFalse((destination / "phenocam-vision-edge-0.2.4").exists())
         self.assertFalse(self.pip_log.exists())
 
     def test_documented_command_stops_after_checksum_download_failure(self):
@@ -332,7 +327,7 @@ exit 1
         result, destination = self.run_documented_command(archive.as_uri(), missing)
         self.assertNotEqual(result.returncode, 0)
         self.assertTrue((destination / ARCHIVE_NAME).is_file())
-        self.assertFalse((destination / "phenocam-vision-edge-0.2.3").exists())
+        self.assertFalse((destination / "phenocam-vision-edge-0.2.4").exists())
         self.assertFalse(self.pip_log.exists())
 
     def test_documented_command_stops_after_checksum_mismatch(self):
@@ -343,7 +338,7 @@ exit 1
             checksum.as_uri(),
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((destination / "phenocam-vision-edge-0.2.3").exists())
+        self.assertFalse((destination / "phenocam-vision-edge-0.2.4").exists())
         self.assertFalse(self.pip_log.exists())
 
     def test_documented_command_stops_after_invalid_archive(self):
@@ -369,7 +364,7 @@ exit 1
             TEST_PIP_STATUS="1",
         )
         self.assertNotEqual(result.returncode, 0)
-        installed = destination / "phenocam-vision-edge-0.2.3"
+        installed = destination / "phenocam-vision-edge-0.2.4"
         self.assertTrue((installed / ".venv").is_dir())
         self.assertFalse((installed / "input").exists())
         self.assertFalse((installed / "output").exists())

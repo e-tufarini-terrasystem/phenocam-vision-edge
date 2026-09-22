@@ -1,4 +1,4 @@
-"""Phenocam: download responsibility extracted without changing the data contract."""
+"""Download planned PhenoCam archives within the configured byte budget."""
 
 import csv
 from pathlib import Path

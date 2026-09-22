@@ -1,4 +1,4 @@
-"""Create immutable site-day splits without reading sealed images."""
+"""Assign deterministic site-day splits from inventory without opening images."""
 
 import csv
 import json

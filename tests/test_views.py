@@ -1,8 +1,4 @@
-"""Verify normalized image loading and sixteen model-ready view preparations.
-
-Disposable images and pure coordinate checks cover fifteen adaptive crops,
-orientation, priority, complete coverage, and tensors without ONNX Runtime.
-"""
+"""Verify EXIF normalization, letterboxing, crop coverage, and tensors with synthetic images."""
 
 import tempfile
 import unittest

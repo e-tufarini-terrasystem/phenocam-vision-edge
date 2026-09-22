@@ -1,12 +1,20 @@
-# Phenocam Vision public dataset (v2)
+# Phenocam Vision public dataset (0.1.2)
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 1b068c1446306051bed0f76271c867768f233139` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 ## Overview
 
 Version 2 is the public training artifact used as the reproducible base of
-dataset v3. It supports YOLO object detection for people and privacy-relevant
+dataset 0.1.3. It supports YOLO object detection for people and privacy-relevant
 vehicles while preserving the COCO class IDs expected by the runtime. The
 materialized artifact is named `training-dataset/` for compatibility with the
-builder contract and `notebooks/training-v2.ipynb`.
+builder contract and training notebook 0.1.2.
 
 This artifact contains training data only. It is not an operational validation
 or test set and does not prove performance on deployment cameras.
@@ -60,8 +68,8 @@ training-dataset/
 
 ## Split and annotation format
 
-All 2,000 images belong to `train`; v2 intentionally has no `val` or `test`
-split. Dataset v3 replaces this limitation with group-safe Train, Validation,
+All 2,000 images belong to `train`; 0.1.2 intentionally has no `val` or `test`
+split. Dataset 0.1.3 replaces this limitation with group-safe Train, Validation,
 TEST-ID, and TEST-OOD partitions.
 
 Each non-empty label line uses normalized YOLO detection format:
@@ -89,8 +97,8 @@ second independent negative reviewer was unavailable.
 ## Use
 
 The training notebook reads `dataset/training-dataset`. To rebuild or validate
-the public artifact, follow [CREATION.md](CREATION.md). Full historical build
-evidence remains in [../history/training-dataset.md](../history/training-dataset.md).
+the public artifact, follow [creation.md](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/docs/0.1.2/creation.md). Full historical build
+evidence remains in [../history/training-dataset.md](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/docs/history/training-dataset.md).
 
 Known limitations are the missing validation/test split, the single-reviewer
 waiver, strong source imbalance by class, and the absence of operational-domain

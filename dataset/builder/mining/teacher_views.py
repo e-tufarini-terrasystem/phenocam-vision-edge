@@ -41,6 +41,7 @@ def _predict_view(model, source, crop, image_size, model_names, target_names, mo
         class_index = int(class_index)
         if model_names[class_index] not in target_names or len(box) != 4 or not all(math.isfinite(value) for value in box):
             continue
+        # Internal crop edges can truncate boxes; source-image edges are allowed.
         if priority and _internal_edge(box, crop, image_size):
             rejected += 1
             continue
@@ -53,7 +54,7 @@ def _predict_view(model, source, crop, image_size, model_names, target_names, mo
 
 
 def predict_image(model, path, image_size, model_names, target_names, model_size, confidence, device, tiled, crop_region="all"):
-    """Predict one image without batching so YOLO26x stays within MPS memory."""
+    """Predict one view at a time to limit peak memory; tiled mode omits the full view."""
     detections, rejected = [], 0
     if tiled:
         with Image.open(path) as source_image:

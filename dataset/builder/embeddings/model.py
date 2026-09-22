@@ -1,4 +1,4 @@
-"""Embeddings: model responsibility extracted without changing the data contract."""
+"""Compute normalized SSCD embeddings with a checksum-verified model."""
 
 import json
 import os

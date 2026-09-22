@@ -1,4 +1,4 @@
-"""Register sources command arguments."""
+"""Register source acquisition command arguments."""
 
 from pathlib import Path
 

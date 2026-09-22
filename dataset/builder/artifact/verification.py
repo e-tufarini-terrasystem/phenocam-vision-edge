@@ -1,4 +1,4 @@
-"""Verify exact bytes, human annotations and isolation of all five splits."""
+"""Verify catalog checksums, annotation geometry, and separation of configured splits."""
 
 from collections import Counter, defaultdict
 import math
@@ -11,6 +11,7 @@ from .manifest import CATALOG, CONFIG, DIGEST, load, local_path
 
 
 def verify(root=CATALOG, config=CONFIG, images=True, decode=True):
+    """Always check labels and lineage; images/decode control byte and pixel checks."""
     root = Path(root)
     settings, rows = load(root, config)
     checksums = local_path(root, 'metadata/checksums.sha256')
@@ -70,8 +71,8 @@ def verify(root=CATALOG, config=CONFIG, images=True, decode=True):
         labels += len(lines)
     if set(listed) != expected or any(len(splits) != 1 for splits in separation.values()):
         raise DatasetError('Checksum inventory or split separation differs')
-    # Ultralytics writes label caches even with image caching disabled. Only
-    # regular split caches are disposable; image and label inventories stay exact.
+    # Allow regular split label caches outside the checksum inventory.
+    # They are generated even when training image caching is disabled.
     caches = {f'labels/{split}.cache' for split in settings['splits']}
     for name in caches:
         path = local_path(root, name)

@@ -1,4 +1,4 @@
-"""Annotation entry points; implementation is grouped by responsibility."""
+"""Public annotation bundle and review import functions."""
 
 from .records import MAPPING_FIELDS, NEGATIVE_EXPORT_FIELDS, POSITIVE_IMPORT_FIELDS, _read_csv, _openimages_identity, _phenocam_identity, _bundle_name, _categories, _write_reproducible_member
 from .preview import _materialize_preview

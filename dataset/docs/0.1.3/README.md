@@ -1,13 +1,21 @@
-# Phenocam Vision dataset v3
+# Phenocam Vision dataset 0.1.3
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 0d66dd8f09a3bddcbee65c331f53d4480613ed49` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 ## Overview
 
-Dataset v3 is the canonical leakage-aware YOLO detection dataset for training,
+Dataset 0.1.3 is the canonical leakage-aware YOLO detection dataset for training,
 validation, and separate in-domain and out-of-domain evaluation. It detects
 people and privacy-relevant vehicles while preserving the COCO IDs required by
 the edge runtime.
 
-The materialized artifact is `dataset/dataset-v3/`. It contains public Open
+The materialized artifact is dataset 0.1.3. It contains public Open
 Images and PhenoCam data plus reviewed private operational images. Private
 images must not be redistributed.
 
@@ -28,7 +36,7 @@ come from `raspberrypi2.local` (2025) and `sitets02` (2026).
 ## Structure
 
 ```text
-dataset-v3/
+<dataset 0.1.3>/
 ├── images/
 │   ├── train/
 │   ├── val/
@@ -108,21 +116,19 @@ The deterministic allocation uses seed `42`, exact split sizes, and only then
 minimizes class, season, and luminance imbalance.
 
 Model detections were review suggestions, never ground truth. Public source
-licenses and attribution are recorded in v2 metadata. Private operational rows
+licenses and attribution are recorded in 0.1.2 metadata. Private operational rows
 are explicitly marked non-redistributable.
 
 ## Use and validation
 
-Train with `dataset/dataset-v3/dataset.yaml`. Use
+Train with dataset 0.1.3 (`dataset.yaml`). Use
 `dataset-test-id.yaml` and `dataset-test-ood.yaml` for separate final
 evaluations. The local viewer is `dataset/viewer.html`; select the whole
-`dataset-v3` directory and choose Train, Validation, Test, Test ID, or Test OOD.
+dataset 0.1.3 directory and choose Train, Validation, Test, Test ID, or Test OOD.
 
 Verify the artifact from the repository root:
 
-```sh
-dataset/.venv/bin/python -m dataset.builder.partition verify dataset/dataset-v3
-```
+For the historical commands, see the original document referenced above.
 
 The verifier checks images and labels, class IDs and geometry, manifest
 membership, exact split sizes, unique identities and hashes, camera/group
@@ -130,10 +136,10 @@ isolation, cross-split pHash distance, YAML portability, and checksums.
 
 ## Limitations
 
-The public negatives retain the v2 single-reviewer waiver. TEST-OOD contains
+The public negatives retain the 0.1.2 single-reviewer waiver. TEST-OOD contains
 only two private cameras, is class-imbalanced, and is not a general PhenoCam
-benchmark. Weather and scene-condition labels are unavailable. Dataset v3
+benchmark. Weather and scene-condition labels are unavailable. Dataset 0.1.3
 supports controlled evaluation but does not itself establish production recall,
 false-positive rate, or generalization to unseen operational sites.
 
-Construction and reproducibility are documented in [CREATION.md](CREATION.md).
+Construction and reproducibility are documented in [creation.md](creation.md).

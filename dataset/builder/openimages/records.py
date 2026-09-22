@@ -1,4 +1,4 @@
-"""Openimages: records responsibility extracted without changing the data contract."""
+"""Convert Open Images metadata into attributed, rotation-adjusted candidate records."""
 
 import hashlib
 import json
@@ -41,7 +41,7 @@ def _rotate_box(box, rotation):
 
 
 def candidate_row(image, image_boxes, live_boxes, rotation, verified_negative, subset, config):
-    """Serialize one eligible record with its review requirement and attribution."""
+    """Return an attributed review candidate, or None without positive/negative evidence."""
     image_id = image["ImageID"]
     license_url = image["License"].strip()
     source_config = config["open_images"]

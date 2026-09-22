@@ -1,4 +1,4 @@
-"""Annotation: preview responsibility extracted without changing the data contract."""
+"""Materialize oriented JPEG previews with the recorded annotation dimensions."""
 
 from pathlib import Path
 from PIL import Image, ImageOps

@@ -28,7 +28,8 @@ REQUIRED = (
     "scripts/batch.sh",
     "scripts/installer.sh",
 )
-DOCUMENTATION = ("docs/cli.md", "docs/development.md", "docs/manual.md")
+# Optional documentation preserves compatibility with historical commits.
+DOCUMENTATION = ("LICENSE", "docs/cli.md", "docs/development.md", "docs/manual.md")
 
 
 class PackageError(RuntimeError):
@@ -87,7 +88,6 @@ def source_files(reference):
         if path not in tree:
             raise PackageError(f"required source path does not exist: {path}")
         selected[safe_path(path)] = tree[path]
-    # Older source commits remain packageable; current commits carry their versioned docs.
     for path in DOCUMENTATION:
         if path in tree:
             selected[safe_path(path)] = tree[path]
@@ -181,7 +181,7 @@ def build(version, reference, output_directory):
         with os.fdopen(descriptor, "w", encoding="ascii", newline="") as checksum:
             checksum.write(f"{digest}  {archive_name}\n")
 
-        # Final names stay absent until both temporary assets pass validation.
+        # Publish after archive validation and checksum creation; clean up partial failures.
         if archive_path.exists() or checksum_path.exists():
             raise PackageError("release asset already exists")
         temporary_archive.rename(archive_path)

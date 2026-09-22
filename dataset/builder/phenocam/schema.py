@@ -1,4 +1,4 @@
-"""Phenocam: schema responsibility extracted without changing the data contract."""
+"""PhenoCam archive and frame CSV fields, filename patterns, and catalog endpoint."""
 
 import re
 

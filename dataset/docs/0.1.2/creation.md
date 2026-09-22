@@ -1,4 +1,7 @@
-# Creation of the public dataset (v2)
+# Creation of the public dataset (0.1.2)
+
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 ## Data origin and acquisition
 
@@ -56,8 +59,8 @@ source metadata and archives
 ```
 
 The exact approved specification is preserved in
-[`../dataset-plan-en.md`](../dataset-plan-en.md), with an Italian summary in
-[`../dataset-plan-it.md`](../dataset-plan-it.md). Manual annotation guidance is
+[`../plan-en.md`](../plan-en.md), with an Italian summary in
+[`../plan-it.md`](../plan-it.md). Manual annotation guidance is
 in [`../annotation-guide-it.md`](../annotation-guide-it.md).
 
 ## Reproducibility
@@ -99,12 +102,12 @@ CLI support is separately pinned in `dataset/requirements-cvat.txt`.
 
 ## Split decision and leakage boundary
 
-V2 deliberately materializes only `train`. Duplicate and provenance groups are
+0.1.2 deliberately materializes only `train`. Duplicate and provenance groups are
 still recorded so later splitting can keep related items together. Internal
 operational images are excluded entirely. This preserves the first experiment's
-public-data boundary but makes v2 unsuitable for final validation by itself.
+public-data boundary but makes 0.1.2 unsuitable for final validation by itself.
 
-Dataset v3 performs the actual group-safe partition. It keeps Open Images
+Dataset 0.1.3 performs the actual group-safe partition. It keeps Open Images
 duplicate groups indivisible, keeps each public PhenoCam camera together, joins
 PhenoCam pHash-near components, and reserves private operational cameras for
 TEST-OOD.
@@ -118,4 +121,4 @@ TEST-OOD.
 - External input is strictly validated and path traversal is rejected.
 - The single-reviewer waiver remains visible and cannot be described as
   independent negative verification.
-- Operational validation is outside v2 and remained pending until v3.
+- Operational validation is outside 0.1.2 and remained pending until 0.1.3.

@@ -1,8 +1,4 @@
-"""Verify deterministic release packaging in disposable Git repositories.
-
-Synthetic commits exercise allowlisting and path safety without reading the
-working repository, accessing a network, or consulting the real remote.
-"""
+"""Verify deterministic packaging and path safety using disposable Git repositories."""
 
 import hashlib
 import importlib.util
@@ -34,10 +30,10 @@ class ReleasePackageTests(unittest.TestCase):
         self.git("config", "user.email", "release@example.invalid")
         files = {
             "README.md": b"committed readme\n",
+            "LICENSE": b"committed license\n",
             "assets/logo.svg": b"<svg/>\n",
             "docs/cli.md": b"software operation guide\n",
             "docs/development.md": b"development guide\n",
-            "docs/manual.md": b"operator manual\n",
             "phenocam/__init__.py": b'"""Package."""\n',
             "phenocam/classes/naïve.py": b"VALUE = 1\n",
             "models/yolo26n-phenocam.onnx": b"model bytes\x00",
@@ -98,6 +94,7 @@ class ReleasePackageTests(unittest.TestCase):
 
     def test_success_uses_only_normalized_allowlisted_commit_files(self):
         (self.repository / "README.md").write_text("working tree change\n", encoding="utf-8")
+        (self.repository / "LICENSE").write_text("uncommitted license\n", encoding="utf-8")
         (self.repository / "phenocam/untracked.py").write_text("UNTRACKED = True\n", encoding="utf-8")
         result = self.run_packager()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -111,10 +108,10 @@ class ReleasePackageTests(unittest.TestCase):
             root = "phenocam-vision-edge-0.1.0"
             expected_files = {
                 f"{root}/README.md",
+                f"{root}/LICENSE",
                 f"{root}/assets/logo.svg",
                 f"{root}/docs/cli.md",
                 f"{root}/docs/development.md",
-                f"{root}/docs/manual.md",
                 f"{root}/models/yolo26n-phenocam.onnx",
                 f"{root}/models/yolo26n-phenocam.json",
                 f"{root}/phenocam/__init__.py",
@@ -130,12 +127,26 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertNotIn(f"{root}/tests/test_example.py", names)
             self.assertNotIn(f"{root}/phenocam/untracked.py", names)
             self.assertEqual(archive.extractfile(f"{root}/README.md").read(), b"committed readme\n")
+            self.assertEqual(archive.extractfile(f"{root}/LICENSE").read(), b"committed license\n")
             for member in archive:
                 self.assertEqual((member.uid, member.gid, member.uname, member.gname, member.mtime), (0, 0, "", "", 0))
                 self.assertEqual(member.mode, 0o755 if member.isdir() or member.name.endswith(".sh") else 0o644)
 
         digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
         self.assertEqual(checksum_path.read_text(encoding="ascii"), f"{digest}  {archive_path.name}\n")
+
+    def test_historical_commit_without_license_keeps_its_manual(self):
+        self.git("rm", "LICENSE", "docs/cli.md", "docs/development.md")
+        (self.repository / "docs").mkdir(exist_ok=True)
+        (self.repository / "docs/manual.md").write_bytes(b"historical manual\n")
+        self.git("add", "docs/manual.md")
+        self.commit("historical documentation layout")
+        result = self.run_packager()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with tarfile.open(self.asset_paths()[0], "r:gz") as archive:
+            root = "phenocam-vision-edge-0.1.0"
+            self.assertNotIn(f"{root}/LICENSE", archive.getnames())
+            self.assertEqual(archive.extractfile(f"{root}/docs/manual.md").read(), b"historical manual\n")
 
     def test_two_builds_are_byte_identical(self):
         second_output = self.root / "second output"

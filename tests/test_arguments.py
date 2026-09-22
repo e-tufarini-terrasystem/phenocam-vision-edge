@@ -1,10 +1,4 @@
-"""
-Verify paths, deletion intent, identity, and metadata at the CLI boundary.
-
-Temporary entries prove the at-least-one and pairwise identity invariants for
-untrusted paths. Metadata cases also enforce regular-file validation and prevent
-serialized output paths from injecting lines without modifying production files.
-"""
+"""Verify CLI action requirements, path aliases, file identities, and metadata paths."""
 
 import contextlib
 import io

@@ -1,4 +1,4 @@
-"""Phenocam: frames responsibility extracted without changing the data contract."""
+"""Sample visible frames from validated PhenoCam archive members."""
 
 import csv
 import os

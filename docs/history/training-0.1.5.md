@@ -1,8 +1,16 @@
-# Training v5 — esito finale
+# Training 0.1.5 — esito finale
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob a928f90072b59b215d5c8f5b3f25f1a48dcb299a` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Data: 2026-09-07.
 
-Stato: **v5 promossa con un trade-off dichiarato**. Il modello di deployment è
+Stato: **0.1.5 promossa con un trade-off dichiarato**. Il modello di deployment è
 YOLO26n; YOLO26x è stato usato soltanto come teacher per le proposte da
 revisionare e non viene distribuito sul Raspberry Pi.
 
@@ -14,17 +22,17 @@ parametri, memoria o costo d'inferenza rispetto a YOLO26n:
 
 - 2.408.932 parametri fused e 5,4 GFLOPs;
 - soglia runtime congelata: `0.47`;
-- checkpoint: `models/yolo26n-v5.pt`;
-- ONNX statico, batch 1, 640×640, opset 20: `models/yolo26n-v5.onnx`;
+- checkpoint: checkpoint PT 0.1.5;
+- ONNX statico, batch 1, 640×640, opset 20: modello ONNX 0.1.5;
 - output verificato: `[1, 300, 6]`, 80 classi COCO.
 
-La decisione privilegia il dominio richiesto: l'ONNX v5 migliora F1 di `+0,04491`
+La decisione privilegia il dominio richiesto: l'ONNX 0.1.5 migliora F1 di `+0,04491`
 sul PKLot holdout e di `+0,01169` su TEST-OOD, con una regressione di `-0,00520`
 su TEST-ID. Non è quindi un miglioramento uniforme su ogni slice.
 
 ## Dataset e assenza di leakage
 
-`dataset-v5` contiene 2.004 immagini e 6.402 box:
+Il dataset 0.1.5 contiene 2.004 immagini e 6.402 box:
 
 | Split | Immagini | Box | Uso |
 | --- | ---: | ---: | --- |
@@ -114,10 +122,10 @@ media `0,43915`, guadagno `+0,00608`. La selezione congelata ha SHA-256 modello
 
 ## Test finali del deployment ONNX
 
-Il confronto usa l'ONNX baseline alla soglia 0,46 e l'ONNX v5 alla soglia
+Il confronto usa l'ONNX baseline alla soglia 0,46 e l'ONNX 0.1.5 alla soglia
 congelata 0,47. Modello e soglie non sono stati modificati dopo l'apertura.
 
-| Split | F1 baseline | F1 v5 | Delta | Precision v5 | Recall v5 |
+| Split | F1 baseline | F1 0.1.5 | Delta | Precision 0.1.5 | Recall 0.1.5 |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | PKLot holdout | 0,29547 | 0,34037 | +0,04491 | 0,81977 | 0,21478 |
 | TEST-ID | 0,48627 | 0,48106 | −0,00520 | 0,44007 | 0,53047 |
@@ -126,7 +134,7 @@ congelata 0,47. Modello e soglie non sono stati modificati dopo l'apertura.
 | sola camera-stress Raspberry | 0,49572 | 0,50752 | +0,01180 | 0,94866 | 0,34643 |
 
 Le metriche standard PyTorch confermano mAP50–95 TEST-ID `0,58229 → 0,58256`
-e TEST-OOD `0,13260 → 0,13421`. Sul PKLot holdout v5 ottiene mAP50–95
+e TEST-OOD `0,13260 → 0,13421`. Sul PKLot holdout 0.1.5 ottiene mAP50–95
 `0,09184`; le auto lontane restano il limite principale.
 
 PT e ONNX coincidono sui conteggi PKLot e OOD. Sulla validation, l'export ONNX
@@ -143,8 +151,8 @@ scene della stessa vista PUCPR: molte box, ma bassa indipendenza statistica.
 
 | Artefatto | Byte | SHA-256 |
 | --- | ---: | --- |
-| `models/yolo26n-v5.pt` | 5.542.277 | `93cca0065d9d06da5c78edadb388967a88b32fc2f0557a09fa82e1fcf8a638a3` |
-| `models/yolo26n-v5.onnx` | 9.941.955 | `252f302257759cae6d40579fb76b74d66f87bdce2997d44f89dba85d03420379` |
+| checkpoint PT 0.1.5 | 5.542.277 | `93cca0065d9d06da5c78edadb388967a88b32fc2f0557a09fa82e1fcf8a638a3` |
+| modello ONNX 0.1.5 | 9.941.955 | `252f302257759cae6d40579fb76b74d66f87bdce2997d44f89dba85d03420379` |
 
 Il benchmark di contratto sul Mac Apple M4 misura 20 forward CPU dopo tre
 warmup: media 21,78 ms, mediana 21,47 ms e p95 24,41 ms per singola vista. Non
@@ -168,19 +176,8 @@ pseudo-ground-truth per aumentare artificialmente il numero di immagini.
 
 ## Comandi riproducibili
 
-```sh
-.venv-export/bin/python -m scripts.training_v5.train adamw-head 42
-.venv-export/bin/python -m scripts.training_v5.train adamw-head 17
-.venv-export/bin/python -m scripts.training_v5.train adamw-head 73
-.venv-export/bin/python -m scripts.training_v5.interpolate \
-  --parent output/training-v5/runs/adamw-head/weights/best.pt \
-  --parent output/training-v5/runs/adamw-head-seed17/weights/best.pt \
-  --parent output/training-v5/runs/adamw-head-seed73/weights/best.pt \
-  --name adamw-head-soup-refined
-.venv-export/bin/python -m scripts.training_v5.selection freeze
-PYTHONPATH=. .venv-export/bin/python -m scripts.training_v5.finalize
-```
+Per i comandi storici, consultare il documento originale indicato sopra.
 
 Le ricevute complete di training, selection, test ed export sono sotto
-`output/training-v5/`; gli artifact di lavoro sono ignorati da Git, mentre PT,
+output del training 0.1.5; gli artifact di lavoro sono ignorati da Git, mentre PT,
 ONNX e ricevuta finale sono versionati in `models/`.

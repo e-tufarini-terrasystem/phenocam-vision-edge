@@ -1,4 +1,4 @@
-"""Workflow: preparation responsibility extracted without changing the data contract."""
+"""Screen Open Images selections and prepare review packets without overwriting progress."""
 
 from ..baseline import screen_manifest
 from ..common import DatasetError

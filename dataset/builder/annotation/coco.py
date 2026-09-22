@@ -1,4 +1,4 @@
-"""Annotation: coco responsibility extracted without changing the data contract."""
+"""Build reproducible COCO archives with source boxes or model suggestions for review."""
 
 import json
 import zipfile
@@ -64,9 +64,7 @@ def _build_coco_bundle(name, rows, identity_function, annotation_function, outpu
         coco_images.append(
             {
                 "id": image_id,
-                # CVAT uploads these resources as bare filenames. Keeping the
-                # COCO identity identical lets the annotation archive match an
-                # already-created task without relying on path normalization.
+                # Match the bare filenames uploaded to CVAT, without directory prefixes.
                 "file_name": file_name,
                 "width": int(row["width"]),
                 "height": int(row["height"]),

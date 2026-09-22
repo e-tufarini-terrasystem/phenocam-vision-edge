@@ -1,8 +1,4 @@
-"""Verify deterministic detection metadata summaries and failure boundaries.
-
-Temporary local files and synthetic detections cover replacement and atomic
-persistence without running inference or mutating repository fixtures.
-"""
+"""Verify metadata content, atomic replacement, and failure cleanup in temporary files."""
 
 import os
 import stat

@@ -143,11 +143,19 @@ After editing, verify whether the change reduced or increased conceptual complex
   or require Git at runtime.
 - Keep software and model versions independent. A software release alone does
   not justify changing `model_version` or the model artifacts.
+- Software stability and model acceptance are independent. A stable software
+  release may bundle an experimental model when its status and limitations are
+  clearly documented. Software promotion does not change model acceptance status.
 - Keep the bundled model identity in `models/yolo26n-phenocam.json`:
-  `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6` for the
-  historical v6 artifact. In this experimental model series, revision vN uses
-  `0.1.N`; this is a project convention, not the software release number or
-  the Ultralytics exporter version. Change the series only by explicit decision.
+  `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6`.
+  Use `0.1.2` through `0.1.6` for the corresponding historical model cycles
+  in Markdown names and content. Preserve expanded/extended variant labels,
+  hashes and acceptance results; normalized names do not create past releases.
+  Dataset documentation uses the version of its associated training cycle.
+  Only `0.1.6` is maintained as a specialized model in the current checkout.
+  Software versions and upstream product versions remain independent.
+  Preserve exact historical commands and paths through their original Git
+  documents; never invent executable paths by substituting version numbers.
 - Keep the stable model filenames independent of the revision. Record a new
   version and matching hashes for a new model artifact; never assign the same
   model identity/version to different ONNX bytes. Preserve historical provenance
@@ -155,7 +163,8 @@ After editing, verify whether the change reduced or increased conceptual complex
 - Detection metadata must obtain model identity from the selected ONNX file's
   sibling JSON receipt, after validating its fields and `onnx_sha256` against
   the selected file. Do not duplicate identity constants in runtime code or
-  infer versions from filenames. An absent receipt yields `unknown`; an invalid
+  infer versions from filenames. An absent receipt yields `model_id=unknown`
+  and `model_version=unknown`; never assign a version without a verified receipt. An invalid
   or mismatched receipt with `--meta` must fail before output writes or deletion.
 - Update current installation commands, metadata examples, and release-related
   test expectations together. Preserve historical release references.
@@ -170,8 +179,9 @@ After editing, verify whether the change reduced or increased conceptual complex
   model bytes against the receipt; a model version update alone does not prove
   a quality improvement or authorize promotion out of experimental status.
 - Publish corrections as a new patch release. Do not move existing release tags
-  or replace published assets. Preserve experimental/prerelease status unless
-  promotion is explicitly authorized and supported by validation.
+  or replace published assets. Track software prerelease status and model
+  experimental status separately; promotion of either requires explicit
+  authorization and validation appropriate to that component.
 
 ## Non-Goals
 

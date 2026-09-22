@@ -1,10 +1,4 @@
-"""
-Provide the process boundary for the single-image inference command.
-
-Argument handling, optional image/metadata destinations, and source deletion
-intent are delegated to the single inference transaction. This entry point owns
-only fixed diagnostics, including deletion failure, and success timing.
-"""
+"""Run single-image inference and report CLI errors or ONNX execution time."""
 
 import sys
 from typing import Optional, Sequence

@@ -1,1 +1,1 @@
-"""Operational image mining for the v3 human-review queues."""
+"""Image mining and model-assisted human-review queues."""

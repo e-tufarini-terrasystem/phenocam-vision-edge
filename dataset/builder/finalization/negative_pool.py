@@ -1,4 +1,4 @@
-"""Choose the smallest diverse PhenoCam negative supplement."""
+"""Fill the PhenoCam negative quota while preserving reviewed empty frames."""
 
 from pathlib import Path
 

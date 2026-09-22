@@ -1,4 +1,4 @@
-"""Phenocam: plan responsibility extracted without changing the data contract."""
+"""Select PhenoCam site archives by season within a download budget."""
 
 import json
 import csv

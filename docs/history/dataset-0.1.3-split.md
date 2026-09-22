@@ -1,4 +1,12 @@
-# Report di analisi e split del dataset v3
+# Report di analisi e split del dataset 0.1.3
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 3748e3d0df97998ddde907918288f4f9bc3d9bd5` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Data della misura: 2026-09-02. Stato: split materializzato e verificato.
 
@@ -88,7 +96,7 @@ derivata dalla composizione misurata.
 
 ## Strategie valutate
 
-| Strategia | Vantaggi | Svantaggi/leakage | Esito v3 |
+| Strategia | Vantaggi | Svantaggi/leakage | Esito 0.1.3 |
 | --- | --- | --- | --- |
 | A — 70/15/15 random stratificato | più evaluation | stessa camera in tutti i subset | respinta |
 | B — 80/10/10 random | più training | le percentuali non risolvono leakage | respinta senza gruppi |
@@ -154,11 +162,7 @@ Train, Validation, Test, Test ID e Test OOD, aggiorna conteggi e metadati.
 
 Comandi dalla directory `dataset/`:
 
-```sh
-.venv/bin/python -m builder.partition build dataset-v3 dataset-v3-rebuilt
-.venv/bin/python -m builder.partition verify dataset-v3
-open viewer.html
-```
+Per i comandi storici, consultare il documento originale indicato sopra.
 
 Limite di verifica UI: in questa sessione non era disponibile un browser
 controllabile. La sintassi JavaScript e i controlli statici sono testati; il

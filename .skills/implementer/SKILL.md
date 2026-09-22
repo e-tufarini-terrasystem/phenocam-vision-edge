@@ -38,12 +38,13 @@ services. Preserve all unrelated worktree changes.
 
 Apply only the invariants relevant to the change, including:
 
-- inference uses the bundled end-to-end `models/yolo26n.onnx` graph;
+- deployed inference uses the bundled `models/yolo26n-phenocam.onnx` graph;
 - one image is processed sequentially as one full view plus fifteen crops;
 - model metadata and tensor shapes are validated before inference;
 - enabled-class selection occurs after global detection suppression;
-- requested images precede metadata update, which precedes conditional input
-  deletion;
+- an enabled final detection triggers either input/metadata deletion or requested
+  image writes followed by metadata update; deletion takes precedence and writes
+  no products, while no detection preserves images and updates supplied metadata;
 - failures expose stable user-facing errors without host details;
 - the release archive contains only the explicit runtime allowlist.
 

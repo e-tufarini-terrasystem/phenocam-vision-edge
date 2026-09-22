@@ -1,4 +1,12 @@
-# YOLO26n training v4 — registro sperimentale
+# YOLO26n training 0.1.4 — registro sperimentale
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 1e30d0350c845b56ba4689013a155601ee8d350d` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Stato iniziale: revisione training completata; preparazione della validation
 PhenoCam positiva prima del training. TEST-ID e TEST-OOD restano sigillati.
@@ -25,9 +33,9 @@ dataset/builder/mining/
   validation_selection.py       (~120 linee; coda positiva soltanto validation)
   __main__.py                   (~14 linee modificate; CLI invariata nel ruolo)
 
-scripts/training_v4/
+<training implementation 0.1.4>/
   __init__.py                   (~1 linea)
-  dataset.py                    (~195 linee; materializzazione e audit v4)
+  dataset.py                    (~195 linee; materializzazione e audit 0.1.4)
   train.py                      (~145 linee; un esperimento isolato)
   standard.py                   (~145 linee; sola valutazione Ultralytics)
   interpolate.py                (~155 linee; griglia lineare dichiarata)
@@ -66,10 +74,10 @@ Il filtro pHash e camera-day conserva 3 frame da 2 siti e scarta 2 near
 duplicate. La teacher inference sui 15 crop aggiunge 2 proposte alle 5 full
 image: il gate finale ha 7 proposte, tutte piccole a 640 (`car`: 4, `truck`: 1,
 `person`: 1, `bus`: 1). Il bundle e in
-`dataset/workspace/training-v4/validation/review/gate/`, SHA-256 receipt
+workspace del training 0.1.4 (`validation/review/gate/`), SHA-256 receipt
 `4040c6fce5603493c73eed0bf748f77a27f3c7f3be1b64a12bbd5c512816256`.
-Il task CVAT locale 15, `V4 public PhenoCam validation positives - review
-gate`, e stato creato con le 3 immagini e le 7 proposte.
+Il task CVAT locale 15, del ciclo 0.1.4 (public PhenoCam validation positives - review
+gate), e stato creato con le 3 immagini e le 7 proposte.
 
 La revisione del task 15 e stata chiusa in `Acceptance/Completed`. L'export
 COCO ha SHA-256
@@ -81,7 +89,7 @@ risultati e impedisce conclusioni forti sul dominio.
 
 ## Dataset e criterio di selezione congelati prima dei risultati
 
-`dataset-v4` contiene 1.621 immagini train con 3.858 box e 203 immagini
+Il dataset 0.1.4 contiene 1.621 immagini train con 3.858 box e 203 immagini
 validation con 464 box. Il train aggiunge soltanto le 3 immagini positive
 revisionate; la validation aggiunge le 3 negative confermate. L'audit ha
 verificato 2.968 checksum, zero sovrapposizioni di siti e nessun file TEST nel
@@ -141,14 +149,14 @@ checkpoint originale.
 
 ## Selezione congelata ed export
 
-- checkpoint: `models/yolo26n.pt`, copiato come `models/yolo26n-v4.pt`;
+- checkpoint: `models/yolo26n.pt`, copiato come checkpoint PT 0.1.4;
 - SHA-256 PT: `9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef`;
 - soglia: `0,45`;
-- ONNX opset 20: `models/yolo26n-v4.onnx`;
+- ONNX opset 20: modello ONNX 0.1.4;
 - SHA-256 ONNX: `d2f2aad7f15c578db23b9bbf74923c16f1e7ba42591746c177ecd96cae936db1`;
 - contratto verificato: input `1×3×640×640`, output `1×300×6`, 80 classi COCO.
 
-La receipt `output/training-v4/frozen-selection.json` è stata scritta prima di
+La receipt output del training 0.1.4 (`frozen-selection.json`) è stata scritta prima di
 aprire TEST-ID e TEST-OOD. La selezione non è stata modificata dopo il test.
 
 ## Risultato domain-representative

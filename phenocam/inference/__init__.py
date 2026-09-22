@@ -1,1 +1,1 @@
-"""Mark the inference domain without importing transaction or runtime code."""
+"""Image inference; session creation and processing require explicit imports."""

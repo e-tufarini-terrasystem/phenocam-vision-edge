@@ -1,9 +1,6 @@
 #!/bin/sh
-# Run single-image inference over the project's input/ directory.
-# This developer helper writes bounding-box annotations only, one process per
-# source. A regular,
-# non-symlink same-stem metadata file is passed when present.
-# Image validation, inference, and output writing remain inside phenocam.
+# Process each image in input/ separately, writing annotations to output/.
+# Pass a same-stem .meta file when it is regular and not a symlink.
 
 set -u
 
@@ -13,11 +10,8 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || { echo "error: project d
 model="$root/models/yolo26n-phenocam.onnx"
 input_dir="$root/input"
 output_dir="$root/output"
-confidence=0.47  # Range 0..1; higher filters more boxes, including false positives.
-# Suggested trials: 0.47 = current setting; 0.55 = moderate; 0.65 = strict filtering.
-# Higher thresholds may lose real objects, especially distant ones. Compare the
-# same images and use a different output_dir per trial to avoid overwriting.
-threads=${YOLO_NUM_THREADS:-4}  # 1..4; an environment override is also accepted.
+confidence=0.47  # 0..1; higher thresholds also discard more true detections.
+threads=${YOLO_NUM_THREADS:-4}  # 1..4
 
 python="$root/.venv/bin/python"
 [ -x "$python" ] || python=$(command -v python3)
@@ -33,8 +27,7 @@ cd "$root" || { echo "error: project directory cannot be resolved" >&2; exit 1; 
 [ -n "$python" ] && [ -x "$python" ] || { echo "error: Python interpreter does not exist" >&2; exit 1; }
 mkdir -p -- "$output_dir" 2>/dev/null || { echo "error: output directory could not be created" >&2; exit 1; }
 
-# The CLI has no confidence option. Bind the existing filter parameter only in
-# this child process; keep CLI validation, all sixteen views, and output handling.
+# The CLI has no confidence option; override its filter only in this child process.
 runner='
 import sys
 from functools import partial

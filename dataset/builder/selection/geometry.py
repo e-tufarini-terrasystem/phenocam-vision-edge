@@ -1,4 +1,4 @@
-"""Selection: geometry responsibility extracted without changing the data contract."""
+"""Classify box size and difficulty using the runtime crop geometry at 640 pixels."""
 
 import json
 from collections import Counter

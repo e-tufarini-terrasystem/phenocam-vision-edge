@@ -1,4 +1,12 @@
-# Revisione pre-ampliamento del dataset v3
+# Revisione pre-ampliamento del dataset 0.1.3
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 6525b2004dc497eb1a378c98a795093139ed4bc7` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
 
 > Errata corrige del 2 settembre 2026: una box `bus` del frame
 > `raspberrypi2.local--2025-11-11T091905--be026e5d2e7d.jpg` racchiudeva un
@@ -9,12 +17,12 @@
 
 Data della misura: 2026-09-01.
 
-Stato: report pre-modifica. L'artifact oggi denominato `dataset/dataset-v3/` non è stato
+Stato: report pre-modifica. L'artifact oggi denominato dataset 0.1.3 non è stato
 modificato e il Task CVAT 11 non è ancora ground truth.
 
 ## Esito
 
-Il dataset v3 materiale contiene 2.240 immagini e 10.562 annotazioni. Le 2.000
+Il dataset 0.1.3 materiale contiene 2.240 immagini e 10.562 annotazioni. Le 2.000
 immagini pubbliche costituiscono l'unico training split; le 240 immagini interne
 sono separate in `operational_dev` e `operational_mining` e non sono usate
 automaticamente per il training.
@@ -42,15 +50,15 @@ Le sezioni usano quattro qualificatori:
 
 Fonti locali principali:
 
-- `dataset/dataset-v3/metadata/source-images.csv`;
-- `dataset/dataset-v3/labels/**`;
-- `dataset/dataset-v3/metadata/source-annotations.jsonl`;
+- dataset 0.1.3 (`metadata/source-images.csv`);
+- dataset 0.1.3 (`labels/**`);
+- dataset 0.1.3 (`metadata/source-annotations.jsonl`);
 - `dataset/workspace/sources/phenocam/baseline-screened.csv`;
-- `dataset/workspace/training-v3/screening/public-teacher/`;
-- `dataset/workspace/training-v3/selection/public-teacher-clean.csv`;
-- `output/training-v2/split-audit.json` e relativi elenchi train/validation;
+- workspace del training 0.1.3 (`screening/public-teacher/`);
+- workspace del training 0.1.3 (`selection/public-teacher-clean.csv`);
+- output del training 0.1.2 (`split-audit.json`) e relativi elenchi train/validation;
 - `dataset/config/dataset-contract.json` e
-  `dataset/config/training-v3.json`.
+  configurazione del training 0.1.3.
 
 Le percentuali di immagini per classe sono prevalenze e possono sommare oltre
 il 100%, perché una stessa immagine può contenere classi diverse. Le percentuali
@@ -94,7 +102,7 @@ non descrive la distribuzione effettivamente usata per addestrare il modello.
 | `bus` | 126 | 6,30% | 180 | 3,85% |
 | `truck` | 226 | 11,30% | 270 | 5,77% |
 
-Tutti i minimi di istanza del contratto v2 sono rispettati. `car`, `truck`,
+Tutti i minimi di istanza del contratto 0.1.2 sono rispettati. `car`, `truck`,
 `bicycle`, `motorcycle` e `bus` sono però vicini ai rispettivi minimi, mentre
 `person` li supera ampiamente. Il deficit più rilevante rispetto al dominio
 operativo è quindi la copertura delle automobili in immagini a camera fissa.
@@ -121,7 +129,7 @@ operativo è quindi la copertura delle automobili in immagini a camera fissa.
 | `bus` | 0 | 0,00% | 0 | 0,00% |
 | `truck` | 51 | 42,50% | 63 | 2,09% |
 
-L'assenza di `bicycle` negli split operativi è coerente con la regola v3 che
+L'assenza di `bicycle` negli split operativi è coerente con la regola 0.1.3 che
 non annota una bicicletta senza persona; non implica che la classe possa essere
 rimossa dall'ontologia pubblica a sei classi.
 
@@ -129,10 +137,10 @@ rimossa dall'ontologia pubblica a sei classi.
 
 Il dataset materiale non contiene directory `val` o `test` e il suo YAML
 dichiara soltanto `train`, `operational_dev` e `operational_mining`. Il notebook
-`notebooks/training-v2.ipynb` costruisce però un train/validation temporaneo e deterministico
+Il notebook di training 0.1.2 costruisce però un train/validation temporaneo e deterministico
 raggruppando per `group_id`.
 
-### Split derivato usato dal training v2
+### Split derivato usato dal training 0.1.2
 
 | Split derivato | Immagini | Open Images | PhenoCam | Positive | Negative | Annotazioni |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -229,7 +237,7 @@ dataset corrente.
 ### Pool misurato
 
 Lo screening ha elaborato 3.059 immagini eleggibili, con zero errori, dopo aver
-escluso identità, hash e camera-day già usati nel v3 pubblico o nel pilot
+escluso identità, hash e camera-day già usati nel 0.1.3 pubblico o nel pilot
 precedente. Il pool copre 141 siti, 2.077 camera-day e il periodo 2001-2023.
 
 | Stagione | Immagini eleggibili |
@@ -281,7 +289,7 @@ hanno luminanza euristica intermedia. Il task è ancora in stato `annotation`,
 con zero job completati: questi numeri restano predizioni.
 
 Rispetto al dataset corrente, il massimo coseno SSCD delle 40 immagini è 0,7915,
-ben sotto il gate 0,95: sono nuove rispetto al v3. All'interno delle 40, però,
+ben sotto il gate 0,95: sono nuove rispetto al 0.1.3. All'interno delle 40, però,
 esistono 5 coppie SSCD almeno 0,95 e 99 coppie dello stesso sito con distanza
 pHash non superiore a 8. La ridondanza interna è quindi il limite principale.
 
@@ -302,7 +310,7 @@ Criteri, nell'ordine:
 5. fra coppie SSCD con coseno almeno 0,95, mantenere quella con più target
    verificati, poi quella che aggiunge una classe rara, poi la confidenza YOLO
    più alta solo come spareggio;
-6. rieseguire deduplicazione contro tutto il v3 con SHA-256, pHash e SSCD;
+6. rieseguire deduplicazione contro tutto il 0.1.3 con SHA-256, pHash e SSCD;
 7. mantenere le immagini scartate in una riserva revisionata con motivazione,
    senza cancellarle.
 
@@ -331,12 +339,12 @@ un mining separato, non un abbassamento indiscriminato della soglia.
 
 ## 7. Strategia di split consigliata
 
-Le nuove immagini appartengono a siti PhenoCam già presenti nel pubblico v2.
+Le nuove immagini appartengono a siti PhenoCam già presenti nel pubblico 0.1.2.
 Per il primo ciclo devono restare nello stesso lato di training delle altre
 immagini di quei siti; non devono essere distribuite casualmente fra train e
 validation.
 
-Per un futuro training v3 riproducibile:
+Per un futuro training 0.1.3 riproducibile:
 
 - Open Images: mantenere indivisibili i gruppi di provenienza;
 - PhenoCam: assegnare l'intero `site_id` a un solo split, non il singolo giorno;
@@ -348,7 +356,7 @@ Per un futuro training v3 riproducibile:
 
 Il cambio da split per camera-day a split per sito modifica il protocollo di
 benchmark e deve essere versionato esplicitamente; non va applicato retroattivamente
-al risultato v2 senza conservare il benchmark storico.
+al risultato 0.1.2 senza conservare il benchmark storico.
 
 ## 8. Coerenza con la documentazione
 
@@ -364,17 +372,17 @@ Elementi coerenti:
 
 Incongruenze o limiti da correggere dopo la revisione:
 
-- il README v3 riporta correttamente 2.240 immagini, ma le statistiche
+- il README 0.1.3 riporta correttamente 2.240 immagini, ma le statistiche
   materializzate espongono le classi solo per gli split operativi e non il
   totale pubblico;
 - il YAML materiale non ha `val` o `test`; il vero split di training vive in
-  `output/training-v2/` ed è quindi esterno all'artifact;
-- lo split v2 rispetta `group_id` ma non il sito PhenoCam, creando leakage di
+  output del training 0.1.2 ed è quindi esterno all'artifact;
+- lo split 0.1.2 rispetta `group_id` ma non il sito PhenoCam, creando leakage di
   sfondo fisso fra train e validation;
-- `training-v3.json` elenca cinque classi privacy e omette `bicycle`, mentre il
+- configurazione del training 0.1.3 elenca cinque classi privacy e omette `bicycle`, mentre il
   dataset pubblico mantiene l'ontologia a sei classi; il confine è intenzionale
   per i task operativi ma deve essere esplicitato nel futuro README ampliato;
-- `sealed_test` è un confine del workflow, non uno split distribuito nel v3;
+- `sealed_test` è un confine del workflow, non uno split distribuito nel 0.1.3;
 - il selettore YOLO26x verifica la novità SSCD rispetto al dataset esistente ma
   non impone diversità SSCD tra le immagini dello stesso task.
 
@@ -387,10 +395,10 @@ Incongruenze o limiti da correggere dopo la revisione:
    checksum.
 4. Applicare i criteri conservativi alle annotazioni umane e produrre un CSV
    `included/reserved/rejected` con motivazione.
-5. Materializzare il v3 ampliato in una nuova destinazione o tramite identità di
+5. Materializzare il 0.1.3 ampliato in una nuova destinazione o tramite identità di
    build nuova, senza sovrascrivere l'artifact corrente.
 6. Rieseguire checksum, validazione label, audit leakage e statistiche complete.
-7. Solo allora aggiornare `dataset/docs/dataset-v3/README.md`, README
+7. Solo allora aggiornare `dataset/docs/0.1.3/README.md`, README
    materializzato e stato del
    progetto con i numeri misurati finali.
 
@@ -433,7 +441,7 @@ training conserva 3.052 `person`, 200 `bicycle`, 862 `car`, 204 `motorcycle`,
 
 L'audit finale non trova duplicati esatti di immagine, identità o path, né
 `group_id` presenti in più split. Tutti i 3.244 file immagine/label ereditati
-dal training v2 sono byte-identici. L'artifact non introduce split `val` o
+dal training 0.1.2 sono byte-identici. L'artifact non introduce split `val` o
 `test`: le nuove immagini restano nel training insieme agli altri frame dei
 medesimi siti, mentre gli split interni rimangono separati e non addestrabili.
 I checksum completi e i 43 test dataset risultano validi.

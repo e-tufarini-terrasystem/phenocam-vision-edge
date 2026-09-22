@@ -1,5 +1,13 @@
 # Ciclo multi-sito PhenoCam — gate di revisione
 
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob ba4bcef239804b1ff6116d6edd66d09989c86ff1` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
+> Historical record for this iteration; use the [current guide](../development.md#current-workflow).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Data di avvio: 2026-09-03.
 
 Stato: investigazione e preparazione del gate. Nessun dato di TEST-ID,
@@ -21,7 +29,7 @@ evidenza decisionale per questo ciclo.
 
 ```text
 dataset/config/
-  training-v4.json                         (~55 linee dati)
+  <training configuration 0.1.4>                         (~55 linee dati)
 
 dataset/builder/mining/
   __main__.py                              (~19 linee aggiunte; totale <200)
@@ -139,10 +147,10 @@ conteggi non devono essere descritti come distribuzione del ground truth.
 
 Artifact principale:
 
-- immagini e receipt: `dataset/workspace/training-v4/review/gate/`;
-- anteprima locale: `dataset/workspace/training-v4/review/gate/preview.html`;
+- immagini e receipt: workspace del training 0.1.4 (`review/gate/`);
+- anteprima locale: workspace del training 0.1.4 (`review/gate/preview.html`);
 - preannotazioni COCO:
-  `dataset/workspace/training-v4/review/gate/annotations.coco.zip`;
+  workspace del training 0.1.4 (`review/gate/annotations.coco.zip`);
 - SHA-256 annotazioni:
   `f24291eb4fa5304bd6c4d2e08bfce9576ec08bf6a11a56932e280a6c16b7c3c9`;
 - SHA-256 receipt bundle:
@@ -156,12 +164,12 @@ full-image, crop-only e pipeline fusa con geometria e soppressione del runtime.
 La metrica operativa esclude `bicycle`, coerentemente con il filtro privacy;
 la mAP standard storica include le sei classi annotate. Le soglie sotto sono i
 massimi F1 su una griglia validation diagnostica `0,15..0,40` a passo `0,05`;
-non congelano ancora la selezione del ciclo v4.
+non congelano ancora la selezione del ciclo 0.1.4.
 
 | Checkpoint | mAP50-95 standard | Soglia pipeline | Full F1 | Crop F1 | Pipeline F1 | Pipeline P/R |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | YOLO26n originale | 0,5318 | 0,40 | 0,5081 | 0,2875 | 0,4243 | 0,3804 / 0,4797 |
-| v3-extended corrente | 0,5404 | 0,35 | 0,4724 | 0,2504 | 0,3633 | 0,3234 / 0,4144 |
+| 0.1.3-extended corrente | 0,5404 | 0,35 | 0,4724 | 0,2504 | 0,3633 | 0,3234 / 0,4144 |
 
 La mAP a vista singola migliora nel modello corrente, ma la pipeline reale
 regredisce di 0,0610 F1 rispetto al checkpoint originale. Questa è evidenza di
@@ -174,10 +182,10 @@ misure su Mac M4, non sul Raspberry Pi 3.
 
 ## Istruzioni per la revisione umana
 
-1. Aprire `dataset/workspace/training-v4/review/gate/preview.html` e verificare
+1. Aprire workspace del training 0.1.4 (`review/gate/preview.html`) e verificare
    l'allineamento iniziale.
-2. Il task CVAT locale `14`, `V4 public PhenoCam multi-site positives - review
-   gate`, è stato creato con le 20 immagini sotto `gate/images/default/`, le
+2. Il task CVAT locale `14`, del ciclo 0.1.4 (public PhenoCam multi-site positives - review
+   gate), è stato creato con le 20 immagini sotto `gate/images/default/`, le
    label di `gate/labels.json` e `gate/annotations.coco.zip` come COCO 1.0. Il
    read-back conferma 20 immagini, 37 proposte e le categorie attese; non creare
    un secondo task.
@@ -187,22 +195,12 @@ misure su Mac M4, non sul Raspberry Pi 3.
    `arsgreatbasinltar177` e `nphtin` richiedono attenzione speciale perché
    revisioni precedenti hanno trovato confusori statici in quelle camere.
 4. Completare il task ed esportare COCO 1.0 esattamente come
-   `dataset/workspace/training-v4/review/human-export.coco.zip`.
+   workspace del training 0.1.4 (`review/human-export.coco.zip`).
 
 Comando esatto per riprendere dopo l'export (richiede soltanto l'ID numerico
 mostrato da CVAT):
 
-```sh
-printf 'CVAT task id: ' && read -r TASK_ID && \
-dataset/.venv/bin/python -m dataset.builder.mining \
-  --config dataset/config/training-v4.json import-reviewed \
-  --selection dataset/workspace/training-v4/selection/multisite.csv \
-  --bundle-dir dataset/workspace/training-v4/review/gate \
-  --export dataset/workspace/training-v4/review/human-export.coco.zip \
-  --output-dir dataset/workspace/training-v4/reviewed/public-multisite \
-  --task-id "$TASK_ID" --annotator Emanuele --reviewer Emanuele \
-  --task-completed
-```
+Per i comandi storici, consultare il documento originale indicato sopra.
 
 ## Gate e lavoro non eseguito
 

@@ -1,4 +1,4 @@
-"""Selection: initial responsibility extracted without changing the data contract."""
+"""Select provisional Open Images frames under diversity, stratum, and feature quotas."""
 
 import csv
 import json

@@ -1,4 +1,4 @@
-"""Phenocam review: allocation responsibility extracted without changing the data contract."""
+"""Track duplicate components, balanced quotas, and PhenoCam review records."""
 
 
 

@@ -1,4 +1,4 @@
-"""Workflow: status responsibility extracted without changing the data contract."""
+"""Report dataset readiness and check required review and model artifacts."""
 
 import json
 from ..common import DatasetError

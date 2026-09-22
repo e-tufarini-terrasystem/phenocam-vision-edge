@@ -1,4 +1,4 @@
-"""Openimages: index responsibility extracted without changing the data contract."""
+"""Index eligible Open Images metadata and record rejected candidates."""
 
 import csv
 import json

@@ -1,5 +1,8 @@
 # Ribilanciamento dopo l’audit CVAT — 28 agosto 2026
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 ## Evidenza osservata
 
 I due task positivi sono stati esportati, sottoposti ad audit e importati senza

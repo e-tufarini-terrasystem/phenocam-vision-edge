@@ -1,4 +1,4 @@
-"""Annotation: negative responsibility extracted without changing the data contract."""
+"""Build negative-review pages and reconcile attributed review decisions."""
 
 import json
 from pathlib import Path

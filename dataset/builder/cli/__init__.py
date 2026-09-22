@@ -1,1 +1,1 @@
-"""Acquisition command arguments grouped by responsibility."""
+"""Dataset command argument definitions."""

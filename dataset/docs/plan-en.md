@@ -7,6 +7,9 @@ while deliberately leaving download and training implementation to later work.
 
 # External mixed detection dataset: iteration 1
 
+> Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
+> Commands refer to the original workflow; ignored artifacts require local evidence.
+
 Status: approved specification
 
 Decision date: 2026-08-26

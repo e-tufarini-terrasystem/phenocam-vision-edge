@@ -1,4 +1,4 @@
-"""Review: openimages responsibility extracted without changing the data contract."""
+"""Build Open Images review queues and COCO suggestions under the configured policy."""
 
 import csv
 import json

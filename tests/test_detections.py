@@ -1,8 +1,4 @@
-"""Verify uniform confidence row normalization and deterministic suppression.
-
-Synthetic rows cover untrusted values and geometry; immutable detections cover
-IoU, smaller-box coverage, the competing road-vehicle domain, and tie breakers.
-"""
+"""Verify row validation, cross-view suppression, class competition, and tie ordering."""
 
 import unittest
 from types import SimpleNamespace

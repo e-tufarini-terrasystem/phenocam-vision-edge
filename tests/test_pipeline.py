@@ -1,9 +1,4 @@
-"""Verify the ordered inference, product, metadata, and deletion transaction.
-
-One or two outputs never duplicate inference, and final product generation
-occurs only after successful global suppression. Metadata follows output
-persistence and propagates failures. Doubles prove ordering, timing, and data.
-"""
+"""Verify inference and output ordering, conditional deletion, metadata, and failure propagation."""
 
 import tempfile
 import unittest

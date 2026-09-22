@@ -1,10 +1,6 @@
-"""
-Define the fixed, version-controlled COCO class configuration.
+"""COCO class switches for detection output and conditional deletion.
 
-Names, grouping, order, and tuple structure are invariants. Operators may
-modify only the boolean value attached to each class.
-
-The committed defaults enable people and selected road vehicles for privacy analysis.
+Edit only the booleans; names, groups, order, and tuple structure are fixed.
 """
 
 COCO_CLASSES = (

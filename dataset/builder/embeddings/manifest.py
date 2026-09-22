@@ -1,4 +1,4 @@
-"""Embeddings: manifest responsibility extracted without changing the data contract."""
+"""Combine source manifests into a unique, ordered inventory for embeddings."""
 
 import csv
 from pathlib import Path

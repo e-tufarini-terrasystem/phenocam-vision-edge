@@ -1,4 +1,4 @@
-"""Phenocam review: packet responsibility extracted without changing the data contract."""
+"""Write the PhenoCam review CSV, empty COCO scaffold, and annotation instructions."""
 
 import csv
 import json

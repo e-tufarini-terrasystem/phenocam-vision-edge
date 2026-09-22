@@ -1,12 +1,10 @@
-"""
-Define and validate the command-line boundary for the application.
+"""Validate CLI paths and capture file identities before inference.
 
-CLI values are untrusted input. Downstream code may rely on the returned paths
-identifying valid input/model files, an optional validated metadata file, at
-least one image, metadata, or deletion action and existing output parents. Outputs are
-distinct, but one may name the input directly. Deletion takes precedence over
-image writes. The result carries deletion intent and validated file identities
-for input and optional metadata. Metadata-bound output paths cannot inject lines.
+Require an image output, metadata update, or conditional deletion. Image outputs
+must be distinct; one may replace the input directly, but not through an alias.
+Metadata must be a separate regular file; serialized output paths cannot contain
+line breaks. Metadata identity is captured only for deletion. These checks do
+not validate image or model contents or guarantee that files remain unchanged.
 """
 
 from argparse import ArgumentParser
@@ -114,8 +112,8 @@ def validate_arguments(
     for output_path in outputs:
         if output_path is None:
             continue
-        # Only a direct source path may be replaced; distinct link aliases remain
-        # invalid because atomic replacement changes one directory entry only.
+        # Replacing one directory entry cannot update distinct hard-link aliases.
+        # Reject symbolic aliases too; allow only the direct input path.
         if _same_file(input_path, output_path):
             if (
                 input_path.is_symlink()

@@ -60,7 +60,11 @@ def _selected_row(row):
 
 
 def reconcile_positive_floors(dataset_root, config):
-    """Make the smallest deterministic unreviewed-frame swaps needed by CVAT edits."""
+    """Restore all class floors with one unreviewed-frame swap, or fail.
+
+    Among feasible swaps, minimize changed box counts, then break ties by seed.
+    If floors already hold, preserve the selection.
+    """
     root = Path(dataset_root) / "workspace"
     openimages = root / "sources" / "open-images"
     imported = root / "annotation" / "imported"

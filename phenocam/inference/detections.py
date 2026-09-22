@@ -1,8 +1,7 @@
-"""Normalize untrusted rows and suppress duplicate global detections.
+"""Validate detection rows and suppress overlaps in source-image coordinates.
 
-Rows receive uniform confidence filtering and coordinate validation before
-deterministic same-class and competing car, bus, truck suppression. Class
-selection stays outside this boundary so every valid class participates.
+All valid classes participate before output filtering; car, bus, and truck share
+a suppression domain.
 """
 
 import math
@@ -17,6 +16,8 @@ _ROAD_VEHICLE_NAMES = frozenset(("car", "bus", "truck"))
 
 @dataclass(frozen=True)
 class Detection:
+    """Source-image pixel box; view and row priorities break confidence ties."""
+
     x1: float
     y1: float
     x2: float
@@ -31,6 +32,7 @@ def normalize_rows(
     rows, view, image_width, image_height, model_names,
     confidence_threshold=_CONFIDENCE_THRESHOLD,
 ):
+    """Return valid rows in source coordinates, skipping malformed rows individually."""
     detections = []
     maximum_x = image_width - 1.0
     maximum_y = image_height - 1.0
@@ -48,7 +50,6 @@ def normalize_rows(
             if confidence + 1e-7 < confidence_threshold:
                 continue
 
-            # Global coordinates are clipped before the positive-area invariant.
             x1 = max(0.0, min(maximum_x, (x1 - view.offset_x) / view.scale + view.crop_x))
             y1 = max(0.0, min(maximum_y, (y1 - view.offset_y) / view.scale + view.crop_y))
             x2 = max(0.0, min(maximum_x, (x2 - view.offset_x) / view.scale + view.crop_x))
@@ -109,7 +110,6 @@ def deduplicate(detections, model_names):
         )
         accepted = []
         for candidate in candidates:
-            # Earlier accepted boxes own confidence and deterministic tie priority.
             if any(_overlaps(candidate, previous) for previous in accepted):
                 continue
             accepted.append(candidate)

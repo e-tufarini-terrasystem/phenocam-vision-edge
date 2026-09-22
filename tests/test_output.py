@@ -1,8 +1,4 @@
-"""Verify selected rendering, source independence, write order, and failures.
-
-Synthetic images and narrow Pillow mocks exercise the final output boundary
-without ONNX. Later cases also cover exact privacy geometry and filtering.
-"""
+"""Verify rendering, independent image products, and replacement failures with synthetic images."""
 
 import os
 import stat

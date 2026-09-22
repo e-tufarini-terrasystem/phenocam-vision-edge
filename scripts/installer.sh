@@ -1,8 +1,5 @@
 #!/bin/sh
-# Configure one extracted Raspberry Pi runtime package.
-# The script validates architecture and Python, creates the package-local
-# virtual environment, installs runtime requirements, and creates runtime
-# directories without privilege escalation.
+# Set up an extracted Raspberry Pi package with a local venv, input/, and output/.
 
 set -u
 
