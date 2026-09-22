@@ -20,7 +20,7 @@ over output writes. See the [operating guide](docs/cli.md) for the complete beha
 
 ## Software release v0.2.4
 
-Software **v0.2.4** is a prerelease. Raspberry Pi checks on 2026-09-22
+Software **v0.2.4** is stable. Raspberry Pi checks on 2026-09-22
 passed installation and functional CLI/batch cases. The maintained suite passes
 all 281 tests with public PKLot fixtures and model `0.1.6`. Complete-command time
 is about 18 seconds on the 1280×720 PKLot benchmark with four threads and
@@ -29,6 +29,9 @@ See the
 [hardware test report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/raspberry-pi-0.2.4.md).
 Exact release commit and package verification are recorded in the
 [release notes](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/tag/v0.2.4).
+The release was promoted from prerelease with its original tag, archive and
+checksum preserved. The archived README records its initial prerelease status;
+the release notes record the subsequent stable promotion.
 
 The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`.
 Its sibling JSON identifies the model

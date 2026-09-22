@@ -18,6 +18,11 @@ Model bytes are unchanged. The runtime JSON receipt contains only `model_id`,
 [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-0.1.6.md)
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md).
 The model remains experimental, with no demonstrated overall improvement.
+Software `v0.2.4` was promoted to stable with the maintainer's approval after
+passing CI and Raspberry Pi qualification. Promotion preserves the original
+release commit, tag and asset bytes; the archived README retains its initial
+prerelease wording. Current release notes record the stable status. Model
+`0.1.6` remains experimental independently of software stability.
 Software `v0.2.3` was considered stable by the maintainer following manual testing
 on Raspberry Pi. Direct checks of the `v0.2.4` package on 2026-09-22 passed
 installation and functional cases on a Pi 3 B+. The initial suite exposed four
