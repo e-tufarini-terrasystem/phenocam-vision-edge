@@ -11,7 +11,7 @@ fonti, composizione, controlli e separazione dei dati interni.
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Stato: specifica approvata il 2026-08-26. La versione inglese
-[`dataset-plan-en.md`](dataset-plan-en.md) è normativa in caso di ambiguità.
+[`plan-en.md`](plan-en.md) è normativa in caso di ambiguità.
 
 Decisione di implementazione del 2026-08-27: questa iterazione costruisce
 soltanto il dataset pubblico di training. L'inventario, la validation operativa

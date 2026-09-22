@@ -1,22 +1,27 @@
-# Handoff training v3 — 31 agosto 2026
+# Handoff training 0.1.3 — 31 agosto 2026
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 07731af6e97d7431ede5923a7fecfc1d97a6ba25` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
 
 > Historical record for this iteration; use the [current guide](../development.md#current-workflow).
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
 > Aggiornamento 2 settembre 2026: il task 11 è stato completato, esportato e
-> importato. Il build affiancato, ora denominato `dataset-v3-expanded`, contiene 18
+> importato. Il build affiancato, ora denominato dataset 0.1.3 expanded, contiene 18
 > nuove immagini PhenoCam revisionate. Lo stato corrente e i conteggi verificati
-> sono in `docs/status/training-v3.md`; il testo seguente resta la fotografia
+> sono in `docs/status/training-0.1.3.md`; il testo seguente resta la fotografia
 > storica dell'handoff.
 
 ## Stato attuale
 
 Il gate umano interno è concluso. Inventario, split operativo, screening
-baseline/v2, embedding, selezioni, revisione CVAT e import delle due coorti
+baseline/0.1.2, embedding, selezioni, revisione CVAT e import delle due coorti
 interne sono completati. Il nuovo gate pubblico del task 11 è in revisione; non
-è stato ancora avviato alcun training v3.
+è stato ancora avviato alcun training 0.1.3.
 
-Nel progetto CVAT `Phenocam privacy detector v3` (ID 1) restano tre task attivi
+Nel progetto CVAT del ciclo 0.1.3 (ID 1) restano tre task attivi
 e utili:
 
 | Task | ID | Job | Immagini | Box |
@@ -35,9 +40,9 @@ non separabili in modo affidabile devono essere marcati `ambiguous`.
 
 ## Cosa è stato completato
 
-### Modello v2 e dataset
+### Modello 0.1.2 e dataset
 
-- Modello ONNX v2 stabilizzato e incluso nel package, SHA-256
+- Modello ONNX 0.1.2 stabilizzato e incluso nel package, SHA-256
   `f62fd573fd6315fc34ddc3b0f22f4351be78f05db768babf6bca35b0c69d8962`.
 - Viewer dataset migliorato e verificato su 2.000 immagini.
 - Controllo manuale del dataset pubblico trasformato in una coda CVAT da 22
@@ -60,11 +65,12 @@ non separabili in modo affidabile devono essere marcati `ambiguous`.
 Il pilot pubblico da 200 immagini è stato completato con `0/200` positivi. È
 stato esportato e archiviato prima della rimozione da CVAT:
 
-- COCO: `dataset/workspace/annotation/exports/v3-public-pilot-reviewed.coco.zip`;
-- backup ripristinabile:
-  `dataset/workspace/annotation/exports/v3-public-pilot-task-backup.zip`.
+- export COCO revisionato del pilot pubblico per il ciclo 0.1.3;
+- backup ripristinabile del task del pilot.
 
-La causa principale era il ranking: soltanto 7 immagini avevano confidenza v2
+I nomi esatti degli archivi sono conservati nel documento originale.
+
+La causa principale era il ranking: soltanto 7 immagini avevano confidenza 0.1.2
 `>=0,30`; 161 erano state selezionate per segnali deboli `crop_only`.
 
 Una seconda analisi con il gate stretto trova 58 candidati con accordo fra i
@@ -81,14 +87,14 @@ I task interni originali proponevano tutte le detection alla soglia `0,01`,
 generando migliaia di falsi box. Sono stati sostituiti con bundle che accettano
 una proposta soltanto quando:
 
-- baseline e v2 rilevano entrambi l'oggetto con confidenza `>=0,30`;
+- baseline e 0.1.2 rilevano entrambi l'oggetto con confidenza `>=0,30`;
 - la classe è identica;
 - l'IoU fra le due box è `>=0,50`.
 
 Il filtro è in `dataset/builder/mining/suggestions.py`; l'orchestrazione CVAT
 rimane sotto il limite di 200 linee produttive. Sono stati aggiunti il flag
 `cvat-bundle --clean-suggestions`, la configurazione del gate e il comando
-`dataset/commands/cvat-tasks.sh upload-v3-clean`.
+il comando storico documentato nella fonte originale.
 
 ### Integrazione YOLO26x — 1 settembre 2026
 
@@ -187,7 +193,7 @@ I backup completi dello stato corretto hanno suffisso
 ### Import operativo con provenienza — 1 settembre 2026
 
 I due export corretti sono stati importati sotto
-`dataset/workspace/training-v3/reviewed/`. Ogni immagine usa il formato
+workspace del training 0.1.3 (`reviewed/`). Ogni immagine usa il formato
 `sito--timestamp--sha12.jpg`, mentre il manifest conserva nome sorgente,
 identita, sito, gruppo, split, coorte, checksum e revisori.
 
@@ -198,18 +204,18 @@ I 240 nomi sono unici e contengono `raspberrypi2.local` o `sitets02`; le copie
 coincidono con gli SHA-256 sorgente e gli artifact non contengono path locali.
 Il report preannotazione/ground truth registra complessivamente 2.085 box
 corrispondenti, 49 rimosse e 3.801 aggiunte. Questi dati restano operativi e non
-entrano nel training del primo ciclo v3.
+entrano nel training del primo ciclo 0.1.3.
 
-### Dataset v3 materializzato — 1 settembre 2026
+### Dataset 0.1.3 materializzato — 1 settembre 2026
 
-L'artifact oggi denominato `dataset/dataset-v3/` è apribile con il viewer e contiene 2.240
+L'artifact oggi denominato dataset 0.1.3 è apribile con il viewer e contiene 2.240
 immagini: le 2.000 pubbliche e invariate sotto `train`, più 120
 `operational_dev` e 120 `operational_mining`. Le 240 immagini interne restano
 escluse dalla voce `train` del file YOLO. Il manifest conserva origine e nome
 sorgente; i filename includono sito, timestamp e hash breve.
 
 La verifica confronta byte-per-byte tutti i 3.244 file pubblici di immagini e
-label con la v2, controlla unicità e presenza di ogni path, valida tutte le
+label con la 0.1.2, controlla unicità e presenza di ogni path, valida tutte le
 label normalizzate e conferma l'intero manifest SHA-256.
 
 ## Task rimossi e recuperabilità
@@ -238,13 +244,13 @@ il task 11 contiene quindi 40 immagini e 192 proposte su 4 siti e 33 gruppi.
 
 Il readback COCO da CVAT coincide per conteggi, classi e geometrie, con scarto
 massimo `0,0093` pixel. Le proposte restano da revisionare e non fanno ancora
-parte del dataset v3.
+parte del dataset 0.1.3.
 
-Il report `docs/status/training-v3-expansion-review-2026-09-01.md` misura
+Il report `docs/status/dataset-0.1.3-review.md` misura
 composizione, bias e leakage prima di ogni modifica. La pipeline pronta per il
 post-review assegna ogni immagine a `included`, `reserved` o `rejected`, limita
 il primo ingresso a 18 frame (8 per sito dominante, uno per camera-day), applica
-SSCD `0,95` e permette un build affiancato senza sovrascrivere il v3 corrente.
+SSCD `0,95` e permette un build affiancato senza sovrascrivere il 0.1.3 corrente.
 
 ## Verifiche eseguite
 
@@ -261,7 +267,7 @@ SSCD `0,95` e permette un build affiancato senza sovrascrivere il v3 corrente.
 
 1. Completare il task 11 e correggere tutte le proposte YOLO26x.
 2. Esportare e importare il task con revisori attribuiti.
-3. Aggiornare composizione pubblica v3 e README con il rendimento umano reale.
+3. Aggiornare composizione pubblica 0.1.3 e README con il rendimento umano reale.
 4. Proseguire con training ed evaluation usando le coorti interne separate.
 
 Non è stato eseguito alcun push.

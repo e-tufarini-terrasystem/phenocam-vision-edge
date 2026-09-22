@@ -147,10 +147,15 @@ After editing, verify whether the change reduced or increased conceptual complex
   release may bundle an experimental model when its status and limitations are
   clearly documented. Software promotion does not change model acceptance status.
 - Keep the bundled model identity in `models/yolo26n-phenocam.json`:
-  `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6` for the
-  historical v6 artifact. In this experimental model series, revision vN uses
-  `0.1.N`; this is a project convention, not the software release number or
-  the Ultralytics exporter version. Change the series only by explicit decision.
+  `model_id` is `yolo26n-phenocam` and `model_version` is `0.1.6`.
+  Use `0.1.2` through `0.1.6` for the corresponding historical model cycles
+  in Markdown names and content. Preserve expanded/extended variant labels,
+  hashes and acceptance results; normalized names do not create past releases.
+  Dataset documentation uses the version of its associated training cycle.
+  Only `0.1.6` is maintained as a specialized model in the current checkout.
+  Software versions and upstream product versions remain independent.
+  Preserve exact historical commands and paths through their original Git
+  documents; never invent executable paths by substituting version numbers.
 - Keep the stable model filenames independent of the revision. Record a new
   version and matching hashes for a new model artifact; never assign the same
   model identity/version to different ONNX bytes. Preserve historical provenance

@@ -213,8 +213,8 @@ writes or deletion. It never selects model paths from receipt fields. Without
 | `model_version` | `MAJOR.MINOR.PATCH`, no leading zeros, at most 32 characters. |
 | `onnx_sha256` | 64 lowercase hexadecimal characters matching the model. |
 
-The specialized model's historical revision v6 is `0.1.6` in the project's
-experimental `0.1.N` series. The optional base uses `models/yolo26n.json` with
+The specialized model is `yolo26n-phenocam`, version `0.1.6`, and remains
+experimental. The optional base uses `models/yolo26n.json` with
 identity `yolo26n`, version `0.1.0`. These are project artifact versions, not
 Ultralytics exporter versions. Copy or rename the ONNX and receipt together.
 The hash binds the pair but does not authenticate its provenance.

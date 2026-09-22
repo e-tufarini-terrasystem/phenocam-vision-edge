@@ -7,8 +7,8 @@ separate workstation environment.
 
 ## Current canonical dataset
 
-Use `dataset/data/`. It contains the reviewed former v6 training/validation
-artifact and the two historical test splits, with source identities and human
+Use `dataset/data/`. It contains the reviewed training/validation data for 0.1.6
+and the two historical test splits, with source identities and human
 labels preserved. There is no dependency on materializing older dataset versions.
 
 | Split | Images | Purpose |
@@ -128,26 +128,32 @@ The English/Italian dataset plans describe iteration 1; versioned dataset guides
 and status reports preserve the decisions and waivers of their respective cycles.
 
 <details>
-<summary>Public v2/v3 acquisition, annotation and retired build commands (da14b7d)</summary>
+<summary>Public 0.1.2/0.1.3 acquisition, annotation and retired build commands (da14b7d)</summary>
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 302abec4aa94a97b23f8b4bd265f63e919251204` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
 
 The following describes the pre-consolidation pipeline at `da14b7d`. Intermediate
 artifacts, model versions and historical commands are preserved as context;
-use the canonical commands above for current builds. The old partition command
-and `build-v3` materializer have been retired. The unversioned public-source
+use the canonical commands above for current builds. The partition command
+and materializer for the 0.1.3 dataset have been retired. The public-source
 review/finalization tools remain available for acquisition work.
 
 
 This directory owns both the completed public training dataset and the local,
 reproducible construction pipeline. The distributable `training-dataset/` never
-contains internal operational imagery. The private `dataset-v3/` artifact
+contains internal operational imagery. The private dataset 0.1.3 artifact
 partitions public data into train, validation, and TEST-ID, and reserves
 reviewed operational imagery as TEST-OOD.
-Unreviewed V3 mining data and local paths remain under the ignored `workspace/`
+Unreviewed 0.1.3 mining data and local paths remain under the ignored `workspace/`
 boundary.
 
 The historical public training artifact was `training-dataset/` (local, ignored).
 Its versioned composition and limitations are documented in
-[`docs/dataset-v2/README.md`](docs/dataset-v2/README.md), which is copied to
+[`docs/0.1.2/README.md`](docs/0.1.2/README.md), which is copied to
 `training-dataset/README.md` during materialization.
 
 ### Historical dataset status
@@ -162,16 +168,16 @@ The 2,000-frame YOLO dataset is complete with status
   unavailable;
 - operational validation on internal imagery remains `pending`.
 
-The leakage-aware v3 artifact contains 2,240 images and 10,562 annotations:
+The leakage-aware 0.1.3 artifact contains 2,240 images and 10,562 annotations:
 1,600 train images, 200 validation images, 200 TEST-ID images, and 240 TEST-OOD
 images. Public splits keep PhenoCam cameras and pHash-near components disjoint;
 TEST-OOD contains the two later private operational cameras.
 
-The local `dataset-v5/` experiment artifact preserves v4, adds the completed
+The local dataset 0.1.5 experiment artifact preserves 0.1.4, adds the completed
 27-image PKLot review, and aligns selected training crops with the runtime
 geometry. Its measured composition, leakage boundary, and training protocol are
 recorded in
-[`../docs/status/training-v5-design-2026-09-03.md`](../docs/status/training-v5-design-2026-09-03.md).
+[`../docs/status/training-0.1.5-plan.md`](../docs/status/training-0.1.5-plan.md).
 
 The waiver must remain visible in reports and training records. This dataset is
 not evidence of production accuracy on internal camera imagery.
@@ -179,9 +185,9 @@ not evidence of production accuracy on internal camera imagery.
 ### Directory layout
 
 - `training-dataset/`: ignored, materialized YOLO dataset ready for training;
-- `dataset-v3/`: ignored, final leakage-aware YOLO v3 artifact;
-- `dataset-v3-source/`: optional ignored unsplit v3 build input;
-- `dataset-v3-expanded/`: optional, viewer-compatible expanded v3 with
+- dataset 0.1.3: ignored, final leakage-aware YOLO 0.1.3 artifact;
+- dataset 0.1.3 source: optional ignored unsplit 0.1.3 build input;
+- dataset 0.1.3 expanded: optional, viewer-compatible expanded 0.1.3 with
   the reviewed public addition and separate operational splits;
 - `builder/`: deterministic dataset-construction package;
 - `commands/`: shell entry points for building, review, CVAT, and finalization;
@@ -224,20 +230,16 @@ dataset/commands/dataset-builder.sh test
 The completed workflow can be reproduced with the staged builder commands and
 then materialized with:
 
-```sh
-dataset/commands/dataset-finalization.sh build
-dataset/commands/dataset-finalization.sh build-v3
-cd dataset && .venv/bin/python -m builder.partition build dataset-v3-source dataset-v3
-```
+For the historical commands, see the original document referenced above.
 
 The builder refuses to overwrite an existing `training-dataset/` or partition
 destination. Move or archive an existing artifact deliberately before rebuilding
-it. `build-v3` defaults to the intermediate `dataset-v3-source/`; the partition
-command creates the final artifact atomically.
+it. The historical build command first produces an intermediate source dataset
+for 0.1.3; the partition command creates the final artifact atomically.
 Reviewed public PhenoCam additions enter training only through the audited
 `included/reserved/rejected` selection described in `../docs/development.md` and
 must be requested explicitly with `--include-public-expansion`; they do not
-silently alter the canonical 2,240-image v3 dataset.
+silently alter the canonical 2,240-image 0.1.3 dataset.
 
 Run the tests directly with:
 
@@ -248,12 +250,12 @@ dataset/.venv/bin/python -m unittest discover -s dataset/tests -v
 ### Historical viewer
 
 Open [`viewer.html`](viewer.html) in a browser and select
-`dataset/dataset-v3/`. The Train, Validation, Test, Test ID, and Test OOD
+dataset 0.1.3. The Train, Validation, Test, Test ID, and Test OOD
 selector reloads only the chosen subset. The
 local-only viewer associates each YOLO label with its image, draws the bounding
 boxes, shows image/annotation counts and available provenance, and supports
 filename, positive/negative, and object-class filters without uploading files.
-V3 filenames can be filtered by
+0.1.3 filenames can be filtered by
 `raspberrypi2.local` or `sitets02`. Click the selected image name to select it
 for copying; use the left and right arrow keys to move between images. Zoom with
 the mouse wheel, the controls below the image, or the `+`, `-`, and `0` keys.
@@ -273,14 +275,7 @@ dataset/commands/cvat-server.sh open
 
 The positive task wrapper is:
 
-```sh
-dataset/commands/cvat-tasks.sh profile
-dataset/commands/cvat-tasks.sh list
-dataset/commands/cvat-tasks.sh upload-open-images
-dataset/commands/cvat-tasks.sh upload-phenocam
-dataset/commands/cvat-tasks.sh upload-open-images-supplement
-dataset/commands/cvat-tasks.sh upload-v3-public-teacher
-```
+For the historical commands, see the original document referenced above.
 
 The complete historical annotation procedure remains in
 [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md). Human decisions
@@ -288,8 +283,8 @@ remain authoritative; baseline detections may prioritize review but cannot
 establish ground truth or verify a negative.
 
 The first parking-lot source evaluation is recorded in
-[`../docs/status/parking-lot-source-evaluation-2026-09-03.md`](../docs/status/parking-lot-source-evaluation-2026-09-03.md).
-Only the completed official-PKLot task 17 is admitted to `dataset-v5`; the open
+[`../docs/status/parking-sources.md`](../docs/status/parking-sources.md).
+Only the completed official-PKLot task 17 is admitted to dataset 0.1.5; the open
 task 13 and its automatic suggestions remain outside every training artifact.
 
 ### Data sources and security boundary
@@ -308,20 +303,20 @@ accepting data.
 
 ### Documentation
 
-- [`docs/dataset-v2/README.md`](docs/dataset-v2/README.md) and
-  [`docs/dataset-v2/CREATION.md`](docs/dataset-v2/CREATION.md): public v2
+- [`docs/0.1.2/README.md`](docs/0.1.2/README.md) and
+  [`docs/0.1.2/creation.md`](docs/0.1.2/creation.md): public 0.1.2
   composition and construction;
-- [`docs/dataset-v3/README.md`](docs/dataset-v3/README.md) and
-  [`docs/dataset-v3/CREATION.md`](docs/dataset-v3/CREATION.md): canonical v3
+- [`docs/0.1.3/README.md`](docs/0.1.3/README.md) and
+  [`docs/0.1.3/creation.md`](docs/0.1.3/creation.md): canonical 0.1.3
   composition, split methodology, and reproducibility;
-- [`../docs/status/dataset-v3-split-2026-09-02.md`](../docs/status/dataset-v3-split-2026-09-02.md):
+- [`../docs/status/dataset-0.1.3-split.md`](../docs/status/dataset-0.1.3-split.md):
   measured split report, evidence, and limitations;
-- [`docs/dataset-plan-en.md`](docs/dataset-plan-en.md): normative build contract;
-- [`docs/dataset-plan-it.md`](docs/dataset-plan-it.md): concise Italian plan;
+- [`docs/plan-en.md`](docs/plan-en.md): normative build contract;
+- [`docs/plan-it.md`](docs/plan-it.md): concise Italian plan;
 - [`docs/annotation-guide-it.md`](docs/annotation-guide-it.md): manual review;
-- [`docs/next-steps-it.md`](docs/next-steps-it.md): completed state and boundary;
+- [`docs/status/public-dataset-2026-08-28.md`](docs/status/public-dataset-2026-08-28.md): completed state and boundary;
 - `docs/status/` and `docs/history/`: preserved development history;
-- [`../docs/status/training-v3-expansion-review-2026-09-01.md`](../docs/status/training-v3-expansion-review-2026-09-01.md):
+- [`../docs/status/dataset-0.1.3-review.md`](../docs/status/dataset-0.1.3-review.md):
   measured pre-expansion audit and quantitative admission policy.
 
 </details>

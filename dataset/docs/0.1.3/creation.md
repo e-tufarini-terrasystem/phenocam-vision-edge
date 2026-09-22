@@ -1,15 +1,20 @@
-# Creation of dataset v3
+# Creation of dataset 0.1.3
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 38460d9d8ede00c4cc1428a3e2ac024f77f49aac` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
 
 > Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
 ## Origin and acquisition
 
-Dataset v3 starts from the verified 2,000-image public v2 artifact and adds 240
+Dataset 0.1.3 starts from the verified 2,000-image public 0.1.2 artifact and adds 240
 reviewed private operational images for out-of-domain evaluation. The public
 base combines Open Images V7 and PhenoCam Network v3; its acquisition,
 licensing, review, and deduplication are described in
-[`../dataset-v2/CREATION.md`](../dataset-v2/CREATION.md).
+[`../0.1.2/creation.md`](../0.1.2/creation.md).
 
 Public PhenoCam frames were acquired through NASA Earthdata from fixed cameras,
 then selected across sites, cameras, seasons, and time. The public set covers
@@ -24,15 +29,15 @@ limits. Inventory records stable identity, site, timestamp, group, source and
 decoded hashes, and perceptual hash. Deterministic site-day groups prevent
 adjacent operational frames from being treated as independent samples.
 
-Baseline and v2 YOLO models screen candidates only to prioritize review and
+Baseline and 0.1.2 YOLO models screen candidates only to prioritize review and
 identify representative or informative frames. Suggestions are never accepted
 as labels without human review. The selected operational cohorts contain 120
 representative development frames and 120 informative mining frames from the
 two available private cameras.
 
-An optional, separately named `dataset-v3-expanded/` artifact can include 18
+An optional, separately named dataset 0.1.3 expanded artifact can include 18
 additional human-reviewed public PhenoCam positives. It is not part of the
-canonical 2,240-image v3 composition and is never included implicitly.
+canonical 2,240-image 0.1.3 composition and is never included implicitly.
 
 ## Annotation
 
@@ -62,9 +67,9 @@ but does not delete them. All 2,240 source images remain in the final artifact.
 ## Construction pipeline
 
 ```text
-public v2 artifact + reviewed private images
+public 0.1.2 artifact + reviewed private images
 → strict manifest and checksum validation
-→ canonical 2,240-image unsplit v3 source artifact
+→ canonical 2,240-image unsplit 0.1.3 source artifact
 → source/label inventory and measured statistics
 → camera, duplicate, and pHash connected components
 → deterministic constrained allocation (seed 42)
@@ -104,35 +109,19 @@ dataset/commands/dataset-builder.sh test
 Starting from a clean destination and complete reviewed workspace, materialize
 the canonical source and partition it:
 
-```sh
-dataset/commands/dataset-finalization.sh build-v3
-cd dataset
-.venv/bin/python -m builder.partition build dataset-v3-source dataset-v3
-.venv/bin/python -m builder.partition verify dataset-v3
-```
+For the historical commands, see the original document referenced above.
 
 Recalculate an existing artifact's inventory and statistics without writing:
 
-```sh
-cd dataset
-.venv/bin/python -m builder.partition analyze dataset-v3
-```
+For the historical commands, see the original document referenced above.
 
 Regenerate the split beside a valid artifact and verify it:
 
-```sh
-cd dataset
-.venv/bin/python -m builder.partition build dataset-v3 dataset-v3-rebuilt
-.venv/bin/python -m builder.partition verify dataset-v3-rebuilt
-```
+For the historical commands, see the original document referenced above.
 
 Build the optional reviewed public expansion explicitly:
 
-```sh
-dataset/.venv/bin/python -m dataset.builder.finalization build-v3 \
-  --destination dataset/dataset-v3-expanded \
-  --include-public-expansion
-```
+For the historical commands, see the original document referenced above.
 
 The canonical source build omits the optional expansion by default, so its
 2,240-image contract remains accepted by the partition verifier.

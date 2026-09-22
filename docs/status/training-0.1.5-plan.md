@@ -1,15 +1,20 @@
-# Dataset e training v5 — decisione misurata
+# Dataset e training 0.1.5 — decisione misurata
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob c845cd51bcb056c74c889a20ba12dfc9608bf408` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
 
 > Historical record for this iteration; use the [current guide](../development.md#current-workflow).
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Stato: dataset materializzato e verificato; training, test ed export conclusi.
 L'esito misurato è in
-[`training-v5-experiment-2026-09-07.md`](training-v5-experiment-2026-09-07.md).
+[`training-0.1.5.md`](training-0.1.5.md).
 
 ## Risultato
 
-`dataset/dataset-v5/` è un nuovo artifact e non modifica `dataset-v4`. Contiene:
+Il dataset 0.1.5 è un nuovo artifact e non modifica dataset 0.1.4. Contiene:
 
 | Split | Immagini | Box | Ruolo |
 | --- | ---: | ---: | --- |
@@ -24,9 +29,9 @@ Sono stati verificati 3.230 checksum, 2.004 identità uniche, 2.004 immagini
 compilate uniche, zero camera-day condivisi tra split e zero corrispondenze di
 identità o SHA-256 con i test canonici.
 
-## Perché la v4 non ha migliorato il prodotto
+## Perché la 0.1.4 non ha migliorato il prodotto
 
-Le prove v4 hanno migliorato la mAP single-view, ma hanno peggiorato la F1 della
+Le prove 0.1.4 hanno migliorato la mAP single-view, ma hanno peggiorato la F1 della
 pipeline full-image più 15 crop. Il finalista interpolato ha prodotto soltanto
 `+0,0021` F1, sotto il gate `+0,005`. Le ricette erano brevi e conservative
 (20 epoche, learning rate `5e-5`/`1e-4`, backbone in parte o interamente
@@ -34,9 +39,9 @@ congelato), mentre il training vedeva immagini intere e il runtime usa anche 15
 crop sovrapposti. La validation PhenoCam conteneva appena due box positive:
 troppo poco per scegliere con stabilità un modello operativo.
 
-La correzione v5 affronta soltanto ciò che si può correggere senza leakage:
+La correzione 0.1.5 affronta soltanto ciò che si può correggere senza leakage:
 
-- mantiene integralmente train e validation v4;
+- mantiene integralmente train e validation 0.1.4;
 - integra il task CVAT 17 completato, non le proposte automatiche;
 - aggiunge tre crop per immagine positiva PhenoCam train e per immagine PKLot
   train, usando esattamente la griglia runtime 5×3 con overlap 20%;
@@ -67,7 +72,7 @@ Il train riceve 533 box full-image e 144 box nei 54 crop. Il numero di box
 `car` nel train passa da 716 a 1.368; la sua quota passa dal 18,6% al 29,9%,
 mentre `person` resta la classe maggiore al 54,3%. È un riequilibrio mirato al
 caso parcheggio, non una duplicazione indiscriminata. Le altre classi conservano
-tutti gli esempi v4 e ricevono soltanto le occorrenze realmente presenti nelle
+tutti gli esempi 0.1.4 e ricevono soltanto le occorrenze realmente presenti nelle
 scene revisionate.
 
 Le sei immagini holdout hanno 1.313 box, ma rappresentano una sola vista: sono
@@ -86,8 +91,8 @@ esterne, ma la scarsità di frame operativi positivi e indipendenti.
 
 I 120 frame `operational-mining-informative` e i 120
 `operational-dev-representative`, già revisionati, coincidono esattamente con
-l'intero TEST-OOD v3/v4. Il builder v3 aveva assegnato tutti i record `internal`
-al test, nonostante i nomi originari dei due cohort. Non possono entrare in v5
+l'intero TEST-OOD 0.1.3/0.1.4. Il builder 0.1.3 aveva assegnato tutti i record `internal`
+al test, nonostante i nomi originari dei due cohort. Non possono entrare in 0.1.5
 e continuare a sostenere un confronto storico valido.
 
 Esiste un vero cohort `sealed_test` di 241 frame, separato per camera-day, ma le
@@ -119,14 +124,14 @@ annotazione umana, senza riutilizzare i 240 frame storici.
 ## Protocollo per il prossimo training
 
 La prima prova deve usare la baseline ufficiale YOLO26 per piccoli dataset,
-senza la combinazione v4 di learning rate quasi nullo e training breve:
+senza la combinazione 0.1.4 di learning rate quasi nullo e training breve:
 AdamW, `lr0=0.001`, 50 epoche, `patience=20`, `mosaic=0.5`, `mixup=0` e
 `copy_paste=0`. Una sola ablation aggiunge `freeze=10`; il backbone libero resta
 la prova principale. È la ricetta raccomandata dalla documentazione ufficiale
 ([YOLO26 training recipe](https://docs.ultralytics.com/guides/yolo26-training-recipe),
 [training tips](https://docs.ultralytics.com/guides/model-training-tips)).
 
-Checkpoint e soglia vanno scelti una volta sulla validation v5 con la pipeline
+Checkpoint e soglia vanno scelti una volta sulla validation 0.1.5 con la pipeline
 reale full più crop. Poi si apre una sola volta il PKLot holdout e, per sola
 regressione storica, TEST-ID/TEST-OOD. Un miglioramento può essere dichiarato
 solo se supera rumore e repliche, conserva le classi non-parcheggio e migliora
@@ -139,14 +144,14 @@ Le stime escludono test e fixture e rispettano il limite di 200 linee
 produttive per l'orchestrazione:
 
 ```text
-dataset/config/training-v5.json       (~43 linee; contratto e receipt)
-scripts/training_v5/
+<training configuration 0.1.5>       (~43 linee; contratto e receipt)
+<training implementation 0.1.5>/
   __init__.py                         (~1 linea)
   tiles.py                            (~41 linee; geometria e clipping)
   sources.py                          (~126 linee; import delle due sorgenti)
   dataset.py                          (~190 linee; materializzazione e audit)
-tests/test_training_v5.py             (test esclusi dal limite)
-dataset/dataset-v5/                   (artifact generato)
+<training tests 0.1.5>             (test esclusi dal limite)
+<dataset 0.1.5>/                   (artifact generato)
 ```
 
 L'invariante centrale è che un parent e i suoi crop restino nello stesso split;

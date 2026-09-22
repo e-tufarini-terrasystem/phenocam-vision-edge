@@ -23,13 +23,13 @@ over output writes. See the [operating guide](docs/cli.md) for the complete beha
 Software release **v0.2.3** is considered stable by the maintainer following
 manual testing on Raspberry Pi. This status applies to the software runtime.
 
-The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`
-(the unchanged historical v6 artifact). Its sibling JSON identifies the model
+The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`.
+Its sibling JSON identifies the model
 and its ONNX SHA-256. The model remains **experimental**: training acceptance
 criteria were not all met, and overall improvement was not demonstrated.
 Software stability does not establish detection accuracy.
 
-The [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-v6-experiment.md)
+The [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-0.1.6.md)
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md)
 preserve the evidence and limitations. These repository reports are not included
 in the runtime archive.

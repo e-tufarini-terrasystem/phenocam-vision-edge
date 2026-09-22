@@ -1,5 +1,10 @@
 # Valutazione sorgenti parcheggio — gate CVAT
 
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob c3657ea1168e38bcccf70176c58030fd01166d66` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
 > Historical record for this iteration; use the [current guide](../development.md#current-workflow).
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
@@ -58,9 +63,9 @@ soglia 0,20, inferenza intera e tiled a 1280 px e deduplicazione IoU 0,50.
 Il read-back del task contiene esattamente le stesse 50 immagini e 1.729 box
 dell'archivio importato dopo l'arrotondamento CVAT a due decimali.
 
-### PKLot ufficiale — campione bilanciato v4
+### PKLot ufficiale — campione bilanciato 0.1.4
 
-- Task: `V4 PKLot balanced official - 27 CC BY 4.0 - review gate`
+- Task: del ciclo 0.1.4 (PKLot balanced official - 27 CC BY 4.0 - review gate)
 - ID: `17`
 - URL locale: <http://localhost:8080/tasks/17>
 - Contenuto: 27 frame originali 1280×720 e 1.835 suggerimenti YOLO26x:
@@ -70,7 +75,7 @@ dell'archivio importato dopo l'arrotondamento CVAT a due decimali.
 
 I frame provengono dall'archivio ufficiale, non dal derivato del task 13. La
 selezione non ha corrispondenze esatte, decodificate o pHash a distanza ≤4 con
-v4; non contiene coppie pHash interne a distanza ≤4 e non riusa timestamp del
+0.1.4; non contiene coppie pHash interne a distanza ≤4 e non riusa timestamp del
 task 13. Il read-back CVAT ha preservato tutte le 27 immagini e tutte le 1.835
 geometrie. Manifest, ricevuta e audit sono in
 `dataset/workspace/sources/pklot-balanced-27/` e restano ignorati da Git.
@@ -124,7 +129,7 @@ campione di 27 immagini prende un solo frame per ciascuna cella, usa date
 distinte entro ogni vista e sostituisce qualsiasi sovrapposizione temporale con
 il pilot.
 
-## Dimensionamento e integrazione in v4
+## Dimensionamento e integrazione in 0.1.4
 
 Il minimo utile da ammettere è **21 immagini revisionate**, mentre le 27 del
 task 17 servono a revisionare anche il controllo OOD:
@@ -135,12 +140,12 @@ task 17 servono a revisionare anche il controllo OOD:
 - **6 holdout PKLot**: PUCPR a densità media e alta, non usate per training o
   per la metrica aggregata; misurano separatamente il caso denso e lontano.
 
-V4 contiene oggi 1.621 immagini train e 203 validation. Con 18+3 immagini il
+0.1.4 contiene oggi 1.621 immagini train e 203 validation. Con 18+3 immagini il
 rapporto rimane praticamente invariato: da 88,87/11,13 a 88,83/11,17. I
 suggerimenti destinati al train sono 551, di cui 495 `car`; se fossero tutti
 confermati, il train passerebbe da 3.858 a 4.409 box e `car` da 716 a 1.211,
 cioè il 27,47% delle istanze. Questo resta sotto il limite dichiarato del 30%,
-equivalente a circa 630 nuove `car` sul v4 attuale.
+equivalente a circa 630 nuove `car` sul 0.1.4 attuale.
 
 Le tre candidate validation a bassa densità contengono 53 suggerimenti, 52
 `car` e un `truck`. Se tutti fossero confermati, la validation avrebbe 206
@@ -151,12 +156,12 @@ PKLot separata.
 
 Questi sono massimi pre-revisione, non conteggi finali. L'ammissione deve usare
 solo le box corrette e deve essere annullata o ridotta se supera 630 `car` nel
-train, introduce near-duplicate o peggiora i gate v4 esistenti.
+train, introduce near-duplicate o peggiora i gate 0.1.4 esistenti.
 
 ## Sonda sul modello corrente
 
 Il campione è stato analizzato in sola lettura con
-`models/yolo26n-v3-extended.onnx`, soglia 0,30 e la pipeline runtime di una vista
+modello ONNX 0.1.3 extended, soglia 0,30 e la pipeline runtime di una vista
 completa più quindici crop. Le label PKLot `space-occupied` sono state usate
 soltanto come proxy di presenza: descrivono piazzole e non box `car`, quindi i
 numeri seguenti non sono precision, recall o mAP.
@@ -189,10 +194,10 @@ blocco. La ricevuta completa è
 4. Materializzare soltanto le 18 train e 3 validation previste; conservare le 6
    scene PUCPR medio/alte come slice di valutazione separata.
 5. TEST-ID e TEST-OOD restano congelati. Confrontare baseline e candidato a
-   parità di modello, seed e configurazione, riportando sia le metriche v4 sia
+   parità di modello, seed e configurazione, riportando sia le metriche 0.1.4 sia
    quelle della slice PKLot.
 6. Conservare l'espansione soltanto se migliora il criterio dichiarato senza
-   regressioni rilevanti; in caso contrario ripristinare v4 invariato.
+   regressioni rilevanti; in caso contrario ripristinare 0.1.4 invariato.
 
 ## Stato verificato
 

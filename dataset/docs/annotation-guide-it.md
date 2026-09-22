@@ -24,7 +24,7 @@ Prima del primo accesso, dalla radice del repository esegui
    profilo viene salvato dal client CVAT con permessi locali restrittivi e non
    entra nel repository.
 
-## 2. Regole operative attuali (introdotte in v3)
+## 2. Regole operative attuali (introdotte in 0.1.3)
 
 Nei task operativi annota ogni target reale visibile: `person`, `car`, `motorcycle`,
 `bus` e `truck`. Furgoni e pickup sono `car`; trattori e macchine agricole
@@ -54,7 +54,13 @@ valgono soltanto per i bundle delle campagne pubbliche indicate.
 ## Campagne storiche e comandi di revisione
 
 <details>
-<summary>Task v2–v6, regole originarie e risultati delle revisioni</summary>
+<summary>Task 0.1.2–0.1.6, regole originarie e risultati delle revisioni</summary>
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 12823c3aadfefa8e4f94b5af0dac84def228a8a9` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
+
 
 I conteggi, gli ID CVAT e gli stati seguenti descrivono le campagne concluse.
 Le sezioni Open Images, PhenoCam e negativi del primo dataset usavano **sei
@@ -68,16 +74,9 @@ partono dalle annotazioni correnti del dataset e non fanno parte del pilot da
 rappresentano target reali e conserva o aggiungi soltanto eventuali target
 validi. Nei due casi indicati come dubbi (`possible_motorcycle_part` e
 `negative_photograph`) usa `ambiguous` se l'immagine non consente una decisione
-affidabile. I frame ambigui non entrano nel training v3.
+affidabile. I frame ambigui non entrano nel training 0.1.3.
 
-```sh
-dataset/commands/cvat-tasks.sh upload-open-images
-dataset/commands/cvat-tasks.sh upload-phenocam
-dataset/commands/cvat-tasks.sh upload-open-images-supplement
-dataset/commands/cvat-tasks.sh upload-v3
-dataset/commands/cvat-tasks.sh read-v3
-dataset/commands/cvat-tasks.sh list
-```
+Per i comandi storici, consultare il documento originale indicato sopra.
 
 Ogni task viene diviso in job da 50 immagini e parte con annotazioni provvisorie.
 
@@ -114,27 +113,27 @@ stesso oggetto tra frame diversi e qui non è appropriato.
 Al termine assegna il job al revisore, portalo allo stage di validazione e risolvi
 gli eventuali problemi prima di marcarlo completato.
 
-### V6 — primo batch operativo, 11 settembre 2026
+### 0.1.6 — primo batch operativo, 11 settembre 2026
 
-Il [progetto v6](http://localhost:8080/projects/2) contiene 60 frame train con
-352 box proposte da YOLO26n-v5, da correggere integralmente:
+Il [progetto 0.1.6](http://localhost:8080/projects/2) contiene 60 frame train con
+352 box proposte da YOLO26n-0.1.5, da correggere integralmente:
 
 - [PhenoZero1: 24 frame](http://localhost:8080/tasks/18/jobs/43).
 - [PhenoZero2: 12 frame](http://localhost:8080/tasks/19/jobs/44).
 - [TS02: 24 frame](http://localhost:8080/tasks/20/jobs/45).
 
-Seguire le regole operative v3 e la guida integrata nel progetto. Aggiungere
+Seguire le regole operative 0.1.3 e la guida integrata nel progetto. Aggiungere
 anche i target non suggeriti; lasciare senza box i veri negativi e usare
 `ambiguous` quando non è possibile decidere. Le proposte non sono ground truth.
 Raspberry è escluso perché tutti i giorni disponibili sono riservati ai test.
-Validation e test v6 sono ancora da preparare su giorni separati.
+Validation e test 0.1.6 sono ancora da preparare su giorni separati.
 Dettagli e verifiche nel
-[resoconto del batch](../../docs/status/training-v6-annotation-2026-09-11.md).
+[resoconto del batch](../../docs/status/annotation-0.1.6.md).
 
 Il batch è stato completato con revisione visuale e correzioni Codex: **57 frame
-inclusi nella v6**, tre mantenuti in CVAT con tag `ambiguous` (task 18/frame 10
-e 23, task 19/frame 0; numerazione CVAT da zero). La v6 è materializzata in
-`dataset/dataset-v6`; gli export finali sono conservati insieme ai backup.
+inclusi nella 0.1.6**, tre mantenuti in CVAT con tag `ambiguous` (task 18/frame 10
+e 23, task 19/frame 0; numerazione CVAT da zero). La 0.1.6 è materializzata in
+dataset 0.1.6; gli export finali sono conservati insieme ai backup.
 Non togliere il tag ai tre esclusi senza risolvere il dubbio e riesportare.
 
 ### Negativi del primo dataset pubblico

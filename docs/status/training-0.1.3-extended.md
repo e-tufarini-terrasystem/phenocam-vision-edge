@@ -1,12 +1,17 @@
-# YOLO26n training report — v3-extended
+# YOLO26n training report — 0.1.3-extended
+
+> Historical artifact labels use normalized model versions, not filesystem paths.
+> Exact commands, identifiers and paths remain in the original document:
+> `git cat-file blob 97c09e41205543cb7bae392f60b5c3a9b4b01411` from the
+> [source snapshot](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/tree/cc63857c12c5553c2e3451854863edf7c0705e2a).
 
 > Historical record for this iteration; use the [current guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/dataset/README.md).
 > Commands refer to the original workflow; ignored artifacts require local evidence.
 
 Status: model selected and exported on 2026-09-02; test evaluation was stopped
-at the user's request. The repository calls the material
-dataset `dataset-v3-expanded`; this report uses the request's `v3-extended` name
-for the same 18-image reviewed extension.
+at the user's request. The reviewed 18-image dataset extension is named
+0.1.3 expanded; this report describes its 0.1.3 extended training experiment.
+The dataset extension and the selected model are distinct artifacts.
 
 ## Executive Summary
 
@@ -22,7 +27,7 @@ remaining stability and test stages.
 | Item | Value |
 | --- | --- |
 | Git commit | `7a9d73061f7ad8e1ce6ac7d7a614e35a472abf4d` (dirty worktree recorded per run) |
-| Dataset artifact | `dataset/dataset-v3-expanded` plus frozen `dataset/dataset-v3` split |
+| Dataset artifact | dataset 0.1.3 expanded plus frozen dataset 0.1.3 split |
 | Dataset fingerprint | `e87592ab2a4d614319518a199aaae52f038ee98a46b40a37f4fc4b06ba484c89` |
 | Python | 3.13.14 |
 | Ultralytics | 8.4.48 |
@@ -69,8 +74,8 @@ renumbering in the edge application.
 
 ## Dataset Integrity Verification
 
-`python -m scripts.training_v3_extended.dataset` independently performed the
-following checks before the new search started:
+The historical dataset audit module independently performed the following
+checks before the new search started; its invocation is in the original document:
 
 - verified every entry in the canonical and extended checksum manifests;
 - decoded all selected images with Pillow;
@@ -88,7 +93,7 @@ All 3,760 extended-artifact checksums passed. The canonical verifier reported
 zero duplicate hashes and zero cross-split pHash-near-duplicate pairs. Measured
 validation (464), TEST-ID (463), and TEST-OOD (5,885) object totals exactly
 match the approved expected counts. The authoritative machine-readable receipt
-is `output/training-v3-extended/dataset-audit.json`.
+is training output 0.1.3 extended (`dataset-audit.json`).
 
 ## Web Research and Methodology
 
@@ -146,7 +151,7 @@ runtime, checkpoint hash, and validation history.
 | Run | mAP50-95 | mAP50 | mAP75 | Precision | Recall | F1 | Best epoch | Runtime |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Untouched COCO checkpoint | 0.5318 | 0.6574 | 0.5367 | 0.7017 | 0.6439 | 0.6716 | n/a | validation only |
-| Historical default v3-expanded fine-tune | 0.5178 | 0.6415 | 0.5350 | 0.6725 | 0.6175 | 0.6438 | 1 | 1,599 s |
+| Historical default 0.1.3-expanded fine-tune | 0.5178 | 0.6415 | 0.5350 | 0.6725 | 0.6175 | 0.6438 | 1 | 1,599 s |
 
 The historical baseline used 30 maximum epochs, patience 8, batch 8, 640 px,
 seed 42, `optimizer=auto`, default augmentation, and stopped after nine epochs.
@@ -156,7 +161,7 @@ was removed by the cleanup incident documented below.
 
 ## Hyperparameter Search
 
-Search definition: `scripts/training_v3_extended/experiments.json`. Broad runs
+Search definition: training implementation 0.1.3 extended (`experiments.json`). Broad runs
 use 15 maximum epochs and patience 5. Except for the named dimension, they use
 batch 8, 640 px, seed 42, default YOLO26n loss weights and augmentation, and
 close mosaic for the final five epochs.
@@ -304,8 +309,8 @@ remain local under ignored `output/` and are not part of the committed model.
 
 | Artifact | SHA-256 | Size |
 | --- | --- | ---: |
-| `models/yolo26n-v3-extended.pt` | `7b9a545a335e785a79292373aba0cad8686653c3cd87814c64f593a779a49bae` | 7,500,800 bytes |
-| `models/yolo26n-v3-extended.onnx` | `a38224fcb45cf90e4f898d64ce0254b5a1f1007309ac9bcd089f20a4961b7ad3` | 9,941,992 bytes |
+| PT checkpoint 0.1.3 extended | `7b9a545a335e785a79292373aba0cad8686653c3cd87814c64f593a779a49bae` | 7,500,800 bytes |
+| ONNX model 0.1.3 extended | `a38224fcb45cf90e4f898d64ce0254b5a1f1007309ac9bcd089f20a4961b7ad3` | 9,941,992 bytes |
 
 The ONNX export uses opset 20, static input `[1, 3, 640, 640]`, output
 `[1, 300, 6]`, and all 80 COCO classes. ONNX Runtime contract validation and
@@ -314,7 +319,7 @@ recorded Apple M4 host was 21.1 ms.
 
 ## Conclusions
 
-The low-rate head-only update is the retained v3-extended model. It reproduces
+The low-rate head-only update is the retained 0.1.3-extended model. It reproduces
 the deleted winner within measurement noise and preserves the edge runtime
 contract. Stability and test conclusions are deliberately not claimed because
 those stages were stopped.
