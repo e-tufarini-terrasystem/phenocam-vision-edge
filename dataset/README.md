@@ -20,9 +20,12 @@ labels preserved. There is no dependency on materializing older dataset versions
 | test_ood | 240 | Historical operational benchmark |
 
 Total: 2,672 images and 13,467 annotations. Images include private operational
-data. Labels and metadata are tracked; image bytes, source pools, CVAT credentials
-and generated workstation YAML stay outside Git. Do not treat this catalog as an
-entirely public image distribution.
+data. Labels and metadata are tracked; dataset image directories, source pools,
+CVAT credentials and generated workstation YAML stay outside Git. Six original
+public PKLot images (CC BY 4.0) are versioned separately as
+[runtime test fixtures](../tests/fixtures/reference/README.md), with attribution
+and source hashes. Private operational images are not test fixtures; this
+catalog is not an entirely public image distribution.
 
 `config/dataset.json` fixes the manifest and checksum-inventory digests, counts
 and 80-class mapping. The inventory pins human labels as well as image bytes;

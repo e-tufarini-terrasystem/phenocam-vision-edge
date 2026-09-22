@@ -1,5 +1,6 @@
-"""Exercise the real pipeline on named local reference images; skip missing inputs."""
+"""Exercise the real pipeline on required, hash-pinned reference image fixtures."""
 
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,43 +12,56 @@ from phenocam.inference import pipeline
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REFERENCE_IMAGES = ROOT / "tests" / "fixtures" / "reference"
 REFERENCE_DATA = (
-    "raspberrypi2.local_2025-11-19_121905.jpg",
-    "raspberrypi2.local_2025-11-19_141905.jpg",
-    "raspberrypi2.local_2025-11-19_151905.jpg",
-    "raspberrypi2.local_2025-12-17_131905.jpg",
-    "raspberrypi2.local_2025-12-18_141905.jpg",
-    "raspberrypi2.local_2025-12-19_124905.jpg",
+    ("pklot-parking2-cloudy-high-2012-11-08_10_50_37.jpg",
+     "66f0b43dbde220e96328a5914a12327c6f6415dac7ddeffc3ec94ac736612f1e"),
+    ("pklot-parking2-cloudy-mid-2012-09-16_12_33_39.jpg",
+     "a1496e0d824e0145c073676ecd78e870e914550af98e60725e9307a76991aa0e"),
+    ("pklot-parking2-rainy-high-2012-11-10_09_42_47.jpg",
+     "cee269889479d9a1774e8866e19d62fd30a5042c7212928c360bcaad37d143a0"),
+    ("pklot-parking2-rainy-mid-2012-11-09_18_07_05.jpg",
+     "9d9ae7d649de725ddae3b71fd01887bcc79dc2ad5a13bd914062bbd9c8e5dcb6"),
+    ("pklot-parking2-sunny-high-2012-10-17_10_59_45.jpg",
+     "231eb194caa0a7e2925425dc475fc073cc714410735efccb8024c61c08563420"),
+    ("pklot-parking2-sunny-mid-2012-10-29_07_42_56.jpg",
+     "7eb1fd3accaa20349cc3715690f688e183ccba45533517e5214b7753fc5ab2b1"),
 )
+# Reviewed 0.1.6 output snapshots are bound to these exact ONNX bytes.
+REFERENCE_MODEL_SHA256 = "72521182fa0c90fec60fb1cd9f3b2ac113d16de476aaeea3a328508b7b2d0b30"
 EXPECTED_WINNERS = (
-    (REFERENCE_DATA[0], "car", 0.70, (2202, 2298, 2695, 2575), 2),
-    (REFERENCE_DATA[1], "car", 0.75, (1833, 2384, 2375, 2587), 2),
-    (REFERENCE_DATA[2], "car", 0.77, (1756, 2430, 2233, 2587), 2),
-    (REFERENCE_DATA[5], "truck", 0.91, (1789, 1594, 2533, 2050), 2),
+    (REFERENCE_DATA[0][0], "car", 0.96, (166, 309, 212, 359), 2),
+    (REFERENCE_DATA[1][0], "car", 0.95, (881, 143, 910, 185), 2),
+    (REFERENCE_DATA[2][0], "car", 0.96, (992, 49, 1020, 85), 2),
+    (REFERENCE_DATA[3][0], "car", 0.95, (188, 190, 230, 228), 2),
+    (REFERENCE_DATA[4][0], "car", 0.92, (156, 190, 197, 234), 2),
+    (REFERENCE_DATA[5][0], "car", 0.96, (311, 311, 353, 361), 2),
 )
 
 
 class ReferenceImageTests(unittest.TestCase):
-    def test_reference_inventory_and_dimensions(self):
-        expected_names = REFERENCE_DATA
-        available_names = tuple(
-            name for name in expected_names if (ROOT / "input" / name).is_file()
+    def setUp(self):
+        model_path = ROOT / "models" / "yolo26n-phenocam.onnx"
+        self.assertEqual(
+            hashlib.sha256(model_path.read_bytes()).hexdigest(), REFERENCE_MODEL_SHA256,
+            "Model bytes changed; review the reference expectations.",
         )
 
+    def test_reference_inventory_and_dimensions(self):
+        expected_names = tuple(name for name, _ in REFERENCE_DATA)
         self.assertEqual(len(set(expected_names)), len(expected_names))
-        if not available_names:
-            self.skipTest("named reference images are unavailable")
-        for name in available_names:
+        for name, digest in REFERENCE_DATA:
             with self.subTest(name=name):
-                with Image.open(ROOT / "input" / name) as source:
+                source_path = REFERENCE_IMAGES / name
+                self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), digest)
+                with Image.open(source_path) as source:
                     image = ImageOps.exif_transpose(source)
                     image.load()
-                self.assertEqual(image.size, (4608, 2592))
+                self.assertEqual(image.size, (1280, 720))
 
-    def assert_reference(self, name):
-        source_path = ROOT / "input" / name
-        if not source_path.is_file():
-            self.skipTest(f"reference image is unavailable: {name}")
+    def assert_reference(self, name, digest):
+        source_path = REFERENCE_IMAGES / name
+        self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), digest)
         model_path = ROOT / "models" / "yolo26n-phenocam.onnx"
         captured = {}
         real_deduplicate = pipeline.deduplicate
@@ -81,7 +95,7 @@ class ReferenceImageTests(unittest.TestCase):
             if detected:
                 with Image.open(output_path) as output:
                     self.assertEqual(output.format, "JPEG")
-                    self.assertEqual(output.size, (4608, 2592))
+                    self.assertEqual(output.size, (1280, 720))
 
         detections = captured["detections"]
         model_names = captured["model_names"]
@@ -153,24 +167,23 @@ class ReferenceImageTests(unittest.TestCase):
             )
             self.assertEqual(len(matches), 1, (name, expected, matches))
 
-    def test_2025_11_19_121905(self):
-        self.assert_reference(REFERENCE_DATA[0])
+    def test_cloudy_high(self):
+        self.assert_reference(*REFERENCE_DATA[0])
 
-    def test_2025_11_19_141905(self):
-        self.assert_reference(REFERENCE_DATA[1])
+    def test_cloudy_mid(self):
+        self.assert_reference(*REFERENCE_DATA[1])
 
-    def test_2025_11_19_151905(self):
-        self.assert_reference(REFERENCE_DATA[2])
+    def test_rainy_high(self):
+        self.assert_reference(*REFERENCE_DATA[2])
 
-    def test_2025_12_17_131905(self):
-        self.assert_reference(REFERENCE_DATA[3])
+    def test_rainy_mid(self):
+        self.assert_reference(*REFERENCE_DATA[3])
 
-    def test_2025_12_18_141905(self):
-        self.assert_reference(REFERENCE_DATA[4])
+    def test_sunny_high(self):
+        self.assert_reference(*REFERENCE_DATA[4])
 
-    def test_2025_12_19_124905(self):
-        self.assert_reference(REFERENCE_DATA[5])
-
+    def test_sunny_mid(self):
+        self.assert_reference(*REFERENCE_DATA[5])
 
 if __name__ == "__main__":
     unittest.main()

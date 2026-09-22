@@ -1,5 +1,5 @@
 # Verify the deterministic Python and shell checks for every change to main.
-# Raspberry Pi hardware and untracked reference images remain external checks.
+# Reference images are versioned test fixtures; Raspberry Pi hardware remains external.
 
 name: CI
 
@@ -28,7 +28,7 @@ jobs:
           python-version: "3.13"
       - name: Install runtime dependencies
         run: python -m pip install -r requirements/test.txt
-      - name: Run tests (reference images optional)
+      - name: Run tests (including reference images)
         run: python -m unittest discover -s tests -v
       - name: Run dataset tests (images not required)
         run: python -m unittest discover -s dataset/tests -v
