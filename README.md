@@ -34,12 +34,6 @@ and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision
 preserve the evidence and limitations. These repository reports are not included
 in the runtime archive.
 
-Version `v0.2.3` corrected model identity in metadata without changing the model
-bytes or the detection/output behavior of `v0.2.2`. `v0.2.1` corrected software
-version metadata and package checks without changing the model from `v0.2.0`.
-The [stable v0.1.0 release](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/tag/v0.1.0)
-remains available with its original requirements and model.
-
 Published releases are frozen. The current source tree has later changes,
 including the optional base ONNX model and its receipt; see
 [release and source differences](docs/cli.md#release-and-source-differences).
