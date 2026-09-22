@@ -265,7 +265,7 @@ The new image is 1280×720 rather than 4608×2592, with a different detection lo
 these figures do not measure a software speedup over the earlier benchmark.
 No runtime, model, dependency, clock or cooling change was made.
 
-## Remaining work
+## Release gates at the time of this report
 
 - Complete release gates on the final chosen commit: passing GitHub CI,
   regenerated and verified archive/checksum, and qualification of that exact
