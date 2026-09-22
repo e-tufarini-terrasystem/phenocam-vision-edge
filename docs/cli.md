@@ -244,8 +244,15 @@ exit status is `1` if any image fails or no supported image is found.
 
 `Execution time: N.NNN s` sums the sixteen ONNX `session.run()` intervals.
 It excludes startup, session creation, preprocessing, rendering and writes.
-The 15-second complete-command target and current Pi multi-view timing remain
-unverified; this timer alone cannot establish either.
+On 2026-09-22, five consecutive complete commands on a Pi 3 B+ with software
+`0.2.4`, model `0.1.6`, four threads, the public 1280×720 PKLot reference image
+and annotated JPEG output took about 18 seconds per image.
+This is an indicative baseline, with no fixed latency requirement; timings vary
+with image, output mode and device conditions. The measurements included an
+active soft temperature limit. The earlier 4608×2592 operational benchmark used
+a different input and is not a direct speed comparison. Exact timings and
+conditions are retained in the
+[hardware test report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/raspberry-pi-0.2.4.md).
 
 | Status | Meaning |
 |---|---|

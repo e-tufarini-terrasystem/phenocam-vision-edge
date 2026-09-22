@@ -20,9 +20,14 @@ over output writes. See the [operating guide](docs/cli.md) for the complete beha
 
 ## Software release v0.2.4
 
-Software release **v0.2.4** is being prepared. Qualification of this candidate
-on Raspberry Pi is pending; the installation links below become available
-when the release is published.
+Software release **v0.2.4** is being prepared. Raspberry Pi checks on 2026-09-22
+passed installation and functional CLI/batch cases. The maintained suite passes
+all 281 tests with public PKLot fixtures and model `0.1.6`. Complete-command time
+is about 18 seconds on the 1280×720 PKLot benchmark with four threads and
+annotated output, an indicative baseline rather than a latency guarantee.
+Final release qualification is still open. See the
+[hardware test report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/raspberry-pi-0.2.4.md).
+The installation links below become available when the release is published.
 
 The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`.
 Its sibling JSON identifies the model
@@ -48,8 +53,13 @@ This section describes the target environment for software **v0.2.4**.
 | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 |
 
 The target device is a Raspberry Pi 3 with 1 GB RAM.
-The requirements above are not a recorded test configuration.
-Target-device qualification of this release is pending.
+The candidate was tested on a Raspberry Pi 3 Model B Plus Rev 1.4 with
+Debian 13.5 (trixie), `aarch64`, and Python 3.13.5. The updated test suite passed
+all 281 cases without skips, including all six public PKLot reference images.
+Source checkouts include these CC BY 4.0 images and attribution in
+`tests/fixtures/reference/`;
+runtime release archives exclude test fixtures.
+Full qualification remains open for the issues described above.
 
 For installation from the current source tree, see
 [manual setup from source](docs/cli.md#manual-setup-from-source).

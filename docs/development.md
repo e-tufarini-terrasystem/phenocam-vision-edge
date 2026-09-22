@@ -19,8 +19,17 @@ Model bytes are unchanged. The runtime JSON receipt contains only `model_id`,
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md).
 The model remains experimental, with no demonstrated overall improvement.
 Software `v0.2.3` was considered stable by the maintainer following manual testing
-on Raspberry Pi. Qualification of `v0.2.4` is pending; see the
-[README](../README.md#supported-environments).
+on Raspberry Pi. Direct checks of the `v0.2.4` package on 2026-09-22 passed
+installation and functional cases on a Pi 3 B+. The initial suite exposed four
+reference expectations inherited from the base model. After reviewing and binding
+those expectations to the specialized ONNX hash, all 281 tests passed without
+skips on both Mac and Pi. The maintained suite now uses public PKLot fixtures
+and has passed again on both platforms. The maintainer retired the legacy
+15-second requirement. The public 1280×720 benchmark takes about 18 seconds on
+the Pi 3 B+ with four threads and annotated output, an indicative baseline with
+no fixed latency requirement. Performance optimization is optional future work.
+See the
+[hardware test report and remaining work](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/raspberry-pi-0.2.4.md).
 Runtime testing on the device and evaluation of model accuracy are separate;
 the release's manual test does not qualify later source changes.
 The original COCO `models/yolo26n.pt` initializes fresh training;
@@ -110,9 +119,23 @@ git diff --check
 ```
 
 CI runs both suites and checks all maintained shell scripts. Dataset tests use
-fixtures and the committed catalog, so private images and the training stack
-are not required. Image integration cases remain optional when their named
-reference inputs are absent.
+fixtures and the committed catalog, so the private dataset image pool and the
+training stack are not required. All six runtime reference images are versioned
+under `tests/fixtures/reference/`, separately from operational `input/` files.
+Their hashes and the selected model hash are checked; missing or changed fixtures
+fail instead of skipping. See the
+[fixture guide](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/tests/fixtures/reference/README.md)
+for provenance, the focused test command and the fixed benchmark input.
+
+The maintained fixtures are six original PKLot images, licensed CC BY 4.0,
+with attribution and archive provenance in the fixture guide. They cover
+cloudy, rainy and sunny parking scenes at 1280×720. Each has a reviewed car
+snapshot bound to the selected ONNX hash; the two-pixel box tolerance and
+two-decimal confidence comparison remain unchanged. These are runtime
+regressions, not accuracy measurements or a new untouched evaluation split.
+Earlier operational-image checks, including the known truck-to-bus model error,
+remain historical evidence in the hardware report. Their images are excluded
+from the published fixture history.
 
 ## Runtime architecture
 
@@ -312,11 +335,12 @@ GitHub Actions runs this deterministic suite with Python 3.13 on Ubuntu x86-64
 for pull requests and pushes to `main`, then syntax-checks both runtime shell
 scripts. This CI does not qualify Raspberry Pi hardware.
 
-The six real-image integration cases and their inventory check are skipped when
-the named, untracked reference images are absent from `input/`. When available,
-they verify valid annotated outputs and the final suppression-domain overlap
-contract. Person and car counts are not asserted because they are not ground
-truth or a measurement of accuracy, precision, recall, or mAP.
+Earlier versions skipped the six real-image cases and inventory check when
+untracked reference images were absent from `input/`. Current source checkouts
+include the required, hash-pinned fixtures in `tests/fixtures/reference/`.
+The cases verify valid annotated outputs and the final suppression-domain
+overlap contract. Person and car counts are not asserted because they are not
+ground truth or a measurement of accuracy, precision, recall, or mAP.
 
 ### Optional model export
 
