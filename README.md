@@ -46,19 +46,20 @@ including the optional base ONNX model and its receipt; see
 
 ## Supported environments
 
-| Use | Platform | Python | Verification scope |
-|---|---|---|---|
-| Stable `v0.1.0` | Raspberry Pi OS 64-bit (`aarch64`) | 3.11 or newer | Historical release |
-| Stable software `v0.2.3` | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 | Maintainer-reported manual testing on Raspberry Pi |
-| Current source | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 | Later source changes are not covered by the release's manual test |
-| Current source | macOS on Apple Silicon | 3.13 | Manual source setup |
-| CI | Ubuntu x86-64 | 3.13 | Tests and shell syntax; no Pi qualification |
+This section applies only to the latest stable software release, **v0.2.3**.
 
-The target is a Raspberry Pi 3 with 1 GB RAM. The manual test report does not
-specify the Pi model, OS/Python versions, or individual checks performed;
-the table lists supported environments, not a recorded test configuration.
-For source installation, use the
-[operating guide](docs/cli.md#manual-setup-from-source).
+| Platform | Required Python |
+|---|---|
+| Raspberry Pi OS 64-bit (`aarch64`) | 3.13 |
+
+The target device is a Raspberry Pi 3 with 1 GB RAM.
+The maintainer reports successful manual testing on Raspberry Pi.
+The exact Pi model, OS/Python versions and individual checks were not
+recorded; the requirements above are not a recorded test configuration.
+
+For installation from the current source tree, see
+[manual setup from source](docs/cli.md#manual-setup-from-source).
+For development and CI, see [development](docs/development.md).
 
 ## Quick install: v0.2.3
 
