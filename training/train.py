@@ -1,4 +1,4 @@
-"""Own a fresh, bounded MPS training run and persist epoch/memory evidence."""
+"""Run fresh training on MPS or CPU and record epoch and memory measurements."""
 
 import csv
 import json
@@ -57,7 +57,7 @@ def main():
     started = time.monotonic()
 
     def initial_state(trainer):
-        # No optimizer/scheduler restoration; all 2,020 images must be consumed.
+        # Require a fresh optimizer and the complete 2,020-image training split.
         if (trainer.start_epoch != 0 or trainer.args.resume or trainer.optimizer.state
                 or len(trainer.train_loader.dataset) != 2020 or trainer.data["names"] != YOLO(base).names):
             raise RuntimeError("Fresh-training or complete-dataset invariant failed")

@@ -1,4 +1,4 @@
-"""Openimages: annotations responsibility extracted without changing the data contract."""
+"""Parse Open Images class mappings, bounding boxes, and image-level labels."""
 
 import csv
 from collections import defaultdict

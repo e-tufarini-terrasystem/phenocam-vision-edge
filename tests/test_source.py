@@ -1,8 +1,4 @@
-"""Verify identity-checked source deletion using disposable filesystem entries.
-
-The tests exercise only temporary files and prove that mismatches, replacements,
-links, and ordinary filesystem failures never remove an unvalidated entry.
-"""
+"""Verify deletion order, identity checks, and partial failures using temporary files."""
 
 import os
 import tempfile

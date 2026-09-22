@@ -1,4 +1,4 @@
-"""Phenocam entry points; implementation is grouped by responsibility."""
+"""Public PhenoCam catalog, archive, and frame-sampling functions."""
 
 from .schema import GRANULE_FIELDS, PLAN_FIELDS, ARCHIVE_DOWNLOAD_FIELDS, FRAME_FIELDS, _ARCHIVE_NAME, _CMR_URL, _FRAME_NAME
 from .catalog import _get_json, _related_url, _archive_information, _bounds, index_granules, fetch_site_metadata

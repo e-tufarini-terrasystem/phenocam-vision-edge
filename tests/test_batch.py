@@ -1,8 +1,4 @@
-"""Verify same-stem metadata pairing and batch continuation locally.
-
-A copied batch script runs in a disposable project layout with a controlled
-Python executable, so argument construction is tested without loading a model.
-"""
+"""Verify metadata pairing and batch continuation with a disposable project and fake Python."""
 
 import os
 import shutil

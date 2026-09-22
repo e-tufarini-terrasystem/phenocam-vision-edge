@@ -1,4 +1,4 @@
-"""Selection: supplement responsibility extracted without changing the data contract."""
+"""Solve for an Open Images supplement meeting class floors and provenance limits."""
 
 import csv
 import json
@@ -20,11 +20,11 @@ def supplemental_selection(
     statistics_path,
     config,
 ):
-    """Select the approved positive supplement with exact global class floors."""
+    """Meet class-count minimums with a fixed number of frames pending human review."""
     try:
         from scipy.optimize import Bounds, LinearConstraint, milp
         from scipy.sparse import lil_matrix
-    except ImportError as error:  # pragma: no cover - setup installs the pinned solver.
+    except ImportError as error:  # pragma: no cover - tests require the pinned solver.
         raise DatasetError("supplemental selection requires scipy") from error
 
     def read(path, required):

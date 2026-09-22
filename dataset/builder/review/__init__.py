@@ -1,4 +1,4 @@
-"""Review entry points; implementation is grouped by responsibility."""
+"""Public Open Images and SSCD calibration review packets."""
 
 from .records import REVIEW_FIELDS, _identity, _triage
 from .openimages import create_openimages_review_packet

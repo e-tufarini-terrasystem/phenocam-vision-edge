@@ -1,4 +1,4 @@
-"""Annotation: records responsibility extracted without changing the data contract."""
+"""Annotation record fields, source identities, and reproducible ZIP entries."""
 
 import csv
 import hashlib

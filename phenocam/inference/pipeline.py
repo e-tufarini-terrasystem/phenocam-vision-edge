@@ -1,11 +1,4 @@
-"""Own the complete single-image, sixteen-view inference transaction.
-
-The original normalized RGB source supplies every view and requested final
-image product. All sixteen views precede global suppression. Enabled final
-detections trigger either input/metadata deletion or image persistence followed
-by metadata commit. Deletion takes precedence and never writes products.
-The returned duration includes only ONNX execution time.
-"""
+"""Coordinate image inference, suppression, conditional deletion, and output writes."""
 
 from phenocam.classes.selection import ModelClassesError, enabled_class_names, model_class_ids
 from phenocam.metadata import update_detection_metadata
@@ -28,13 +21,20 @@ def process_image(
     input_identity=None,
     metadata_identity=None,
 ) -> float:
+    """Process sixteen views; return seconds spent in ONNX session runs.
+
+    Paths must pass CLI validation. Enabled detections trigger deletion when
+    requested, otherwise image writes. Supplied metadata is updated even with
+    no enabled detections, unless deletion succeeds or an earlier step fails.
+    Completed file operations are not rolled back after a later failure.
+    """
     if delete_input_on_detection:
         validate_deletion_identities(input_identity, metadata_path, metadata_identity)
 
     enabled_names = enabled_class_names()
     try:
         if metadata_path is not None:
-            # Validate identity before any inference, product write or deletion.
+            # Validate the model receipt before inference or filesystem changes.
             model_id, model_version = model_identity(model_path)
         session = create_session(model_path)
         input_name, output_name, width, height, model_names = model_contract(session)

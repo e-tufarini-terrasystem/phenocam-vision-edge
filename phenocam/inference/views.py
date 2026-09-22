@@ -1,9 +1,4 @@
-"""Decode one image and create adaptive model-ready views with inverse geometry.
-
-EXIF normalization and RGB ownership happen once here. One full image and
-fifteen covering crops are prepared on demand with deterministic geometry and
-priority.
-"""
+"""Decode one RGB image and prepare sixteen letterboxed views with inverse geometry."""
 
 import math
 from dataclasses import dataclass
@@ -21,6 +16,8 @@ _OVERLAP = 0.20
 
 @dataclass(frozen=True)
 class View:
+    """NCHW float32 RGB tensor in [0, 1], with its crop and letterbox transform."""
+
     crop_x: int
     crop_y: int
     crop_width: int
@@ -75,6 +72,8 @@ def _prepare_view(image, input_width, input_height, crop_x, crop_y, priority):
 
 
 def _crop_rectangles(width, height):
+    # n crops of size c and overlap o span c * (n - (n - 1) * o).
+    # Round c up to cover the full image.
     columns, rows = (5, 3) if width >= height else (3, 5)
     crop_width = max(
         1, math.ceil(width / (columns - (columns - 1) * _OVERLAP))
@@ -84,6 +83,7 @@ def _crop_rectangles(width, height):
     def starts(dimension, crop_dimension, count):
         final = max(0, dimension - crop_dimension)
         values = [round(index * final / (count - 1)) for index in range(count)]
+        # Anchor both edges; tiny images intentionally repeat crop positions.
         values[0] = 0
         values[-1] = final
         return values

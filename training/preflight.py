@@ -45,7 +45,7 @@ def main():
         shutil.copy2(ROOT / name, destination)
     environment = subprocess.check_output([sys.executable, '-m', 'pip', 'freeze'], text=True)
     (WORK / 'provenance/environment.txt').write_text(environment)
-    # Portable catalog, workstation-specific training YAML inside this run only.
+    # Keep the machine-specific absolute dataset path inside this run.
     write(WORK / 'dataset.yaml', {'path': str(DATASET), 'train': 'images/train',
                                   'val': 'images/val', 'names': names})
     report.update({'reference': digests, 'reference_source': config['reference'],

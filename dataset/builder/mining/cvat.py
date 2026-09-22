@@ -1,4 +1,4 @@
-"""Build local CVAT bundles with model suggestions that never become labels."""
+"""Build CVAT bundles with model suggestions that require human review."""
 
 import csv
 import json

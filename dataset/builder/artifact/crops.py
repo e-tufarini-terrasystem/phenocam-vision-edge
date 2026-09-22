@@ -4,7 +4,10 @@ from phenocam.inference.views import _crop_rectangles
 
 
 def selected_rectangles(width, height, column):
-    """Return one runtime crop per row, rotating the selected column."""
+    """Select three crops at stride five; the caller chooses the column.
+
+    This gives one crop per row for landscape/square images, not portrait grids.
+    """
     rectangles = _crop_rectangles(width, height)
     if len(rectangles) != 15 or not 0 <= column < 5:
         raise ValueError("invalid runtime crop geometry")
@@ -12,7 +15,10 @@ def selected_rectangles(width, height, column):
 
 
 def remap_boxes(boxes, rectangle, minimum_visible_fraction=0.5):
-    """Clip boxes to a crop while excluding minor edge fragments."""
+    """Return crop-local boxes with at least one pixel per side.
+
+    Keep fragments if the original center is inside or enough area is visible.
+    """
     crop_x, crop_y, crop_width, crop_height = rectangle
     if not 0 < minimum_visible_fraction <= 1:
         raise ValueError("invalid visible fraction")

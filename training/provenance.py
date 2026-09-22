@@ -1,4 +1,4 @@
-"""Own named run paths, atomic receipts and immutable source identities."""
+"""Define run paths and persist atomic receipts with source hashes."""
 
 import hashlib
 import json

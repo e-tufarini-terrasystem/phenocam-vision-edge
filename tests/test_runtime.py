@@ -1,7 +1,4 @@
-"""Verify ONNX session configuration, model metadata, and timed tensor runs.
-
-All runtime objects and clocks are test doubles; no test loads a real model.
-"""
+"""Verify sessions and timing with doubles, and model identity against real file hashes."""
 
 import hashlib
 import json

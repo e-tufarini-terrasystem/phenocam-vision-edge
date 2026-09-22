@@ -1,4 +1,4 @@
-"""Openimages: schema responsibility extracted without changing the data contract."""
+"""CSV fields for Open Images candidates and acquisition rejections."""
 
 
 

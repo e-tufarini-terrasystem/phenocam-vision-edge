@@ -1,4 +1,4 @@
-"""Workflow entry points; implementation is grouped by responsibility."""
+"""Public dataset review preparation, status, and preflight functions."""
 
 from .paths import DATASET_ROOT, REPOSITORY_ROOT, _paths, _read_csv
 from .review import _selection_summary, _review_summary, _completed_review, _positive_import_summary, _screening_summary, _review_has_human_progress

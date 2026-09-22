@@ -1,9 +1,7 @@
-"""Own selected-class rendering and verified final-image persistence.
+"""Render independent annotated and privacy images from validated detections.
 
-Geometry and detection validation are complete before this boundary. This file
-creates independent annotated/privacy products and writes them deterministically.
-The pipeline decides whether detections warrant writing any products.
-``write_outputs`` is the single boundary mapping failures to the fixed error.
+The pipeline decides when to write. Each file is verified before replacement;
+failure of a later output does not roll back an earlier one.
 """
 
 from math import ceil, floor

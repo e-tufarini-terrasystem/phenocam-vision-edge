@@ -1,8 +1,4 @@
-"""Define inference-domain errors that cross into the CLI boundary.
-
-The errors carry only fixed, non-sensitive meanings; the package command owns
-their user-facing messages and process status handling.
-"""
+"""Inference errors with fixed meanings; the CLI supplies messages and exit codes."""
 
 
 class InferenceError(RuntimeError):

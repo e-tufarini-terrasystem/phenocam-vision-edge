@@ -1,1 +1,1 @@
-"""Mark the class-selection domain without exposing compatibility imports."""
+"""Class configuration and model selection; no eager imports."""

@@ -1,4 +1,4 @@
-"""Annotation: bundle responsibility extracted without changing the data contract."""
+"""Assemble CVAT annotation bundles and negative-review packets from selections."""
 
 import json
 from pathlib import Path

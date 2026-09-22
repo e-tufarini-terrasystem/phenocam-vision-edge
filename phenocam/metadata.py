@@ -1,8 +1,7 @@
-"""Own deterministic detection metadata replacement and atomic persistence.
+"""Replace detection metadata atomically, preserving unrelated UTF-8 content.
 
-Trusted final detections and validated paths become one fixed ``[detection]``
-section. The existing UTF-8 document remains untrusted: unrelated bytes are
-preserved, and replacement commits atomically within the target directory.
+Callers supply validated detections, paths, and model identity. All existing
+case-sensitive [detection] sections are replaced with one current summary.
 """
 
 import os

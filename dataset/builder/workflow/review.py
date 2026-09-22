@@ -1,4 +1,4 @@
-"""Workflow: review responsibility extracted without changing the data contract."""
+"""Summarize selection, screening, and human-review completeness from CSV records."""
 
 from collections import Counter
 from pathlib import Path

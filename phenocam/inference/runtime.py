@@ -1,8 +1,4 @@
-"""Own the quiet ONNX Runtime session, model contract, and timed execution.
-
-This boundary knows model identity, tensors and runtime options, but not source image
-geometry, detection post-processing, class selection, or output rendering.
-"""
+"""Configure CPU ONNX sessions, validate model contracts, and time execution."""
 
 import ast
 import hashlib
@@ -33,7 +29,7 @@ with open(os.devnull, "w") as _null_stderr:
 
 
 def _thread_count() -> int:
-    """Use up to four cores by default and accept only safe overrides."""
+    """Accept 1..4 threads; otherwise default to the CPU count capped at four."""
     default = min(4, os.cpu_count() or 1)
     configured = os.environ.get("YOLO_NUM_THREADS")
     if configured is None:
@@ -52,7 +48,7 @@ def create_session(model_path: Path):
     options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
-    # These caches trade memory for speed and are intentionally disabled on Pi.
+    # Disable memory reuse options on all hosts to match the Pi memory budget.
     options.enable_mem_pattern = False
     options.enable_cpu_mem_arena = False
     options.log_severity_level = 3
@@ -68,7 +64,11 @@ def create_session(model_path: Path):
 
 
 def model_identity(model_path):
-    """Read a bounded sibling receipt and bind its identity to the ONNX bytes."""
+    """Return receipt identity after checking the selected ONNX hash.
+
+    A missing receipt returns ("unknown", "0.1.0"); an invalid one raises
+    InferenceError. Read at most 64 KiB plus one byte to detect oversize files.
+    """
     model_path = Path(model_path)
     receipt_path = model_path.with_suffix(".json")
     try:
@@ -110,6 +110,11 @@ def model_identity(model_path):
 
 
 def model_contract(session):
+    """Validate float32 NCHW input and end-to-end [1, N, 6] detection output.
+
+    Return input/output names, width, height, and class metadata. The caller
+    validates the COCO class inventory separately.
+    """
     try:
         inputs = session.get_inputs()
         outputs = session.get_outputs()
@@ -151,6 +156,7 @@ def model_contract(session):
 
 
 def run_tensor(session, input_name, output_name, tensor):
+    """Return [N, 6] float32 rows and session.run seconds; row values remain unchecked."""
     start = perf_counter()
     try:
         result = session.run((output_name,), {input_name: tensor})

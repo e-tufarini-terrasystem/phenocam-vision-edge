@@ -1,8 +1,7 @@
-"""Own ordered, verified deletion of an input and optional metadata entry.
+"""Delete the input, then optional metadata, checking each file before unlinking.
 
-This boundary checks current type and identity immediately before unlinking and
-maps ordinary failures to a file-specific sanitized error. Detection policy and CLI
-messages belong to callers, not this filesystem module.
+Checks compare the regular-file type and saved device/inode pair. They do not
+make stat and unlink atomic or roll back a completed deletion.
 """
 
 import stat
@@ -35,15 +34,14 @@ def validate_deletion_identities(input_identity, metadata_path=None, metadata_id
 
 def delete_source(input_path, expected_identity, metadata_path=None, metadata_identity=None):
     validate_deletion_identities(expected_identity, metadata_path, metadata_identity)
-    # Validate both identities before deleting the input; then check each entry.
+    # Check both identity tuples first; stat each entry only when its turn arrives.
     entries = ((input_path, expected_identity, SourceDeleteError),)
     if metadata_path is not None:
         entries += ((metadata_path, metadata_identity, MetadataDeleteError),)
     for path, identity, error in entries:
         try:
             current = path.stat(follow_symlinks=False)
-            # Only the validated regular entry may be unlinked. A failure stops
-            # the sequence; deletion of an earlier entry cannot be rolled back.
+            # Refuse entries whose current type or device/inode differs from validation.
             if not stat.S_ISREG(current.st_mode) or (
                 current.st_dev,
                 current.st_ino,

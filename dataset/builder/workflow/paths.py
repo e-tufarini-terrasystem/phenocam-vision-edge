@@ -1,4 +1,4 @@
-"""Workflow: paths responsibility extracted without changing the data contract."""
+"""Locate dataset workflow artifacts and read optional CSV inventories."""
 
 import csv
 from pathlib import Path

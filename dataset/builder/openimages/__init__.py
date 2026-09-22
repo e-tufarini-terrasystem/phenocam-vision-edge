@@ -1,4 +1,4 @@
-"""Openimages entry points; implementation is grouped by responsibility."""
+"""Public Open Images indexing, selection, and download functions."""
 
 from .schema import CANDIDATE_FIELDS, REJECTION_FIELDS
 from .annotations import _flag, _number, load_label_map, _read_boxes, _read_labels

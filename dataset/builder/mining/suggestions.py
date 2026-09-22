@@ -58,7 +58,11 @@ def suggestions(baseline, candidate, class_ids, policy=None, model_names=("basel
 
 
 def novel_instances(existing, candidates, minimum_iou=0.5, class_names=None):
-    """Return candidate instances that do not duplicate same-class boxes."""
+    """Keep candidates below the IoU and containment thresholds of occupied boxes.
+
+    Suppression is per class; supplied class names group car, bus, and truck.
+    Accepted candidates also suppress later candidates in confidence order.
+    """
     if not 0 < minimum_iou <= 1:
         raise ValueError("minimum IoU must be in (0, 1]")
     occupied, novel = list(existing), []

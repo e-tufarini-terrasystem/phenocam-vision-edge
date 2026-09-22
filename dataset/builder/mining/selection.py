@@ -1,4 +1,4 @@
-"""Create immutable site-day splits and later select diverse review queues."""
+"""Select diverse public and operational review queues from model predictions."""
 
 import csv, json
 from collections import Counter, defaultdict

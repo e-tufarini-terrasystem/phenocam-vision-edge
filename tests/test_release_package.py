@@ -1,8 +1,4 @@
-"""Verify deterministic release packaging in disposable Git repositories.
-
-Synthetic commits exercise allowlisting and path safety without reading the
-working repository, accessing a network, or consulting the real remote.
-"""
+"""Verify deterministic packaging and path safety using disposable Git repositories."""
 
 import hashlib
 import importlib.util

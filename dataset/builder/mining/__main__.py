@@ -1,4 +1,4 @@
-"""Command line for deterministic v3 operational mining."""
+"""Command line for image mining and human-review queues."""
 
 import argparse
 import json

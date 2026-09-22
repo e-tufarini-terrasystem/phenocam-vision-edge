@@ -1,9 +1,4 @@
-"""Verify package-local and documented release installation paths.
-
-Tests replace ``uname`` and ``python3`` through a temporary ``PATH``, avoid
-network access, and assert effects only inside disposable package layouts. The
-same command environment exercises the exact README bootstrap sequence.
-"""
+"""Verify installer and README bootstrap behavior with local assets and fake commands."""
 
 import hashlib
 import os

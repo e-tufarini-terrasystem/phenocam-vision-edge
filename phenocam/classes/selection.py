@@ -1,9 +1,7 @@
-"""
-Resolve the repository's fixed COCO selection to validated model class IDs.
+"""Validate the configured COCO inventory and map enabled names to model IDs.
 
-Both the editable configuration and third-party model metadata are untrusted.
-Only fixed application errors cross this boundary; returned names and IDs are
-immutable and satisfy the canonical inventory invariants.
+The local Python configuration is executed, so it must be trusted code. Its
+class inventory and the model metadata are validated before selection.
 """
 
 import importlib.util
@@ -86,7 +84,6 @@ def enabled_class_names():
                     enabled.append(class_name)
             actual_inventory.append((category_name, tuple(class_names)))
 
-        # Exact comparison keeps names, membership, and ordering immutable.
         if tuple(actual_inventory) != _CANONICAL_INVENTORY or not enabled:
             raise ValueError
         return tuple(enabled)
@@ -95,6 +92,7 @@ def enabled_class_names():
 
 
 def model_class_ids(model_names, enabled_names):
+    """Validate the full COCO mapping and return enabled IDs in numeric order."""
     try:
         if not isinstance(model_names, Mapping):
             raise ValueError
@@ -114,7 +112,7 @@ def model_class_ids(model_names, enabled_names):
             raise ValueError
 
         name_to_id = {name: class_id for class_id, name in items}
-        # Model IDs are model-owned, so selection is by name then numeric order.
+        # Model class IDs may differ from the canonical COCO order.
         return tuple(sorted(name_to_id[name] for name in enabled_names))
     except Exception:
         raise ModelClassesError() from None

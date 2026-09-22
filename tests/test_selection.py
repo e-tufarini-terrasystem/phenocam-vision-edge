@@ -1,9 +1,4 @@
-"""
-Verify the fixed class inventory and the class-selection trust boundary.
-
-Malformed configurations live only in disposable temporary directories. Tests
-never edit the repository's real configuration.py or construct a YOLO model.
-"""
+"""Verify COCO selection with temporary configurations and synthetic model metadata."""
 
 import tempfile
 import unittest

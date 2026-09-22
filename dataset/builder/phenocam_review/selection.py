@@ -1,4 +1,4 @@
-"""Phenocam review: selection responsibility extracted without changing the data contract."""
+"""Select PhenoCam review candidates by duplicate group, site, season, and role."""
 
 import csv
 import hashlib

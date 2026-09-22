@@ -1,8 +1,4 @@
-"""Verify named external images when available, without owning ``input/``.
-
-Disposable output, uniform confidence, and final suppression domains exercise
-the real pipeline. Missing named images skip; unrelated images are ignored.
-"""
+"""Exercise the real pipeline on named local reference images; skip missing inputs."""
 
 import tempfile
 import unittest

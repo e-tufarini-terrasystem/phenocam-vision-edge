@@ -1,4 +1,4 @@
-"""Annotation: review responsibility extracted without changing the data contract."""
+"""Validate CVAT COCO exports and map reviewed boxes back to source identities."""
 
 import json
 import math

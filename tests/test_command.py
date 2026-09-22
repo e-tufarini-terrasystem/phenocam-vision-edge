@@ -1,10 +1,4 @@
-"""
-Verify optional products, deletion delegation, diagnostics, and success timing.
-
-The argument boundary and `process_image` are mocked; their own modules retain
-path, inventory, inference, and transaction-order coverage. This boundary owns
-fixed metadata and source-deletion statuses without exposing private causes.
-"""
+"""Verify CLI delegation, diagnostics, exit codes, and timing with mocked inference."""
 
 import contextlib
 import io

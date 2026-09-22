@@ -1,4 +1,4 @@
-"""Openimages: shortlist responsibility extracted without changing the data contract."""
+"""Select download candidates by class coverage, frame quotas, and target size."""
 
 import csv
 import json

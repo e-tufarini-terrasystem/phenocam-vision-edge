@@ -1,4 +1,4 @@
-"""Review: calibration responsibility extracted without changing the data contract."""
+"""Build a paired-image browser and CSV packet for human SSCD calibration."""
 
 import csv
 import json
