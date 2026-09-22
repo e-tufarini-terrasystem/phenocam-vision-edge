@@ -186,7 +186,7 @@ Counts include enabled final detections in canonical COCO order:
 [detection]
 detected=true|false
 software_name=phenocam-detection
-software_version=0.2.3
+software_version=0.2.4
 model_id=yolo26n-phenocam
 model_version=0.1.6
 annotated_image=<produced image path, or empty>

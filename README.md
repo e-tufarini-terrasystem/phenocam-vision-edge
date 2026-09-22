@@ -18,10 +18,11 @@ Image outputs are produced only when an enabled final detection remains;
 otherwise existing images stay unchanged. Deletion is opt-in and takes precedence
 over output writes. See the [operating guide](docs/cli.md) for the complete behavior.
 
-## Stable software release v0.2.3
+## Software release v0.2.4
 
-Software release **v0.2.3** is considered stable by the maintainer following
-manual testing on Raspberry Pi. This status applies to the software runtime.
+Software release **v0.2.4** is being prepared. Qualification of this candidate
+on Raspberry Pi is pending; the installation links below become available
+when the release is published.
 
 The bundled model is `models/yolo26n-phenocam.onnx`, model version `0.1.6`.
 Its sibling JSON identifies the model
@@ -34,28 +35,27 @@ and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision
 preserve the evidence and limitations. These repository reports are not included
 in the runtime archive.
 
-Published releases are frozen. The current source tree has later changes,
-including the optional base ONNX model and its receipt; see
+Published releases are frozen. The optional base ONNX model and its receipt
+are available only in the source repository; see
 [release and source differences](docs/cli.md#release-and-source-differences).
 
 ## Supported environments
 
-This section applies only to the latest stable software release, **v0.2.3**.
+This section describes the target environment for software **v0.2.4**.
 
 | Platform | Required Python |
 |---|---|
 | Raspberry Pi OS 64-bit (`aarch64`) | 3.13 |
 
 The target device is a Raspberry Pi 3 with 1 GB RAM.
-The maintainer reports successful manual testing on Raspberry Pi.
-The exact Pi model, OS/Python versions and individual checks were not
-recorded; the requirements above are not a recorded test configuration.
+The requirements above are not a recorded test configuration.
+Target-device qualification of this release is pending.
 
 For installation from the current source tree, see
 [manual setup from source](docs/cli.md#manual-setup-from-source).
 For development and CI, see [development](docs/development.md).
 
-## Quick install: v0.2.3
+## Quick install: v0.2.4
 
 Prerequisites: Raspberry Pi OS 64-bit, Python 3.13 with `python3-venv`,
 `curl`, `tar`, and `sha256sum`. Install OS prerequisites separately; this
@@ -63,24 +63,24 @@ command never invokes `sudo` or a system package manager. Downloads are public
 and need no GitHub account or token.
 
 Run from the parent directory of the new installation. The directory
-`phenocam-vision-edge-0.2.3/` must not already exist.
+`phenocam-vision-edge-0.2.4/` must not already exist.
 
-### Versioned installation (v0.2.3)
+### Versioned installation (v0.2.4)
 
 ```sh
-[ ! -e phenocam-vision-edge-0.2.3 ] && \
+[ ! -e phenocam-vision-edge-0.2.4 ] && \
 curl --fail --fail-early --location --silent --show-error \
-  --output phenocam-vision-edge-0.2.3.tar.gz \
-  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.2.3/phenocam-vision-edge-0.2.3.tar.gz \
-  --output phenocam-vision-edge-0.2.3.tar.gz.sha256 \
-  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.2.3/phenocam-vision-edge-0.2.3.tar.gz.sha256 && \
-sha256sum -c phenocam-vision-edge-0.2.3.tar.gz.sha256 && \
-tar -xzf phenocam-vision-edge-0.2.3.tar.gz && \
-./phenocam-vision-edge-0.2.3/scripts/installer.sh
+  --output phenocam-vision-edge-0.2.4.tar.gz \
+  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.2.4/phenocam-vision-edge-0.2.4.tar.gz \
+  --output phenocam-vision-edge-0.2.4.tar.gz.sha256 \
+  https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/releases/download/v0.2.4/phenocam-vision-edge-0.2.4.tar.gz.sha256 && \
+sha256sum -c phenocam-vision-edge-0.2.4.tar.gz.sha256 && \
+tar -xzf phenocam-vision-edge-0.2.4.tar.gz && \
+./phenocam-vision-edge-0.2.4/scripts/installer.sh
 ```
 
 Success leaves the configured application at
-`./phenocam-vision-edge-0.2.3/`, including the ONNX model, `.venv/`, `input/`,
+`./phenocam-vision-edge-0.2.4/`, including the ONNX model, `.venv/`, `input/`,
 and `output/`. The archive and checksum remain in the current directory. The
 checksum detects corruption or a mismatched download; it is not a publisher
 signature.
@@ -90,7 +90,7 @@ signature.
 Copy an image into the installation and request both output products:
 
 ```sh
-cd phenocam-vision-edge-0.2.3
+cd phenocam-vision-edge-0.2.4
 cp /path/to/image.jpg input/example.jpg
 .venv/bin/python -m phenocam \
   --input input/example.jpg \

@@ -18,8 +18,9 @@ Model bytes are unchanged. The runtime JSON receipt contains only `model_id`,
 [training report](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/training-0.1.6.md)
 and [model comparison](https://github.com/e-tufarini-terrasystem/phenocam-vision-edge/blob/main/docs/status/model-comparison-2026-09-15.md).
 The model remains experimental, with no demonstrated overall improvement.
-Software `v0.2.3` is considered stable by the maintainer following manual testing
-on Raspberry Pi, as recorded in the [README](../README.md#supported-environments).
+Software `v0.2.3` was considered stable by the maintainer following manual testing
+on Raspberry Pi. Qualification of `v0.2.4` is pending; see the
+[README](../README.md#supported-environments).
 Runtime testing on the device and evaluation of model accuracy are separate;
 the release's manual test does not qualify later source changes.
 The original COCO `models/yolo26n.pt` initializes fresh training;
