@@ -155,7 +155,8 @@ After editing, verify whether the change reduced or increased conceptual complex
 - Detection metadata must obtain model identity from the selected ONNX file's
   sibling JSON receipt, after validating its fields and `onnx_sha256` against
   the selected file. Do not duplicate identity constants in runtime code or
-  infer versions from filenames. An absent receipt yields `unknown`; an invalid
+  infer versions from filenames. An absent receipt yields `model_id=unknown`
+  and the conventional initial `model_version=0.1.0` (not a verified revision); an invalid
   or mismatched receipt with `--meta` must fail before output writes or deletion.
 - Update current installation commands, metadata examples, and release-related
   test expectations together. Preserve historical release references.

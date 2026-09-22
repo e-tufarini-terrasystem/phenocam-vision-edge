@@ -1,5 +1,18 @@
 # Training v6 — protocollo e risultati
 
+Nota di consolidamento: il modello storico `yolo26n-v6` è distribuito come
+`yolo26n-phenocam`, versione `0.1.6`, con byte PT e ONNX invariati e stato
+**sperimentale**. La scheda runtime contiene soltanto identità, versione e hash
+ONNX; i riferimenti di provenienza sono conservati qui:
+
+- Ricevuta storica: `models/yolo26n-v6.json` al commit
+  `da14b7d6317d1d158859999947b819f26c332f11`.
+- SHA-256 della ricevuta:
+  `1725300acc3bb4ce5189edc4631c65e0cf07be5cfd6b6b18df3fc01631697f1f`.
+- SHA-256 di `models/yolo26n-phenocam.pt`:
+  `76ca4a80abd559c9d5df378052ad31480bf42f8af301372733c2b6ddb602fed0`.
+- Valutazione successiva: [confronto del 15 settembre 2026](model-comparison-2026-09-15.md).
+
 Nota successiva: il 14 settembre 2026 la copertura per deduplicazione tra viste
 è stata portata dall'80% al 50% su richiesta dell'utente. Le misure di questo
 rapporto restano riferite al runtime all'80%, conservato con i relativi hash

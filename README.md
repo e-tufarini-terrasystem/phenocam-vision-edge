@@ -41,8 +41,10 @@ See the [CLI guide](docs/cli.md) before upgrading.
 
 The current source tree maintains **YOLO26n specialized for PhenoCam**, at
 `models/yolo26n-phenocam.onnx`. Version `0.1.6` is the unchanged former v6 artifact;
-its experimental acceptance status and measured limitations remain recorded in
-`models/yolo26n-phenocam.json`, included in the runtime archive. Its training
+its identity, version and ONNX SHA-256 remain in `models/yolo26n-phenocam.json`,
+included in the runtime archive. Experimental acceptance status, provenance,
+metrics and limitations are preserved in the [training report](docs/status/training-v6-experiment.md)
+and [model comparison](docs/status/model-comparison-2026-09-15.md). Its training
 acceptance criteria were not all met and an overall improvement was not
 demonstrated. This release is intended for evaluation; Raspberry Pi qualification
 of this exact version is pending.

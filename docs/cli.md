@@ -222,7 +222,9 @@ the receipt's path fields to select a model. The receipt is limited to 64 KiB;
 `model_id` is 1–64 ASCII letters, digits, dots, underscores or hyphens, beginning
 with a letter or digit. `model_version` uses `MAJOR.MINOR.PATCH`, without leading
 zeros, within 32 characters. The digest is 64 lowercase hexadecimal characters.
-An absent receipt yields `model_id=unknown` and `model_version=unknown`.
+An absent receipt yields `model_id=unknown` and `model_version=0.1.0`.
+Without a receipt, `0.1.0` is a conventional initial value, not a verified
+revision; no model hash is checked in this case.
 A present but invalid or mismatched receipt fails with `error: inference failed`
 and status `1`. Without `--meta`, the receipt is not read.
 
@@ -230,6 +232,20 @@ The bundled model's historical revision v6 is version `0.1.6` in the project's
 experimental `0.1.N` model series. Its stable filename remains
 `yolo26n-phenocam.onnx`. This corrects identity only: the weights, ONNX bytes,
 historical provenance and experimental acceptance status are unchanged.
+
+The optional base model `models/yolo26n.onnx` uses `models/yolo26n.json`,
+which declares `model_id=yolo26n` and `model_version=0.1.0`. This is the
+project's initial version of that base artifact, not an upstream Ultralytics
+release number. Selecting another model with `--model` selects its sibling
+receipt automatically. Keep the ONNX and its receipt together when copying
+or renaming them.
+
+Each `(model_id, model_version)` pair must identify a single ONNX SHA-256.
+Different ONNX bytes, including a new export, require a new model version
+and matching hash. Keep filenames stable and software versions independent.
+The Ultralytics `version` metadata describes the exporter, not the weights.
+The SHA-256 check verifies the pairing of receipt and model; it does not
+authenticate their provenance.
 
 With no enabled final detection, metadata contains `detected=false`,
 `total_count=0`, and empty `annotated_image` and `privacy_image` values, even

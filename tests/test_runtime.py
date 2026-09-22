@@ -55,8 +55,8 @@ class ModelIdentityTests(unittest.TestCase):
         self.receipt.write_text(json.dumps(self.identity))
         self.assertEqual(model_identity(self.model), ("another-model", "1.2.3"))
 
-    def test_absent_receipt_has_unknown_identity(self):
-        self.assertEqual(model_identity(self.model), ("unknown", "unknown"))
+    def test_absent_receipt_has_unknown_id_and_initial_version(self):
+        self.assertEqual(model_identity(self.model), ("unknown", "0.1.0"))
 
     def test_model_replacement_invalidates_receipt(self):
         self.receipt.write_text(json.dumps(self.identity))
@@ -91,6 +91,12 @@ class ModelIdentityTests(unittest.TestCase):
     def test_bundled_model_matches_declared_identity_and_digest(self):
         model = Path(__file__).resolve().parents[1] / "models/yolo26n-phenocam.onnx"
         self.assertEqual(model_identity(model), ("yolo26n-phenocam", "0.1.6"))
+
+    def test_base_model_matches_declared_identity_and_digest_when_available(self):
+        model = Path(__file__).resolve().parents[1] / "models/yolo26n.onnx"
+        if not model.is_file():
+            self.skipTest("Optional base ONNX model is not available")
+        self.assertEqual(model_identity(model), ("yolo26n", "0.1.0"))
 
 
 class RuntimeTests(unittest.TestCase):

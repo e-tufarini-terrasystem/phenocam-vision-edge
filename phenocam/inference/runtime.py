@@ -77,7 +77,8 @@ def model_identity(model_path):
         except FileNotFoundError:
             if receipt_path.is_symlink():
                 raise ValueError
-            return "unknown", "unknown"
+            # Without a receipt, 0.1.0 is a convention, not a verified revision.
+            return "unknown", "0.1.0"
         if not stat.S_ISREG(receipt_stat.st_mode):
             raise ValueError
         with receipt_path.open("rb") as source:
